@@ -13,6 +13,7 @@ sealed partial class App
     void WishFrame()
     {
         _w.Wishes = _settings.Wishes;
+        _w.Romance = _settings.Romance;
         if (_w.Wish is not { } wish) return;
         var f = wish.By;
         bool gone = !_w.Figures.Contains(f) || f.Dead || f.Mode == Mode.Ragdoll;

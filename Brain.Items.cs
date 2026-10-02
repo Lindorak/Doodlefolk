@@ -7,6 +7,14 @@ namespace StickFight;
 sealed partial class Brain
 {
     public float Hunger = 0.2f;
+    string _optItemLabel = "Use something";
+
+    static string VerbWord(Verb v) => v switch
+    {
+        Verb.Sit => "Sit in", Verb.Lie => "Nap on", Verb.Hammock => "Swing in", Verb.Bounce => "Bounce on", Verb.Eat => "Eat",
+        Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot => "Grab",
+        Verb.Create => "Grab", _ => "Climb on",
+    };
     Item? _item;
     Verb _verb;
     int _seat = -1;
@@ -46,7 +54,7 @@ sealed partial class Brain
         (float score, Item it, Verb v)? best = null;
         foreach (var it in w.Items)
         {
-            if (!it.Free || !it.OnGround) continue;
+            if (!it.Free || !it.OnGround || Unreachable(it)) continue;
             float dist = Vector2.Distance(it.Pos, f.Base);
             if (dist > 2200 * S) continue;
             float near = 1 / (1 + dist / (700 * S));
@@ -61,7 +69,8 @@ sealed partial class Brain
                     Verb.Hammock => it.User == null ? (tired * 1.2f + (1 - E) * 0.5f + P.Playfulness * 0.2f) * it.Def.Comfort : 0,
                     Verb.Bounce => Stamina > 0.4f ? (P.Playfulness * 0.8f + E * 0.6f) * Taste(Thing.Tricks) : 0,
                     Verb.Eat => it.Holder == null ? (Hunger > 0.35f ? Hunger * 3 : Hunger * 0.4f) * Taste(Thing.Eating) : 0,
-                    Verb.Hide => it.User == null ? (Fear > 0.4f || HunterAround(w) ? 3 + Fear * 3 : P.Playfulness * 0.12f) : 0,
+                    // Real fear sends them into hiding; a cursor hunter nearby only spooks the timid.
+                    Verb.Hide => it.User == null ? (Fear > 0.4f ? 2 + Fear * 3 : HunterAround(w) ? (1 - P.Bravery) * 0.6f : P.Playfulness * 0.12f) : 0,
                     Verb.Dance => it.Playing ? MathF.Max(0, f.Tastes.Of(Thing.Dancing) + 0.35f) * 1.3f * (0.5f + Joy) : 0,
                     Verb.Read => it.Holder == null ? (P.Curiosity * (1 - E) * 0.7f + 0.05f) * Taste(Thing.Reading) : 0,
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
@@ -76,6 +85,7 @@ sealed partial class Brain
             }
         }
         if (best is not { } b) return null;
+        _optItemLabel = $"{VerbWord(b.v)} the {b.it.Def.Name.ToLowerInvariant()}";
         return (b.score * 1.6f, () => UseItem(b.it, b.v, w));
     }
 
@@ -110,6 +120,7 @@ sealed partial class Brain
         }
         _itemPending = true;
         Navigate(Spot, 6 * S, Hunger > 0.7f || (v == Verb.Hide && Fear > 0.4f), () => BeginUse(w), WalkPurpose.Other);
+        _navAbout = it;
         _dur = 30;
     }
 
@@ -264,7 +275,7 @@ sealed partial class Brain
                 bool peek = (_t % 4.5f) > 3.6f;
                 f.SetAction(peek ? Act.SitFloor : Act.Curl);
                 if (peek) f.LookAt = w.Cursor;
-                if (Fear > 0.4f || HunterAround(w)) _dur = MathF.Max(_dur, _t + 3);
+                if (Fear > 0.4f || (HunterAround(w) && P.Bravery < 0.35f)) _dur = MathF.Max(_dur, _t + 3);
                 break;
             case Verb.Dance:
                 FaceTo(it.Pos.X + (f.Base.X > it.Pos.X ? 400 : -400) * S);

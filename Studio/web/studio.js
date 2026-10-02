@@ -480,10 +480,27 @@ const SUBPANELS = {
     const blurb = h("p", { class: "sub" });
     const hunter = check("Cursor hunter", "Hunts your cursor across the screen, boxes it, and throws whatever it can grab at it. Never forgives you.",
       () => fig(id) && fig(id).hunter, v => send({ t: "fig", id, op: "hunter", v }));
+    const GENDERS = [["Girl", "Girl"], ["Boy", "Boy"], ["Nonbinary", "Nonbinary"]];
+    const genderChips = GENDERS.map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); send({ t: "fig", id, op: "gender", v: k }); } }, l); c.key = k; return c; });
+    const FOR = [["Girls", "girls"], ["Boys", "boys"], ["Nonbinary", "nonbinary folks"]];
+    let attr = [...(f.attraction || [])];
+    const forChips = FOR.map(([k, l]) => {
+      const c = h("button", { class: "chip", onclick: () => { touched(c); attr = attr.includes(k) ? attr.filter(x => x !== k) : [...attr, k]; paintFor(); send({ t: "fig", id, op: "attraction", v: attr }); } }, l);
+      c.key = k; return c;
+    });
+    function paintFor() { forChips.forEach(c => c.classList.toggle("on", attr.includes(c.key))); }
+    const heart = h("p", { class: "hint" });
     add(panel, h("div", { class: "split" }, svg, h("div", null,
       h("h2", { style: { marginTop: 0 } }, "Who they are"), blurb, sliders.map(x => x.el),
-      h("h3", null, "Start from a type"), presets, h("div", { style: { marginTop: "12px" } }, hunter))));
+      h("h3", null, "Start from a type"), presets, h("div", { style: { marginTop: "12px" } }, hunter),
+      h("h3", null, "Heart"),
+      h("div", { class: "field" }, h("label", null, "They're a"), h("div", { class: "row tight" }, genderChips)),
+      h("div", { class: "field" }, h("label", null, "Can fall for"), h("div", { class: "row tight" }, forChips)),
+      heart)));
     return f => {
+      genderChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === f.gender); });
+      if (forChips.every(idle)) { attr = [...(f.attraction || [])]; paintFor(); }
+      heart.textContent = f.sweetheart ? `Dating ${f.sweetheart} ♥` : f.crush ? `Has a crush on ${f.crush}…` : `Single. ${f.name} ${f.attractionText || ""}.`;
       blurb.textContent = f.describe + "." + (f.hunter ? " Out to get you." : "");
       hunter.update();
       if (dragging < 0 && Date.now() - touchedT > 900) { Object.assign(local, f.traits); draw(f.hex); }
@@ -593,9 +610,13 @@ const SUBPANELS = {
         const mine = range(-1, 1, 0.01, r.mine, v => sendSoon("aff", { t: "fig", id, op: "affinity", other: r.id, v }));
         const theirs = h("div", { class: "meter", style: { gridTemplateColumns: "1fr 44px" } }, h("div", { class: "bar" }, h("i")), h("span", { class: "n" }));
         const word = h("div", { class: "big" }), shared = h("p"), rel = h("p", { class: "hint" });
+        const love = range(0, 1, 0.01, r.love || 0, v => sendSoon("love", { t: "fig", id, op: "love", other: r.id, v }));
+        const loveWord = h("p", { class: "hint" });
+        const breakup = armed("Break them up", "Really?", () => send({ t: "fig", id, op: "breakup" }), "btn small danger");
+        const loveBox = h("div", null, h("h3", null, "Romance"), h("div", { class: "relbar" }, love, h("div", { class: "ends" }, h("span", null, "no spark"), h("span", null, "head over heels"))), loveWord, breakup);
         card.append(h("div", { class: "hint" }, `How ${f.name} feels about ${r.name}`), word,
           h("div", { class: "relbar" }, mine, h("div", { class: "ends" }, h("span", null, "can't stand them"), h("span", null, "best friends"))),
-          h("h3", null, `${r.name} feels…`), theirs, h("h3", null, "In common"), shared, rel,
+          h("h3", null, `${r.name} feels…`), theirs, loveBox, h("h3", null, "In common"), shared, rel,
           h("button", { class: "btn small", onclick: () => go("figure", r.id) }, `Open ${r.name}'s page`));
         cardUpdate = f => {
           const r2 = f.rels.find(x => x.id === route.rel); if (!r2) return;
@@ -605,6 +626,11 @@ const SUBPANELS = {
           $(".n", theirs).textContent = feelWord(r2.theirs).toLowerCase();
           shared.textContent = r2.shared.length ? `They both love ${r2.shared.join(", ").toLowerCase()}. (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match)` : `Not much (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match).`;
           rel.textContent = `Colour rule: ${relWord(r2.relation)}. Change it in Colours & fights.`;
+          loveBox.hidden = !r2.attracted && !(r2.love > 0.01);
+          setRange(love, r2.love || 0);
+          breakup.hidden = !r2.dating;
+          loveWord.textContent = r2.dating ? `Dating ♥ (${r.name} ${r2.theirLove > 0.6 ? "is just as smitten" : r2.theirLove > 0.35 ? "feels it too" : "is cooling off"})`
+            : r2.love > 0.7 ? `Head over heels. Working up the nerve to say something.` : r2.love > 0.45 ? `Has a crush on ${r2.name}.` : r2.love > 0.15 ? "A little spark." : "Just friends (for now).";
         };
       }
       cardUpdate(f);
@@ -619,7 +645,7 @@ const SUBPANELS = {
         e.setAttribute("stroke-width", (1.4 + Math.abs(v) * 6).toFixed(1));
         const r = f.rels.find(r => r.id === o.id);
         e.setAttribute("stroke-dasharray", r && r.relation === "Ignore" ? "4 6" : "");
-        labels[o.id].textContent = feelWord(v).toLowerCase();
+        labels[o.id].textContent = r && r.dating ? "♥ dating" : r && r.love > 0.45 ? "♥ crush" : feelWord(v).toLowerCase();
         if (nodes[o.id].dot && r) nodes[o.id].dot.setAttribute("fill", r.hex);
       }
       cardUpdate(f);
@@ -658,10 +684,27 @@ const SUBPANELS = {
     });
     const hpI = h("i", { style: { "--fill": "#e53935" } }), hpN = h("span", { class: "n" });
     const status = h("p", { class: "sub" });
-    add(panel, h("h2", { style: { marginTop: 0 } }, "Right now"), status, rows.map(r => r.el),
-      h("h3", null, "Health"), h("div", { class: "meter" }, h("label", null, "HP"), h("div", { class: "bar" }, hpI), hpN),
-      h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"));
+    // What's on their mind: the options weighed at the last decision, and the route they're following.
+    const decided = h("p", { class: "sub" });
+    const route = h("p", { class: "hint" });
+    const thoughts = h("div", { class: "thoughts" });
+    add(panel, h("div", { class: "split" },
+      h("div", null, h("h2", { style: { marginTop: 0 } }, "Right now"), status, rows.map(r => r.el),
+        h("h3", null, "Health"), h("div", { class: "meter" }, h("label", null, "HP"), h("div", { class: "bar" }, hpI), hpN),
+        h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up")),
+      h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), decided, thoughts, route,
+        h("p", { class: "hint" }, "Each time they decide, every option gets a score from their needs, mood, likes and personality. Bars show how likely each one was. Things they've done a lot lately score lower, and places they couldn't reach are skipped for a while."))));
+    let thoughtSig = "";
     return f => {
+      decided.textContent = f.decision ? `Last decided to: ${f.decision.toLowerCase()} (${ago(f.decidedAgo)})` : "Hasn't had to decide anything yet.";
+      route.textContent = f.route ? `Route: ${f.route}` : "";
+      const sig = (f.thoughts || []).map(t => t.label + t.share).join("|");
+      if (sig !== thoughtSig) {
+        thoughtSig = sig;
+        thoughts.replaceChildren(...(f.thoughts || []).map(t => h("div", { class: "meter" + (t.label === f.decision ? " picked" : "") },
+          h("label", { title: t.label }, t.label), h("div", { class: "bar" }, h("i", { style: { width: (t.share * 100) + "%", "--fill": t.label === f.decision ? "var(--accent)" : "var(--pencil)" } })),
+          h("span", { class: "n" }, Math.round(t.share * 100) + "%"))));
+      }
       status.textContent = `${f.activity}. ${f.feels}.`;
       for (const r of rows) { const v = f.mood[r.k]; r.i.style.width = (v * 100) + "%"; r.n.textContent = Math.round(v * 100); }
       hpI.style.width = Math.max(0, f.hp) + "%"; hpN.textContent = Math.round(Math.max(0, f.hp));
@@ -1013,6 +1056,7 @@ PAGES.settings = {
       check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
       check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
       check("Hide the figures", "Pauses everything until you turn it back off.", () => st().hidden, v => setS("hidden", v)),
+      check("Romance", "Crushes, blushing, confessions, couples holding hands, jealousy and breakups. Off: just friends.", () => st().romance !== false, v => setS("romance", v)),
       check("They ask for things", "A thought bubble when they want something (a snack, a ball, a bed). Click it to give it to them.", () => st().wishes !== false, v => setS("wishes", v)),
     ];
     const screen = [

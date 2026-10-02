@@ -173,9 +173,18 @@ sealed partial class Figure
     float _time, _restT, _ragT, _getUpT;
     readonly Vector2[] _ragSnap = new Vector2[J.Count];
 
+    /// <summary>Girl, boy or nonbinary, and who they can fall for (both editable in the Studio).</summary>
+    public Gender Gender;
+    public Attraction Attraction;
+    /// <summary>Pink cheeks near a crush (0..1), set by the brain.</summary>
+    public float Blush;
+    /// <summary>Holding hands this frame: where the near / far hand should reach (set by the brain, cleared after posing).</summary>
+    public Vector2? HoldN, HoldF;
+
     public Figure(Color4 color, string name, float scale, Personality traits, Random rng, int? id = null)
     {
         Id = id ?? ++_nextId;
+        (Gender, Attraction) = Romance.Roll(rng);
         Color = color;
         Name = name;
         S = scale;
@@ -399,6 +408,7 @@ sealed partial class Figure
             w.Fx.Dust(Base, S, 3, 0.3f, w.Rng);
             return;
         }
+        if (World.TraceJumps) World.Log($"land {Name}: at ({Base.X:0},{p.Y:0}) on {(long)p.Hwnd} [{p.X1:0}..{p.X2:0}]{(p.Seen != null ? " text" : "")}{(p.Item != null ? " item " + p.Item.Def.Key : "")}");
         Base.Y = p.Y;
         Grounded = true;
         GroundHwnd = p.Hwnd;

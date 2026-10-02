@@ -398,3 +398,7 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .pop-foot { margin-top: 6px; padding-top: 8px; border-top: 1.5px dashed var(--faint); gap: 6px; align-items: center; }
 .row.tight { gap: 4px; align-items: center; flex-wrap: wrap; }
 .btn.icon { min-width: 30px; padding-left: 6px; padding-right: 6px; font-size: 16px; line-height: 1; }
+
+/* what's on their mind */
+.thoughts .meter label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thoughts .meter.picked label { color: var(--accent-ink); font-weight: 600; }

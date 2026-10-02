@@ -125,8 +125,11 @@ sealed class Look
     static readonly string[] Cloth = { "#E53935", "#1E88E5", "#43A047", "#FB8C00", "#8E24AA", "#FDD835", "#00ACC1", "#EC407A", "#2E2E2E", "#F4F4F4", "#6D4C41", "#283593" };
 
     /// <summary>Roll an outfit that suits the personality (deterministic for a seed).</summary>
-    public static Look Generate(Personality p, int seed)
+    public static Look Generate(Personality p, int seed, Gender g = Gender.Nonbinary)
     {
+        // Gender nudges the odds a little (more long hair and skirts for girls, more beards for boys); nothing is ruled out.
+        float girl = g == Gender.Girl ? 1 : 0, boy = g == Gender.Boy ? 1 : 0;
+        float longHair = 1 + girl * 1.2f - boy * 0.4f, beard = 1 - girl * 0.95f + boy * 0.6f, skirt = 1 + girl * 1.5f - boy * 0.85f, bow = 1 + girl * 1.2f - boy * 0.6f;
         var r = new Random(seed ^ 0x5eed);
         float E = p.Energy, C = p.Curiosity, B = p.Bravery, Pl = p.Playfulness, A = p.Aggression, So = p.Sociability;
         string Pick(params (float w, string k)[] o)
@@ -140,14 +143,14 @@ sealed class Look
         {
             Hat = Pick((3.5f, ""), (Pl * 0.8f, "cap"), (So * (1 - E) * 0.6f, "tophat"), ((1 - E) * 0.5f, "beanie"), (A * B * 0.3f, "crown"),
                        (B * 0.4f, "cowboy"), (Pl * So * 0.6f, "party"), (C * (1 - E) * 0.4f, "wizard"), (B * E * 0.4f, "helmet"), (A * B * 0.3f, "viking"),
-                       (0.1f, "chef"), (A * E * 0.6f, "headband"), (So * Pl * 0.3f, "bow"), ((1 - A) * 0.08f, "halo")),
-            Hair = Pick((1.5f, ""), (1.2f, "short"), (E * Pl * 1.0f, "spiky"), (A * B * 0.5f, "mohawk"), (So * 0.6f, "ponytail"), ((1 - E) * 0.4f, "bun"),
-                        (So * 0.6f, "long"), (Pl * 0.4f, "afro"), (Pl * 0.5f, "curly"), (So * 0.4f, "bob")),
-            Beard = Pick((5f, ""), ((1 - E) * 0.6f, "full"), (C * 0.4f, "goatee"), (A * 0.4f, "mustache"), ((1 - So) * 0.4f, "stubble")),
+                       (0.1f, "chef"), (A * E * 0.6f, "headband"), (So * Pl * 0.3f * bow, "bow"), ((1 - A) * 0.08f, "halo")),
+            Hair = Pick((1.5f, ""), (1.2f, "short"), (E * Pl * 1.0f, "spiky"), (A * B * 0.5f, "mohawk"), (So * 0.6f * longHair, "ponytail"), ((1 - E) * 0.4f * longHair, "bun"),
+                        (So * 0.6f * longHair, "long"), (Pl * 0.4f, "afro"), (Pl * 0.5f, "curly"), (So * 0.4f * longHair, "bob")),
+            Beard = Pick((5f, ""), ((1 - E) * 0.6f * beard, "full"), (C * 0.4f * beard, "goatee"), (A * 0.4f * beard, "mustache"), ((1 - So) * 0.4f * beard, "stubble")),
             Glasses = Pick((5f, ""), (C * 1.0f, "round"), (B * Pl * 0.6f, "shades"), (C * (1 - E) * 0.25f, "monocle"), (E * C * 0.3f, "goggles"), (A * B * 0.15f, "eyepatch")),
             Top = Pick((2.5f, ""), (1f, "tee"), (E * 0.5f, "tank"), ((1 - E) * 0.6f, "hoodie")),
             Neck = Pick((5f, ""), (So * (1 - Pl) * 0.6f, "tie"), (So * 0.4f, "bowtie"), ((1 - E) * 0.5f, "scarf")),
-            Waist = Pick((5f, ""), (0.6f, "belt"), (So * 0.6f, "skirt")),
+            Waist = Pick((5f, ""), (0.6f, "belt"), (So * 0.6f * skirt, "skirt")),
             Back = Pick((14f, ""), (B * Pl * 1.0f, "cape")),
             Shoes = Pick((2f, ""), (E * 1.2f, "sneakers"), ((1 - E) * 0.6f + B * 0.3f, "boots")),
             HatColour = Col(Cloth), HairColour = Col(HairColours), TopColour = Col(Cloth), NeckColour = Col(Cloth),

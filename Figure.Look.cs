@@ -8,7 +8,7 @@ namespace StickFight;
 sealed partial class Figure
 {
     Look? _look;
-    public Look Look { get => _look ??= Look.Generate(Traits, StyleChoice.Seed); set => _look = value; }
+    public Look Look { get => _look ??= Look.Generate(Traits, StyleChoice.Seed, Gender); set => _look = value; }
 
     readonly Vector2[] _cape = new Vector2[6], _capeOld = new Vector2[6];
     readonly Vector2[] _pony = new Vector2[4], _ponyOld = new Vector2[4];

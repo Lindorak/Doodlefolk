@@ -16,13 +16,14 @@ sealed partial class Brain
     double _lastBeat;
 
     /// <summary>What there is to do on screen right now, as choices for <see cref="Choose"/>.</summary>
-    void ScreenOptions(World w, List<(float weight, Action act)> opts)
+    void ScreenOptions(World w, OptionList opts)
     {
         float E = P.Energy, tired = 1 - Stamina;
         var media = w.Media;
         if (media.Music && Stamina > 0.25f)
-            opts.Add(((MathF.Max(0, f.Tastes.Of(Thing.Dancing) + 0.4f) * 1.4f + P.Playfulness * 0.3f) * (0.5f + Joy) * (0.6f + E * 0.6f),
-                      () => Go(G.Groove, rng.Range(8, 22))));
+            opts.Add((MathF.Max(0, f.Tastes.Of(Thing.Dancing) + 0.4f) * 1.4f + P.Playfulness * 0.3f) * (0.5f + Joy) * (0.6f + E * 0.6f),
+                      () => Go(G.Groove, rng.Range(8, 22)), "Dance to the music");
+        opts.Category = "Watch the video";
         if (media.Video && WatchSpot(w, media.VideoHwnd) is { } spot)
             opts.Add(((0.45f + Boredom * 0.9f + tired * 0.5f) * Taste(Thing.Sitting) * (1.2f - E * 0.4f), () =>
             {
@@ -32,9 +33,9 @@ sealed partial class Brain
                 Navigate(() => spot.Resolve(w.Env), 6 * S, false, () => Go(G.WatchScreen, rng.Range(20, 60)), WalkPurpose.Watch);
             }));
         if (w.ScreenReact && Stamina > 0.2f && PickWord(w) is { ledge: { } ledge } pw)
-            opts.Add(((0.25f + P.Curiosity * 0.9f) * (0.4f + Boredom) * pw.interest * Taste(Thing.Reading) * 0.9f, () => GoLookAt(w, pw.word, ledge)));
+            opts.Add((0.25f + P.Curiosity * 0.9f) * (0.4f + Boredom) * pw.interest * Taste(Thing.Reading) * 0.9f, () => GoLookAt(w, pw.word, ledge), $"Look at \"{pw.word.Seen.Text}\" on screen");
         if (w.ScreenLinks && w.Offer == null && World.Now > w.NextOfferAt && Stamina > 0.3f && PickLink(w) is { ledge: { } lledge } pl)
-            opts.Add((P.Curiosity * (0.3f + P.Sociability * 0.5f) * (0.4f + Boredom) * 0.7f * MathF.Max(0.2f, 0.6f + UserFondness), () => GoLookAt(w, pl.link, lledge)));
+            opts.Add(P.Curiosity * (0.3f + P.Sociability * 0.5f) * (0.4f + Boredom) * 0.7f * MathF.Max(0.2f, 0.6f + UserFondness), () => GoLookAt(w, pl.link, lledge), "Show you a link");
     }
 
     /// <summary>Debug: do one of the screen things now (word, link, watch, groove). Returns what happened.</summary>

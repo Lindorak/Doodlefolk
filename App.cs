@@ -196,6 +196,7 @@ sealed partial class App : ApplicationContext
         foreach (var it in _w.Items) it.ApplyCarry(_w.Env);
         _w.Env.AddItemSurfaces(_w.Items);
         ScreenFrame();
+        _w.Nav.Refresh();
         WishFrame();
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
@@ -587,6 +588,8 @@ sealed partial class App : ApplicationContext
         f.StyleChoice = old.StyleChoice;
         f.Tastes = old.Tastes;
         f.Hunter = old.Hunter;
+        f.Gender = old.Gender;
+        f.Attraction = old.Attraction;
         f.Look = old.Look;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
@@ -649,6 +652,8 @@ sealed partial class App : ApplicationContext
     {
         if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
         f.Hunter = s.Hunter;
+        if (s.Gender is Gender g) f.Gender = g;
+        if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
         if (s.Trust is float trust) f.Brain.CursorTrust = Math.Clamp(trust, 0, 1);
@@ -686,6 +691,10 @@ sealed partial class App : ApplicationContext
             Look = f.Look.Clone(),
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
+            Gender = f.Gender,
+            Attraction = f.Attraction,
+            Love = _w.Figures.Where(o => o != f && f.Brain.LoveFor(o) > 0.01f).ToDictionary(o => o.Name, o => MathF.Round(f.Brain.LoveFor(o), 3)),
+            Sweetheart = f.Brain.Sweetheart(_w)?.Name,
         }).ToList();
         _settings.Items = SaveItems();
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();
@@ -704,8 +713,13 @@ sealed partial class App : ApplicationContext
                 made.Add((f, s));
             }
         foreach (var (f, s) in made)
+        {
             foreach (var (name, a) in s.Affinity)
                 if (made.FirstOrDefault(m => m.f.Name == name).f is { } o) f.Brain.Affinity[o.Id] = a;
+            foreach (var (name, l) in s.Love)
+                if (made.FirstOrDefault(m => m.f.Name == name).f is { } o) f.Brain.Love[o.Id] = l;
+            if (s.Sweetheart != null && made.FirstOrDefault(m => m.f.Name == s.Sweetheart).f is { } sh) f.Brain.SweetheartId = sh.Id;
+        }
         RestoreItems(_settings.Items);
         foreach (var s in _settings.Props)
         {
@@ -934,6 +948,11 @@ sealed partial class App : ApplicationContext
                 case "wish":
                     // wish <Name>: make that figure want something now (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } wf) World.Log($"wish {wf.Name}: {wf.Brain.ForceWish(_w)}");
+                    break;
+                case "love":
+                    // love <A> <B> [0..1]: A falls for B (debug)
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } la && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } lb)
+                        World.Log("love: " + la.Brain.ForceLove(lb, p.Length > 3 ? float.Parse(p[3], inv) : 0.8f));
                     break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)

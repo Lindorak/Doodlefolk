@@ -133,13 +133,22 @@ sealed partial class Brain
         foreach (var p in m.Players) if (p != f && m.Team.GetValueOrDefault(p) == m.Team.GetValueOrDefault(f)) p.Brain.AddAffinity(f, 0.02f);
     }
 
+    float _celebrateCd;
+
     public void OnMatchMoment(Match m, bool ourPoint, World w)
     {
         if (ourPoint)
         {
             Cheered(0.1f);
-            if (m.Scorer == f || rng.NextDouble() < 0.5) f.Emote(rng.NextDouble() < 0.5 ? "!!" : "♪", 1);
-            if (f.Grounded && rng.NextDouble() < P.Playfulness * 0.5f) f.RequestJump(new Vector2(0, -400 * S), 0.05f);
+            if (m.Scorer == f && _t0 > _celebrateCd && f.Grounded)
+            {
+                // A proper celebration for whoever scored (not every point: rallies would be non-stop hopping).
+                _celebrateCd = _t0 + 8;
+                f.Emote(rng.NextDouble() < 0.5 ? "yes!" : "!!", 1.2f);
+                if (P.Playfulness > 0.6f && Stamina > 0.4f) f.RequestFlip(50 * S);
+                else f.SetAction(Act.Cheer);
+            }
+            else if (rng.NextDouble() < 0.4) f.Emote(rng.NextDouble() < 0.5 ? "!" : "♪", 0.9f);
         }
         else if (rng.NextDouble() < 0.5)
         {
@@ -168,6 +177,13 @@ sealed partial class Brain
         var m = Match;
         if (m == null || m.Over || !w.Matches.Contains(m)) { Match = null; Go(G.Idle, 1); return; }
         if (Stamina < 0.12f) { f.Emote("…", 1); LeaveMatch(); Go(G.SitFloor, 6); return; }
+        // Had enough: the game's not their thing, they're worn out, or something (someone) else is calling.
+        if (_t > 45 && (int)(_t * 2) != (int)((_t - World.Dt) * 2))
+        {
+            float stay = 0.6f + f.Tastes.Of(Thing.PlayingBall) * 0.5f + P.Energy * 0.3f - (1 - Stamina) * 0.6f - Boredom * 0.3f
+                         - (World.Current.Romance && Crush(w) is { } cr && cr.Brain.Match != m ? 0.25f : 0);
+            if (rng.NextDouble() < (0.5f - stay) * 0.04f) { f.Emote(P.Sociability > 0.5f ? "good game!" : "I'm done", 1.2f); LeaveMatch(); Go(G.Idle, 1.5f); return; }
+        }
         Stamina = MathF.Max(0, Stamina - World.Dt * 0.003f);
         _actCd -= World.Dt;
         var b = m.Ball;

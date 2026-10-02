@@ -88,7 +88,7 @@ sealed class Match
         T += dt;
         ShoutT -= dt;
         Players.RemoveAll(p => !w.Figures.Contains(p) || p.Dead || p.Brain.Match != this);
-        if (Over || Players.Count < MinPlayers(Kind) || !w.Props.Contains(Ball) || Gear.Any(g => !w.Items.Contains(g)) || T > 240) { End(w); return false; }
+        if (Over || Players.Count < MinPlayers(Kind) || !w.Props.Contains(Ball) || Gear.Any(g => !w.Items.Contains(g)) || T > 150) { End(w); return false; }
         if (Pause > 0)
         {
             Pause -= dt;

@@ -24,7 +24,7 @@ readonly struct Anchor
 /// climbing when the target is somewhere else.</summary>
 sealed partial class Brain
 {
-    enum Nav { Direct, ToTakeoff, InAir, ToWall, ToThrow, Climbing }
+    enum Nav { Direct, ToTakeoff, InAir, ToWall, ToThrow, Climbing, Off }
     enum WalkPurpose { Wander, Explore, Social, Ball, Other, Look, Watch }
 
     Func<Vector2?> _navTarget = () => null;
@@ -49,6 +49,103 @@ sealed partial class Brain
         _nav = Nav.Direct;
         _hops = 0;
         _stuckT = 0;
+        _route = null;
+        _pending = null;
+        _navAbout = null;
+    }
+
+    // ---- routes (see NavGraph) ----
+    List<NavEdge>? _route;
+    int _routeStep, _routeVersion;
+    NavKey _routeGoal;
+    NavEdge? _pending;
+    float _replanAt;
+    /// <summary>Moves that went wrong recently (by from/to/kind): avoided for a while instead of tried again and again.</summary>
+    readonly Dictionary<(NavKey, NavKey, MoveKind), float> _badMoves = new();
+
+    Mover MyMover => new(S, f.Gravity, f.ClimbStandOffset, f.Height);
+
+    /// <summary>A figure's own take on a move: climbers like climbing, the timid dislike big drops, the tired avoid big
+    /// jumps, and anything that just went wrong is avoided for a while.</summary>
+    float MoveCost(NavEdge e)
+    {
+        float c = e.Kind switch
+        {
+            MoveKind.Climb => (1 - f.Tastes.Of(Thing.Climbing)) * 1.2f + (1 - Stamina) * 1.5f,
+            MoveKind.Jump => (1 - Stamina) * 0.6f + (1 - P.Energy) * 0.3f,
+            MoveKind.Drop => (1.2f - P.Bravery) * MathF.Max(0, (e.ToY - f.Base.Y) / (500 * S)),
+            _ => 0,
+        };
+        if (_badMoves.TryGetValue((e.From, e.To, e.Kind), out var until) && _t0 < until) c += 30;
+        return c;
+    }
+
+    bool Replan(World w, Platform seg, Platform tp, float tx)
+    {
+        _replanAt = _t0 + 0.35f;
+        _route = w.Nav.FindPath(seg, f.Base.X, tp, tx, MyMover, MoveCost);
+        _routeStep = 0;
+        _routeVersion = w.Nav.Version;
+        _routeGoal = NavGraph.Key(tp);
+        if (World.TraceJumps) World.Log($"route {f.Name}: ({f.Base.X:0},{f.Base.Y:0}) -> ({tx:0},{tp.Y:0}): {(_route == null ? "none" : string.Join(" | ", _route))}");
+        return _route != null && _route.Count > 0;
+    }
+
+    /// <summary>Start the move for one step of the route (we're standing at its take-off point).</summary>
+    void TakeStep(NavEdge e, Platform seg, World w)
+    {
+        var env = w.Env;
+        _pending = e;
+        switch (e.Kind)
+        {
+            case MoveKind.Walk:
+            case MoveKind.Drop:
+                f.AllowWalkOff = true;
+                _takeoffX = e.ToX;
+                _nav = Nav.Off;
+                _navT = 0;
+                break;
+            case MoveKind.Jump:
+            {
+                float toY = w.Nav.Get(e.To)?.Y ?? e.ToY;
+                if (!NavGraph.Lob(f.Base, new Vector2(e.ToX, toY), f.Gravity, S, out var v)) { Failed(e); return; }
+                _jRise = f.Base.Y - toY;
+                if (World.TraceJumps) World.Log($"hop {f.Name}: {e} from ({f.Base.X:0},{f.Base.Y:0})");
+                f.RequestJump(v, styled: true);
+                _nav = Nav.InAir;
+                _navT = 0;
+                break;
+            }
+            case MoveKind.Climb:
+            {
+                var wall = env.Walls.FirstOrDefault(x => x.Hwnd == e.WallHwnd && x.Side == e.WallSide && x.ReachesTop);
+                if (wall == null) { Failed(e); return; }
+                _takeoffX = e.FromX;
+                _wallHwnd = wall.Hwnd;
+                _wallSide = wall.Side;
+                _nav = Nav.ToWall;
+                // Tall wall: grapple-carriers may throw a hook up instead, from a few steps back.
+                float rise = seg.Y - wall.Y1;
+                if (_forceGrapple || (rise > f.Height * 1.6f && _t0 >= _noGrappleUntil && rng.NextDouble() < f.Style.GrappleChance * Taste(Thing.Climbing) * 0.8f))
+                {
+                    float back = Math.Clamp(rise * 0.3f, 40 * S, 110 * S);
+                    float tx = M.ClampIn(wall.X + wall.Side * back, seg.X1 + 6 * S, seg.X2 - 6 * S);
+                    if (MathF.Abs(tx - wall.X) > 30 * S && f.Style.Rope != RopeStyle.Never) { _takeoffX = tx; _nav = Nav.ToThrow; }
+                }
+                _forceGrapple = false;
+                break;
+            }
+        }
+    }
+
+    void Failed(NavEdge e)
+    {
+        _badMoves[(e.From, e.To, e.Kind)] = _t0 + rng.Range(25, 45);
+        if (_badMoves.Count > 200) _badMoves.Clear();
+        if (World.TraceJumps) World.Log($"route {f.Name}: {e} failed");
+        _route = null;
+        _pending = null;
+        _hops++;
     }
 
     void WalkTo(float x, bool run, Action onArrive) =>
@@ -67,13 +164,27 @@ sealed partial class Brain
         if (_nav == Nav.InAir)
         {
             f.DesiredVX = 0;
-            if (f.Grounded && !f.JumpPending && _navT > 0.25f) { _nav = Nav.Direct; _hops++; }
+            if (f.Grounded && !f.JumpPending && _navT > 0.25f) _nav = Nav.Direct;
+            return;
+        }
+        if (_nav == Nav.Off)
+        {
+            // Walking on to the next surface or stepping off the end.
+            if (f.Grounded)
+            {
+                var cur = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+                if (cur != null && _pending != null && NavGraph.Key(cur) == _pending.To) { f.AllowWalkOff = false; _nav = Nav.Direct; return; }
+                if (_navT > 2.5f) { f.AllowWalkOff = false; _nav = Nav.Direct; return; }
+                float dir = MathF.Sign(_takeoffX - f.Base.X);
+                f.DesiredVX = (dir == 0 ? f.Facing : dir) * f.WalkSpeed;
+            }
+            else { f.DesiredVX = 0; f.AllowWalkOff = false; _nav = Nav.InAir; _navT = 0.26f; }
             return;
         }
         if (_nav == Nav.Climbing)
         {
             f.DesiredVX = 0;
-            if (!f.Climbing && !f.GrappleBusy && f.Grounded) { _nav = Nav.Direct; _hops++; }
+            if (!f.Climbing && !f.GrappleBusy && f.Grounded) _nav = Nav.Direct;
             return;
         }
         if (!f.Grounded) { f.DesiredVX = 0; return; }
@@ -84,18 +195,39 @@ sealed partial class Brain
         {
             case Nav.Direct:
             {
-                var tp = env.SupportAt(t.X, t.Y, IntPtr.Zero) ?? env.Below(t.X, t.Y - 4 * S);
-                if (tp != null && !SameSegment(tp, seg))
+                f.AllowWalkOff = false;
+                // Just finished a move: did it get us where it should?
+                if (_pending is { } done)
                 {
-                    if (_hops >= 16 || !(PlanHop(env, seg, tp, M.ClampIn(t.X, tp.X1 + 10 * S, tp.X2 - 10 * S), true) || PlanVia(env, seg, tp, t.X)))
+                    _pending = null;
+                    var reached = w.Nav.Get(done.To);
+                    if (NavGraph.Key(seg) == done.To || (reached != null && SameSegment(reached, seg))) _routeStep++;
+                    else Failed(done);
+                }
+                var tp = env.SupportAt(t.X, t.Y, IntPtr.Zero) ?? env.Below(t.X, t.Y - 4 * S);
+                if (tp == null || SameSegment(tp, seg))
+                {
+                    _route = null;
+                    if (MoveToward(t.X, _within)) _onArrive();
+                    break;
+                }
+                bool stale = _route == null || _routeStep >= _route.Count || NavGraph.Key(tp) != _routeGoal
+                             || NavGraph.Key(seg) != _route[_routeStep].From || w.Nav.Get(_route[_routeStep].To) == null;
+                if (stale)
+                {
+                    if (_t0 < _replanAt) { f.DesiredVX = 0; break; }
+                    if (_hops >= 8 || !Replan(w, seg, tp, t.X))
                     {
-                        if (_t0 < TraceUntil) World.Log($"trace {f.Name}: no route from y={seg.Y:0} [{seg.X1:0}..{seg.X2:0}] to y={tp.Y:0} [{tp.X1:0}..{tp.X2:0}] target {t} hops {_hops}");
+                        if (_t0 < TraceUntil || World.TraceJumps) World.Log($"trace {f.Name}: no route from y={seg.Y:0} [{seg.X1:0}..{seg.X2:0}] to y={tp.Y:0} [{tp.X1:0}..{tp.X2:0}] target {t} hops {_hops}");
+                        NoRoute();
                         f.Emote("?", 1);
                         Go(G.Idle, 1);
+                        break;
                     }
-                    return;
                 }
-                if (MoveToward(t.X, _within)) _onArrive();
+                var step = _route![_routeStep];
+                // Walk to the take-off point, then go.
+                if (MoveToward(step.FromX, 3 * S)) TakeStep(step, seg, w);
                 break;
             }
             case Nav.ToTakeoff:
@@ -113,6 +245,7 @@ sealed partial class Brain
                         if (MathF.Abs(v.X) < need) v.X = dir * MathF.Min(need, 700 * S);
                     }
                     _jRise = f.Base.Y - land.Y;
+                    if (World.TraceJumps) World.Log($"hop {f.Name}: from ({f.Base.X:0},{f.Base.Y:0}) [{seg.X1:0}..{seg.X2:0}] to ({land.X:0},{land.Y:0}) hops {_hops} target {_navTarget()}");
                     f.RequestJump(v, styled: true);
                     _nav = Nav.InAir;
                     _navT = 0;
@@ -255,7 +388,7 @@ sealed partial class Brain
     float ClimbPace(bool urgent) =>
         (0.8f + 0.6f * P.Energy + (urgent ? 0.35f : 0) + rng.Range(-0.12f, 0.12f)) * (0.65f + 0.35f * Stamina);
 
-    bool SolveJump(Vector2 from, Vector2 to, out Vector2 v) => SolveLob(from, to, f.Gravity, 26 * S, 330 * S, 700 * S, out v);
+    bool SolveJump(Vector2 from, Vector2 to, out Vector2 v) => NavGraph.Lob(from, to, f.Gravity, S, out v);
 
     /// <summary>Ballistic launch velocity from <paramref name="from"/> to <paramref name="to"/> with an apex
     /// a little above the higher of the two points.</summary>

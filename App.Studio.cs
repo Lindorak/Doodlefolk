@@ -159,7 +159,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume,
-            wishes = _settings.Wishes, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
+            wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
     };
@@ -182,6 +182,13 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
+            thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
+            decision = b.LastDecision, decidedAgo = R(b.DecidedAgo), route = b.RoutePlan,
+            gender = f.Gender.ToString(),
+            attraction = Enum.GetValues<Attraction>().Where(a => a is Attraction.Girls or Attraction.Boys or Attraction.Nonbinary && f.Attraction.HasFlag(a)).Select(a => a.ToString()),
+            attractionText = Romance.Describe(f.Attraction),
+            sweetheart = b.Sweetheart(_w)?.Name,
+            crush = b.Sweetheart(_w) == null ? b.Crush(_w)?.Name : null,
             look = f.Look,
             trust = R(b.CursorTrust),
             memories = b.Memories.AsEnumerable().Reverse().Select(m => new { what = m.What, delta = R(m.Delta), ago = MathF.Round(b.Age - m.At) }),
@@ -219,6 +226,7 @@ sealed partial class App
                 theirs = R(o.Brain.AffinityWith(f)),
                 relation = _w.Fight.Between(f, o).ToString(),
                 similarity = R(f.Tastes.Similarity(o.Tastes)),
+                love = R(b.LoveFor(o)), theirLove = R(o.Brain.LoveFor(f)), attracted = b.AttractedTo(o), dating = b.Dating(o),
                 shared = f.Tastes.SharedLikes(o.Tastes).Select(Tastes.Name),
             }),
         };
@@ -393,7 +401,18 @@ sealed partial class App
                 }
                 break;
             }
-            case "rollLook": f.Look = Look.Generate(f.Traits, _w.Rng.Next()); break;
+            case "rollLook": f.Look = Look.Generate(f.Traits, _w.Rng.Next(), f.Gender); break;
+            case "gender": if (Enum.TryParse<Gender>(Str(m, "v"), out var gnd)) f.Gender = gnd; break;
+            case "attraction":
+                f.Attraction = Attraction.None;
+                foreach (var a in m.GetProperty("v").EnumerateArray()) if (Enum.TryParse<Attraction>(a.GetString(), out var at)) f.Attraction |= at;
+                break;
+            case "love":
+                if (_w.Figures.FirstOrDefault(x => x.Id == m.GetProperty("other").GetInt32()) is { } lo) f.Brain.Love[lo.Id] = Math.Clamp(Num(m, "v"), 0, 1);
+                break;
+            case "breakup":
+                if (f.Brain.Sweetheart(_w) is { } exs) { f.Brain.Love[exs.Id] = 0.1f; }
+                break;
             case "plainLook": f.Look = new Look(); break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
             case "call": PostAll(new { t = "toast", text = f.Brain.CalledByUser(_w) }); break;
@@ -489,6 +508,7 @@ sealed partial class App
             case "hidden": _paused = v.GetBoolean(); break;
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
+            case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "wishes": _settings.Wishes = v.GetBoolean(); if (!_settings.Wishes) _w.Wish = null; break;
             case "screenTerrain": _settings.ScreenTerrain = v.GetBoolean(); ApplyScreenSettings(); break;
             case "screenReact": _settings.ScreenReact = v.GetBoolean(); ApplyScreenSettings(); break;

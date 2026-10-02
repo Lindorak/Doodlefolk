@@ -47,6 +47,21 @@ sealed partial class Figure
         it.Flip = Facing < 0;
     }
 
+    /// <summary>Hands reaching for a sweetheart's hand (targets set by the brain for this frame only).</summary>
+    void HoldHands(ref Vector2 hN, ref Vector2 hF, ref float handW)
+    {
+        Vector2 Local(Vector2 world)
+        {
+            Vector2 d = world - Jt[J.Neck];
+            d = new Vector2(d.X * Facing, d.Y);
+            float len = d.Length(), max = Arm * 0.97f;
+            return len > max ? d / len * max : d;
+        }
+        if (HoldN is Vector2 n && Weapon == null && Carrying == null) { hN = Local(n); handW = 40; }
+        if (HoldF is Vector2 fa) { hF = Local(fa); handW = 40; }
+        HoldN = HoldF = null;
+    }
+
     /// <summary>Where the held thing's tip is (a pencil's point, a sword's end).</summary>
     public Vector2 ToolTip => WeaponTip();
 

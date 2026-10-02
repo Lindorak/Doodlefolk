@@ -22,13 +22,14 @@ sealed partial class Brain
         foreach (var o in w.Figures)
         {
             if (o == f || o.Mode != Mode.Control || o.Brain.Asleep || o.Climbing || o.Brain.InFight) continue;
-            if (RelationTo(o) is Relation.Ignore or Relation.Enemies) continue;
+            if (RelationTo(o) is Relation.Ignore or Relation.Enemies || Awkward(o) || Unreachable(o)) continue;
             float d = Vector2.Distance(o.Base, f.Base);
             if (d > 1600 * S) continue;
             float a = AffinityWith(o);
             if (a < -0.3f) continue;
             // Kindred spirits (shared likes) are the ones it seeks out.
-            cands.Add((o, (a + 0.6f + MathF.Max(0, f.Tastes.Similarity(o.Tastes)) * 0.5f) / (1 + d / (600 * S))));
+            float heart = w.Romance ? LoveFor(o) * 2 + (Dating(o) ? 2 : 0) : 0;   // the one they like, they seek out
+            cands.Add((o, (a + 0.6f + MathF.Max(0, f.Tastes.Similarity(o.Tastes)) * 0.5f + heart) / (1 + d / (600 * S))));
         }
         if (cands.Count == 0) return null;
         float roll = rng.Range(0, cands.Sum(c => c.score));
@@ -45,6 +46,7 @@ sealed partial class Brain
         if (side == 0) side = 1;
         Navigate(() => o.Mode is Mode.Control or Mode.GetUp && w.Figures.Contains(o) ? o.Base + new Vector2(side * 28 * S, 0) : null,
                  6 * S, false, () => Meet(o, w), WalkPurpose.Social);
+        _navAbout = o;
     }
 
     void Meet(Figure o, World w)
@@ -194,6 +196,8 @@ sealed partial class Brain
         var shared = f.Tastes.SharedLikes(o.Tastes).ToList();
         if (shared.Count > 0 && rng.NextDouble() < 0.4) return Symbol(shared[rng.Next(shared.Count)]);
         float a = AffinityWith(o);
+        float love = World.Current.Romance ? LoveFor(o) : 0;
+        if (love > 0.45f && rng.NextDouble() < 0.35) return Dating(o) ? "♥" : rng.NextDouble() < 0.5 ? "…♥" : "uh…";
         if (a > 0.5f && rng.NextDouble() < 0.25) return "♥";
         if (Annoyance > 0.5f && rng.NextDouble() < 0.4) return "#@!";
         return ChatBits[rng.Next(ChatBits.Length - 1)];
@@ -276,9 +280,16 @@ sealed partial class Brain
             }, WalkPurpose.Social);
             return;
         }
-        float target = o.Base.X - o.Facing * 36 * S;
+        // Sweethearts walk close enough to hold hands.
+        bool hands = w.Romance && Dating(o);
+        float target = o.Base.X - o.Facing * (hands ? 19 : 36) * S;
         _run = MathF.Abs(target - f.Base.X) > 200 * S;
-        if (MoveToward(target, 6 * S)) FaceTo(o.Base.X);
+        if (MoveToward(target, (hands ? 3 : 6) * S)) FaceTo(o.Base.X);
+        if (hands && MathF.Abs(o.Base.X - f.Base.X) < 34 * S && MathF.Abs(o.Base.Y - f.Base.Y) < 6 * S && f.Facing == o.Facing)
+        {
+            f.HoldN = o.Jt[J.HandF];
+            o.HoldF = f.Jt[J.HandN];
+        }
     }
 
     void BeginSitWith(Figure o)

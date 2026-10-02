@@ -44,6 +44,7 @@ sealed partial class Brain
         AddAffinity(actor, sign * aT * k * mag);
         // Teaming up on someone we both dislike bonds us.
         if (act == SocialAct.Hurt && aT < -0.3f) AddAffinity(actor, 0.03f * mag);
+        if (RomanceSaw(actor, target, act, w)) return;
 
         if (_witnessCd > 0 || _g is not (G.Idle or G.Watch or G.Walk or G.SitFloor or G.SitEdge or G.Chat)) return;
         float aA = AffinityWith(actor);

@@ -89,11 +89,11 @@ sealed partial class Brain
         return new(pick.Name, pick, null, 0.5f, "");
     }
 
-    void WishOptions(World w, List<(float weight, Action act)> opts)
+    void WishOptions(World w, OptionList opts)
     {
         // A present (from you, or drawn): go and enjoy it.
         if (_gift is { } g && w.Items.Contains(g) && g.OnGround && g.Free && GiftVerb(g) is Verb gv)
-            opts.Add((4, () => { _gift = null; UseItem(g, gv, w); }));
+            opts.Add(4, () => { _gift = null; UseItem(g, gv, w); }, $"Enjoy the {g.Def.Name.ToLowerInvariant()}");
         else if (_gift != null && !w.Items.Contains(_gift)) _gift = null;
         if (_giftBall != null) { if (!w.Props.Contains(_giftBall) || _giftBall.OnGround) _giftBall = null; }
 
@@ -111,7 +111,7 @@ sealed partial class Brain
             if (_t0 > _nextCreate && w.Items.Count < 40 && Stamina > 0.2f)
             {
                 var want = Wanting(w) ?? Whim(w);
-                opts.Add(((0.6f + P.Playfulness + P.Curiosity * 0.5f) * (0.5f + want.Strength + Boredom), () => BeginCreate(want)));
+                opts.Add((0.6f + P.Playfulness + P.Curiosity * 0.5f) * (0.5f + want.Strength + Boredom), () => BeginCreate(want), $"Draw {(want.Item?.Article ?? "a")} {want.Name.ToLowerInvariant()}");
             }
             return;
         }

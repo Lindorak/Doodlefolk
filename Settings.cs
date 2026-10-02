@@ -15,6 +15,11 @@ sealed class SavedFigure
     public float? Trust { get; set; }
     public bool Hunter { get; set; }
     public Look? Look { get; set; }
+    public Gender? Gender { get; set; }
+    public Attraction? Attraction { get; set; }
+    /// <summary>Romantic feelings toward other saved figures, by name, and who they're dating.</summary>
+    public Dictionary<string, float> Love { get; set; } = new();
+    public string? Sweetheart { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -58,6 +63,8 @@ sealed class Settings
     public bool ScreenMedia { get; set; } = true;
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
+    /// <summary>Crushes, dating, jealousy and breakups.</summary>
+    public bool Romance { get; set; } = true;
     public FightSettings Fight { get; set; } = new();
     public List<SavedFigure> Figures { get; set; } = new();
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>

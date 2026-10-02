@@ -10,6 +10,9 @@ sealed partial class World
     public static World Current { get; private set; } = null!;
 
     public readonly Env Env = new();
+    NavGraph? _nav;
+    /// <summary>The map of surfaces and moves the figures plan routes on.</summary>
+    public NavGraph Nav => _nav ??= new NavGraph(Env);
     public readonly List<Figure> Figures = new();
     public readonly List<Prop> Props = new();
     public readonly List<Item> Items = new();

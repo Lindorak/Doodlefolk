@@ -38,6 +38,14 @@ sealed partial class Figure
         r.Line(Jt[J.Pelvis], Jt[J.KneeF], far, w); r.Line(Jt[J.KneeF], Jt[J.FootF], far, w);
         r.Line(Jt[J.Neck], Jt[J.Pelvis], near, w);
         r.Disc(Jt[J.Head], HeadR, near);
+        if (Blush > 0.04f && !(Action == Act.SitBack && FrontView))
+        {
+            // Rosy cheeks on the side of the face it's looking toward.
+            var pink = new Color4(1, 0.42f, 0.55f, MathF.Min(0.85f, Blush * 1.1f) * fade);
+            Vector2 cheek = Jt[J.Head] + new Vector2(Facing * HeadR * 0.42f, HeadR * 0.3f);
+            r.Oval(cheek, HeadR * 0.3f, HeadR * 0.2f, pink);
+            r.Oval(cheek - new Vector2(Facing * HeadR * 0.62f, 0), HeadR * 0.22f, HeadR * 0.16f, pink.A(0.6f));
+        }
         r.Line(Jt[J.Pelvis], Jt[J.KneeN], near, w); r.Line(Jt[J.KneeN], Jt[J.FootN], near, w);
         r.Line(Jt[J.Neck], Jt[J.ElbowN], near, w); r.Line(Jt[J.ElbowN], Jt[J.HandN], near, w);
         DrawLookBody(r, fade);

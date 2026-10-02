@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess,
     }
 
     readonly Figure f;
@@ -55,6 +55,7 @@ sealed partial class Brain
         if (_t0 < TraceUntil) World.Log($"trace {f.Name}: {_g} -> {g} ({dur:0.0}s) by {by}");
         _snub = false;
         f.AimAt = null;
+        if (g != G.Walk) f.AllowWalkOff = false;
         f.FloorSit = false;
         if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
         if (g != G.Walk) _itemPending = false;
@@ -86,6 +87,8 @@ sealed partial class Brain
         Stamina = o.Stamina; Boredom = o.Boredom; Loneliness = o.Loneliness; Annoyance = o.Annoyance; CursorTrust = o.CursorTrust;
         _fondness = o._fondness;
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
+        foreach (var (k, v) in o.Love) Love[k] = v;
+        SweetheartId = o.SweetheartId;
     }
 
     float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o);
@@ -125,7 +128,7 @@ sealed partial class Brain
     {
         Stamina = MathF.Max(0, Stamina - 0.06f);
         Cheered(0.1f);
-        if (_g == G.Walk && _nav == Nav.Climbing) { _nav = Nav.Direct; _hops++; return; }
+        if (_g == G.Walk && _nav == Nav.Climbing) { _nav = Nav.Direct; return; }
         if (rng.NextDouble() < P.Playfulness * 0.6f) Go(G.Cheer, 0.9f);
         else Go(G.Idle, rng.Range(0.8f, 2f));
     }
@@ -170,6 +173,7 @@ sealed partial class Brain
         {
             from.Brain.NoticeIHit(f);
             AddAffinity(from, knockedDown ? -0.25f : -0.08f);
+            LoveHurt(from, knockedDown);
         }
         if (knockedDown) return;
         f.Emote(P.Aggression > 0.55f ? "#@!" : "!", 1.1f);
@@ -196,6 +200,7 @@ sealed partial class Brain
         _usedToCursor = MathF.Max(0, _usedToCursor - dt * 0.003f);
         _watchCd -= dt; _swatCd -= dt; _witnessCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
+        UpdateLove(dt, w);
 
         Vector2 cur = w.Cursor;
         float dist = Vector2.Distance(cur, f.Jt[J.Head]);
@@ -319,6 +324,7 @@ sealed partial class Brain
             case G.DanceWith: DoDanceWith(w); break;
             case G.Groove: DoGroove(w); break;
             case G.Create: DoCreate(w); break;
+            case G.Confess: DoConfess(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -606,39 +612,30 @@ sealed partial class Brain
         float E = P.Energy, tired = 1 - Stamina;
         // Likes and dislikes tilt every choice: loved things are up to ~2.5x as likely, hated ones rare.
         float L(Thing t) => Taste(t);
-        var opts = new List<(float weight, Action act)>
-        {
-            (0.5f + (1 - E) * 0.5f, () => Go(G.Idle, rng.Range(1.5f, 4.5f))),
-            ((tired * 0.8f + (1 - E) * 0.3f) * L(Thing.Sitting), () => Go(G.SitFloor, rng.Range(4, 12))),
-        };
+        var opts = new OptionList();
+        opts.Add(0.5f + (1 - E) * 0.5f, () => Go(G.Idle, rng.Range(1.5f, 4.5f)), "Hang out");
+        opts.Add((tired * 0.8f + (1 - E) * 0.3f) * L(Thing.Sitting), () => Go(G.SitFloor, rng.Range(4, 12)), "Sit down");
         if (Stamina < 0.3f || (Stamina < 0.55f && f.Tastes.Likes(Thing.Napping)))
-            opts.Add(((0.55f - Stamina) * 8 * L(Thing.Napping), () => Go(G.Sleep, rng.Range(15, 40))));
-        if (seg.X2 - seg.X1 > 60 * S) opts.Add(((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg)));
+            opts.Add((0.55f - Stamina) * 8 * L(Thing.Napping), () => Go(G.Sleep, rng.Range(15, 40)), "Nap");
+        if (seg.X2 - seg.X1 > 60 * S) opts.Add((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg), "Wander");
         if (Stamina > 0.35f && PickExplore(env, seg, out var explore))
-            opts.Add((P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore));
+            opts.Add(P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore, "Explore");
         if (!seg.Solid && PickEdge(env, seg, out float edgeX, out int dir))
-            opts.Add(((tired + (1 - E) * 0.6f + 0.1f) * L(Thing.Ledges), () => { _sitDir = dir; WalkTo(edgeX - dir * 3.5f * S, false, () => Go(G.SitEdge, rng.Range(5, 15))); }));
-        if (Stamina > 0.4f) opts.Add((P.Playfulness * E * 0.25f * L(Thing.Tricks), () => { Go(G.Trick, 3); f.RequestFlip(70 * S); }));
-        if (Stamina > 0.3f) opts.Add((P.Playfulness * 0.15f, () => Go(G.Cheer, 0.9f)));
-        if (Stamina > 0.3f && f.Tastes.Likes(Thing.Dancing)) opts.Add((0.25f * L(Thing.Dancing) * (0.5f + Joy), () => { Go(G.Idle, 3); f.StartFidget(Fidget.Groove); }));
-        if (SocialOption(w) is { } social) opts.Add(social);
-        if (FightOption(w) is { } fight) opts.Add(fight);
-        if (Stamina > 0.3f && BallOption(w) is { } ball) opts.Add(ball);
-        if (UserOption(w) is { } user) opts.Add(user);
-        if (HuntOption(w) is { } hunt) opts.Add(hunt);
-        if (ItemOption(w) is { } useItem) opts.Add(useItem);
-        if (SportOption(w) is { } sport) opts.Add(sport);
+            opts.Add((tired + (1 - E) * 0.6f + 0.1f) * L(Thing.Ledges), () => { _sitDir = dir; WalkTo(edgeX - dir * 3.5f * S, false, () => Go(G.SitEdge, rng.Range(5, 15))); }, "Sit on a ledge");
+        if (Stamina > 0.4f) opts.Add(P.Playfulness * E * 0.25f * L(Thing.Tricks), () => { Go(G.Trick, 3); f.RequestFlip(70 * S); }, "Do a trick");
+        if (Stamina > 0.3f) opts.Add(P.Playfulness * 0.15f, () => Go(G.Cheer, 0.9f), "Cheer");
+        if (Stamina > 0.3f && f.Tastes.Likes(Thing.Dancing)) opts.Add(0.25f * L(Thing.Dancing) * (0.5f + Joy), () => { Go(G.Idle, 3); f.StartFidget(Fidget.Groove); }, "Dance");
+        opts.Category = "Hang out with someone"; if (SocialOption(w) is { } social) opts.Add(social);
+        opts.Category = "Start a fight"; if (FightOption(w) is { } fight) opts.Add(fight);
+        opts.Category = "Play ball"; if (Stamina > 0.3f && BallOption(w) is { } ball) opts.Add(ball);
+        opts.Category = "Go see you"; if (UserOption(w) is { } user) opts.Add(user);
+        opts.Category = "Hunt your cursor"; if (HuntOption(w) is { } hunt) opts.Add(hunt);
+        opts.Category = _optItemLabel; if (ItemOption(w) is { } useItem) { opts.Category = _optItemLabel; opts.Add(useItem); }
+        opts.Category = "Play a game"; if (SportOption(w) is { } sport) opts.Add(sport);
         ScreenOptions(w, opts);
         WishOptions(w, opts);
-
-        float total = opts.Sum(o => o.weight);
-        float roll = rng.Range(0, total);
-        foreach (var (weight, act) in opts)
-        {
-            roll -= weight;
-            if (roll <= 0) { act(); return; }
-        }
-        opts[0].act();
+        RomanceOptions(w, opts);
+        Decide(opts);
     }
 
     void Wander(Platform seg)
@@ -667,31 +664,4 @@ sealed partial class Brain
     }
 
     /// <summary>Pick another platform to visit (by jumping or climbing) and return the plan.</summary>
-    bool PickExplore(Env env, Platform seg, out Action plan)
-    {
-        plan = () => { };
-        var cands = new List<(Platform p, float x, float score)>();
-        foreach (var p in env.Platforms)
-        {
-            if (SameSegment(p, seg) || p.X2 - p.X1 < 28 * S) continue;
-            float x = rng.Range(p.X1 + 12 * S, p.X2 - 12 * S);
-            if (!CanReach(env, seg, p, x)) continue;
-            float d = MathF.Abs(x - f.Base.X) + MathF.Abs(p.Y - seg.Y);
-            float score = 1f / (1 + d / (500 * S)) * (p.Y < seg.Y ? 1.3f * Taste(Thing.HighPlaces) : 1f) * (p.Solid ? 0.6f * Taste(Thing.Taskbar) : 1f);
-            if (!CanReachByJump(env, seg, p, x)) score *= Taste(Thing.Climbing);
-            cands.Add((p, x, score));
-        }
-        if (cands.Count == 0) return false;
-        float roll = rng.Range(0, cands.Sum(c => c.score));
-        var pick = cands[^1];
-        foreach (var c in cands) { roll -= c.score; if (roll <= 0) { pick = c; break; } }
-        var target = Anchor.On(env, pick.p, pick.x);
-        float startY = f.Base.Y;
-        plan = () => Navigate(() => target.Resolve(env), 4 * S, false, () =>
-        {
-            if (startY - f.Base.Y > 120 * S && P.Playfulness > 0.45f && rng.NextDouble() < 0.6) Go(G.Cheer, 0.9f);
-            else Go(G.Idle, rng.Range(0.5f, 2f));
-        }, WalkPurpose.Explore);
-        return true;
-    }
 }

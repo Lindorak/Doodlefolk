@@ -29,6 +29,7 @@ sealed partial class Brain
         f.Nightmare = nightmare;
         _lastDream = text;
         _lastNightmare = nightmare;
+        w.Sticker("dream");
         if (nightmare && rng.NextDouble() < 0.35) { f.Dream = null; Fear = M.Clamp01(Fear + 0.3f); f.Emote("!", 1); Go(G.Idle, 1.5f); }
     }
 

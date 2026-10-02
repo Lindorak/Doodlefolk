@@ -200,6 +200,7 @@ sealed partial class Brain
             int price = thing != null ? Price(thing) : 2;
             if (Coins < price) { f.Emote(V("can't afford it…", "NOT ENOUGH COINS!", "too pricey.", "oh… I'm short…", "my purse is light"), 1.4f); Go(G.Idle, 1); return; }
             Coins -= price; seller.Brain.Coins += price;
+            w.Sticker("shopping");
             seller.Emote(seller.Brain.V("thank you!", "THANKS!!", "pleasure.", "th-thank you!", "may it serve you well"), 1.2f);
             World.Play(Sfx.Pip, stall.Pos, 0.3f, 1.6f);
             var got = w.MakeItem?.Invoke(thing?.Key ?? new[] { "pizza", "burger", "cookie" }[rng.Next(3)]);
@@ -301,6 +302,10 @@ sealed partial class Brain
             case "showdream": f.Dream = arg.Replace('_', ' '); f.DreamUntil = _t0 + 30; f.Nightmare = arg.EndsWith('!'); break;
             case "coins": Coins = int.Parse(arg); break;
             case "laugh": f.Emote("ha", 2); break;
+            case "ride": if (w.Items.FirstOrDefault(i => i.IsVehicle && i.Rider == null && (arg == "" || i.Def.Key == arg)) is { } veh) GoRide(veh, w); else return "no free vehicle"; break;
+            case "swim": if (w.Items.FirstOrDefault(i => i.IsWater && (arg == "" || i.Def.Key == arg)) is { } pool) GoSwim(pool, w); break;
+            case "fish": if (w.Items.FirstOrDefault(i => i.Def.Verbs.Contains(Verb.Fish)) is { } pond) GoFish(pond, w); break;
+            case "bite": _biteAt = 0; break;
         }
         return $"{f.Name}: {JobName(Job)} coins={Coins} age={AgeYears:0} stage={LifeStage} goal={_g} dream={f.Dream}";
     }

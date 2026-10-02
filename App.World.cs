@@ -17,6 +17,9 @@ sealed partial class App
     {
         var fires = _w.Items.Where(i => i.Def.Key == "campfire" && i.Holder == null).ToList();
         float night = _settings.DayNight ? _w.Night : 0;
+        // Lamps, fairy lights, lanterns and lit windows (only after dark).
+        var lamps = new List<(Vector2 at, float reach, float strength)>();
+        foreach (var it in _w.Items) if (it.Light() is { } l) lamps.Add(l);
         float Warm(Vector2 at, float s)
         {
             float best = 0;
@@ -24,6 +27,11 @@ sealed partial class App
             {
                 float d = Vector2.Distance(at, fi.Pos), reach = (180 + 120 * night) * s;
                 if (d < reach) best = MathF.Max(best, MathF.Pow(1 - d / reach, 1.6f) * (0.45f + 0.55f * night) * Item.Flicker(now, fi.Id));
+            }
+            foreach (var (lat, reach, strength) in lamps)
+            {
+                float d = Vector2.Distance(at, lat);
+                if (d < reach) best = MathF.Max(best, MathF.Pow(1 - d / reach, 1.4f) * strength);
             }
             return best;
         }

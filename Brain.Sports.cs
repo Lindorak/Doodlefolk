@@ -34,7 +34,7 @@ sealed partial class Brain
 
     /// <summary>Asked to join a game.</summary>
     /// <summary>Already promised elsewhere: a game with you, or a tournament.</summary>
-    bool Engaged => (World.Current.Game is { Over: false } ug && ug.Players.Contains(f)) || (World.Current.Tourney is { Over: false } tn && tn.Entrants.Contains(f));
+    bool Engaged => HapRole.Length > 0 || (World.Current.Game is { Over: false } ug && ug.Players.Contains(f)) || (World.Current.Tourney is { Over: false } tn && tn.Entrants.Contains(f));
 
     bool InvitePlay(Figure from, Sport s)
     {

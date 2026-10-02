@@ -41,6 +41,14 @@ sealed class Weather
         if (k != was) w.OnWeather(k);
     }
 
+    /// <summary>Keep to this weather (the real weather outside) until told otherwise.</summary>
+    public void Hold(WeatherKind k, double now, Random rng, World w, float windKmh)
+    {
+        if (k != Kind || (k != WeatherKind.Clear && _target == 0)) Start(k, now, rng, w);
+        _until = now + 3600;
+        Wind = MathF.Sign(Wind == 0 ? 1 : Wind) * Math.Clamp(windKmh * 6, 20, 320) * w.Scale;
+    }
+
     void Schedule(double now, string mode, Random rng)
     {
         double gap = mode switch { "often" => rng.Range(300, 900), "rare" => rng.Range(2400, 5400), _ => rng.Range(900, 2400) };

@@ -44,6 +44,8 @@ sealed partial class World
     public static bool LassoCursor = true;
     /// <summary>Figures have jobs and earn coins (setting); how many years they age per real day (0: they don't).</summary>
     public static bool Jobs = true;
+    /// <summary>The temperature outside in °C, when the real weather is on (null otherwise).</summary>
+    public float? TempC;
     public static float LifePace;
     /// <summary>Couples can have little ones (setting), up to a cap on how many figures there are in all.</summary>
     public bool Babies = true;
@@ -146,6 +148,17 @@ sealed class Fx
                 Len = rng.Range(6, 10) * s * size,
                 Color = color ?? Gold,
             });
+        }
+    }
+
+    /// <summary>Water thrown up (a dive, a swimmer's stroke, a fish on the line).</summary>
+    public void Splash(Vector2 at, float s, Random rng, float size = 1)
+    {
+        int n = size > 1 ? 9 : 5;
+        for (int i = 0; i < n; i++)
+        {
+            float a = -MathF.PI / 2 + rng.Range(-1.1f, 1.1f);
+            _rays.Add(new Ray { Pos = at, Dir = new(MathF.Cos(a), MathF.Sin(a)), Max = 0.25f + 0.1f * size, Len = rng.Range(5, 9) * s * size, Color = new Color4(0.62f, 0.83f, 1, 0.95f) });
         }
     }
 

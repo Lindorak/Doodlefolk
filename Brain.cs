@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening,
     }
 
     readonly Figure f;
@@ -236,6 +236,7 @@ sealed partial class Brain
         UpdateLife(dt, w);
         UpdateFamily(dt, w);
         UpdateDreams(w);
+        TidyOutdoors(w);
         if (_g is G.Groove or G.DanceWith || (_g == G.UseItem && _verb == Verb.Dance)) Practice(SkillKind.Dancing, dt * 0.002f, true);
 
         Vector2 cur = w.Cursor;
@@ -371,6 +372,10 @@ sealed partial class Brain
             case G.Lasso: DoLasso(w); break;
             case G.Work: DoWork(w); break;
             case G.Build: DoBuild(w); break;
+            case G.Ride: DoRide(w); break;
+            case G.Swim: DoSwim(w); break;
+            case G.Fish: DoFish(w); break;
+            case G.Happening: DoHappening(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -726,6 +731,7 @@ sealed partial class Brain
         GardenOptions(w, opts);
         TownOptions(w, opts);
         HelpBuildOptions(w, opts);
+        OutdoorOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

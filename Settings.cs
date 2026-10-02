@@ -168,6 +168,12 @@ sealed class Settings
     public bool Jobs { get; set; } = true;
     /// <summary>How fast figures age: off, slow (a year a day), fast (a year an hour).</summary>
     public string LifePace { get; set; } = "off";
+    /// <summary>The town holds festivals, talent shows and race days now and then.</summary>
+    public bool Events { get; set; } = true;
+    /// <summary>Where to take the real weather from (when the weather is set to "real").</summary>
+    public string WeatherPlace { get; set; } = "";
+    public double? WeatherLat { get; set; }
+    public double? WeatherLon { get; set; }
     public DateTime? LastSeen { get; set; }
     public int WishesGranted { get; set; }
     public List<SavedClub> Clubs { get; set; } = new();

@@ -16,6 +16,11 @@ sealed partial class Pet
     public readonly int Id = ++_nextId;
     public PetKind Kind;
     public string Name;
+    public string RandomName()
+    {
+        var names = Kind switch { PetKind.Cat => CatNames, PetKind.Dog => DogNames, PetKind.Rabbit => RabbitNames, PetKind.Hamster => HamsterNames, _ => BirdNames };
+        return names[_rng.Next(names.Length)];
+    }
     public Color4 Color, Accent;
     public float SizeMul = 1;
     readonly float _s;
@@ -71,8 +76,7 @@ sealed partial class Pet
         Kind = kind;
         _s = scale;
         _rng = rng;
-        var names = kind switch { PetKind.Cat => CatNames, PetKind.Dog => DogNames, PetKind.Rabbit => RabbitNames, PetKind.Hamster => HamsterNames, _ => BirdNames };
-        Name = names[rng.Next(names.Length)];
+        Name = RandomName();
         // Coats and plumage.
         if (kind == PetKind.Parrot)
         {

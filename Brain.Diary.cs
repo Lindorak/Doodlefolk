@@ -25,7 +25,7 @@ sealed partial class Brain
         : Voice.Plain;
 
     /// <summary>Pick the line that fits this figure's voice (falls back to the plain one).</summary>
-    string V(string plain, string? cheery = null, string? grumpy = null, string? shy = null, string? dreamy = null) => MyVoice switch
+    public string V(string plain, string? cheery = null, string? grumpy = null, string? shy = null, string? dreamy = null) => MyVoice switch
     {
         Voice.Cheery when cheery != null => cheery,
         Voice.Grumpy when grumpy != null => grumpy,

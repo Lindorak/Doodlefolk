@@ -26,6 +26,9 @@ enum Verb
     Lasso,      // lasso: carry it, twirl it, rope a friend, a ball or your cursor
     Collect,    // a trinket: pick it up and keep it
     Tend,       // a plant: water it
+    Ride,       // bike, skateboard, go-kart: hop on and ride along
+    Swim,       // pond, pool: splash about
+    Fish,       // pond: sit at the edge with a rod
 }
 
 enum Ammo { Dart, Water, Snow }
@@ -334,6 +337,72 @@ static class ItemCatalog
                              R(-26, 64, 26, 86, 0), P(13, -30, 86, 0, 100, 30, 86), R(-6, 64, 6, 78, 4), R(14, 72, 22, 80, 7), L(26, 0, 26, 62, 3, 1.4f), L(31, 0, 31, 62, 3, 1.4f),
                              L(26, 12, 31, 12, 3, 1.2f), L(26, 24, 31, 24, 3, 1.2f), L(26, 36, 31, 36, 3, 1.2f), L(26, 48, 31, 48, 3, 1.2f) },
             Verbs = new[] { Verb.Stand, Verb.Hide }, Surface = 64, SurfX1 = -28, SurfX2 = 28, Mass = 6, Likes = new[] { Thing.HighPlaces, Thing.Climbing }, Material = Material.Wood,
+        });
+
+        // ---------------- vehicles, water and lights ----------------
+        Add(new ItemDef
+        {
+            Key = "bike", Name = "Bike", Words = new[] { "bike", "bicycle", "cycle", "push bike" }, W = 40, H = 26, Color = M.Hex(0xE53935),
+            Shapes = new[] { L(-13, 6, -3, 7, 0, 2), L(-3, 7, -6, 18, 0, 2), L(-6, 18, -13, 6, 0, 2), L(-3, 7, 10, 16, 0, 2), L(-6, 17, 10, 17, 0, 2), L(10, 17, 13, 6, 0, 2),
+                             L(10, 17, 9, 22, 6, 1.6f), L(7, 22, 12, 23, 8, 1.8f), L(-9, 19, -3, 19, 8, 2.6f) },
+            Verbs = new[] { Verb.Ride }, Mass = 2, Likes = new[] { Thing.Exploring, Thing.Tricks }, Material = Material.Metal,
+        });
+        Add(new ItemDef
+        {
+            Key = "skateboard", Name = "Skateboard", Words = new[] { "skateboard", "skate board", "longboard", "skate" }, W = 26, H = 5, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { O(-12, 2, 12, 3.8f, 1.6f, 0), L(-12, 3, -14, 4.6f, 0, 1.6f), L(12, 3, 14, 4.6f, 0, 1.6f), R(-9, 1.2f, -6, 2, 6), R(6, 1.2f, 9, 2, 6) },
+            Verbs = new[] { Verb.Ride }, Mass = 1, Likes = new[] { Thing.Tricks }, Material = Material.Wood,
+        });
+        Add(new ItemDef
+        {
+            Key = "gokart", Name = "Go-kart", Words = new[] { "go-kart", "go kart", "gokart", "kart", "race car", "car", "soapbox" }, W = 40, H = 16, Color = M.Hex(0x43A047),
+            Shapes = new[] { R(-18, 3, 18, 5.5f, 6), R(-13, 6, -10, 16, 8), L(6, 11, 9, 15, 8, 1.6f), E(9.5f, 15.5f, 2.2f, 0.9f, 8),
+                             POver(0, -16, 5, -14, 11, 4, 11, 12, 8, 18, 5), POver(1, 10, 5, 18, 5, 18, 7, 12, 8), new Shape('e', new[] { 0f, 8.5f, 2.2f, 2.2f }, 7, Over: true) },
+            Verbs = new[] { Verb.Ride }, Mass = 4, Likes = new[] { Thing.Tricks, Thing.Exploring }, Material = Material.Metal,
+        });
+        Add(new ItemDef
+        {
+            Key = "pond", Name = "Pond", Words = new[] { "pond", "lake", "duck pond", "ducks", "duck", "fishing", "fishing pond" }, W = 150, H = 10, Color = M.Hex(0x4FA3D9),
+            Shapes = new[] { E(0, 4, 76, 5.5f, 13), E(0, 4.6f, 72, 4.2f, 0), E(-40, 6.4f, 7, 1.5f, 10), E(32, 6, 6, 1.3f, 10), L(-70, 4, -73, 22, 10, 1.2f), L(-66, 4, -65, 18, 10, 1.2f), L(-68, 4, -69, 25, 10, 1.2f),
+                             E(-73, 21, 0.9f, 2.6f, 13), E(-69, 24, 0.9f, 2.6f, 13), L(68, 4, 70, 16, 10, 1.2f) },
+            Verbs = new[] { Verb.Swim, Verb.Fish }, Mass = 20, Likes = new[] { Thing.Exploring },
+        });
+        Add(new ItemDef
+        {
+            Key = "pool", Name = "Swimming pool", Words = new[] { "pool", "swimming pool", "paddling pool", "swimming", "swim" }, W = 110, H = 12, Color = M.Hex(0x29B6F6),
+            Shapes = new[] { R(-55, 0, 55, 12, 7), R(-51, 2, 51, 10.5f, 0), L(44, 10, 44, 24, 5, 1.4f), L(49, 10, 49, 24, 5, 1.4f), L(44, 14, 49, 14, 5, 1.2f), L(44, 18, 49, 18, 5, 1.2f), L(44, 22, 49, 22, 5, 1.2f) },
+            Verbs = new[] { Verb.Swim }, Mass = 20, Likes = new[] { Thing.Exploring },
+        });
+        Add(new ItemDef
+        {
+            Key = "lamp", Name = "Lamp", Words = new[] { "lamp", "floor lamp", "street lamp", "lamppost", "lamp post", "light" }, W = 18, H = 62, Color = M.Hex(0xFFE082),
+            Shapes = new[] { E(0, 1.5f, 7, 1.6f, 6), L(0, 2, 0, 50, 5, 1.6f), E(0, 47, 2.2f, 2.2f, 7), P(0, -8, 48, 8, 48, 5, 60, -5, 60) },
+            Mass = 2, Material = Material.Metal,
+        });
+        Add(new ItemDef
+        {
+            Key = "fairylights", Name = "Fairy lights", Words = new[] { "fairy lights", "string lights", "christmas lights", "lights", "bunting" }, W = 150, H = 50, Color = M.Hex(0xFFD54F),
+            Shapes = new[] { L(-72, 0, -72, 48, 3, 2), L(72, 0, 72, 48, 3, 2), C(8, 0.7f, -72, 46, -48, 37, -24, 33, 0, 32, 24, 33, 48, 37, 72, 46),
+                             E(-48, 35.5f, 1.8f, 2.2f, 0), E(-24, 31.5f, 1.8f, 2.2f, 9), E(0, 30.5f, 1.8f, 2.2f, 10), E(24, 31.5f, 1.8f, 2.2f, 16), E(48, 35.5f, 1.8f, 2.2f, 22) },
+            Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "lantern", Name = "Lantern", Words = new[] { "lantern", "paper lantern", "oil lamp", "candle" }, W = 10, H = 18, Color = M.Hex(0xFF7043),
+            Shapes = new[] { R(-4.5f, 0, 4.5f, 2, 6), O(-4, 2, 4, 13, 2, 0), R(-2.5f, 13, 2.5f, 15, 6), C(6, 1, -2, 15, 0, 18, 2, 15), L(-2, 3, -2, 12, 1, 0.6f), L(2, 3, 2, 12, 1, 0.6f) },
+            Carry = true, Mass = 0.6f,
+        });
+        Add(new ItemDef
+        {
+            Key = "fish", Name = "Fish", Words = new[] { "fish", "trout", "a fish" }, W = 12, H = 5, Color = M.Hex(0x90A4AE),
+            Shapes = new[] { P(0, 3, 2.5f, 7, 5, 7, 0), E(-1, 2.5f, 5, 2.4f, 0), E(-4, 3, 0.7f, 0.7f, 8), L(-1, 4.5f, 1, 1, 1, 0.6f) },
+            Verbs = new[] { Verb.Eat }, Carry = true, Bites = 3, Mass = 0.4f, Likes = new[] { Thing.Eating },
+        });
+        Add(new ItemDef
+        {
+            Key = "finishflag", Name = "Finish flag", Words = new[] { "finish line", "finish flag", "chequered flag", "checkered flag" }, W = 18, H = 42, Color = M.Hex(0x2A2A2A),
+            Shapes = new[] { L(-7, 0, -7, 42, 6, 1.6f), R(-7, 30, 9, 41, 7), R(-7, 36, -3, 41, 8), R(1, 36, 5, 41, 8), R(-3, 30, 1, 36, 8), R(5, 30, 9, 36, 8) },
+            Mass = 1,
         });
 
         // ---------------- pet care ----------------

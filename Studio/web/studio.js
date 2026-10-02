@@ -1038,8 +1038,9 @@ function matrix() {
 // ---------------- Things (objects + balls) ----------------
 
 const VERB_WORDS = { Sit: "sit on it", Lie: "nap on it", Hammock: "swing in it", Bounce: "bounce on it", Stand: "climb on it",
-  Eat: "eat it", Hide: "hide in it", Dance: "dance to it", Read: "read it", Warm: "warm up by it", Wield: "swing it", Shoot: "shoot it", Play: "play games with it" };
-const GROUPS = [["Seats", ["Sit"]], ["Beds", ["Lie", "Hammock"]], ["Play & music", ["Bounce", "Dance", "Read"]], ["Food", ["Eat"]], ["Hide, climb & gather", ["Hide", "Stand", "Warm"]], ["Weapons", ["Wield", "Shoot"]], ["Sports", ["Play"]]];
+  Eat: "eat it", Hide: "hide in it", Dance: "dance to it", Read: "read it", Warm: "warm up by it", Wield: "swing it", Shoot: "shoot it", Play: "play games with it",
+  Ride: "ride it", Swim: "swim in it", Fish: "fish in it", Tend: "water it", Collect: "collect it", Lasso: "twirl it", Shelter: "stay dry under it", Create: "draw with it" };
+const GROUPS = [["Out & about", ["Ride", "Swim", "Fish"]], ["Seats", ["Sit"]], ["Beds", ["Lie", "Hammock"]], ["Play & music", ["Bounce", "Dance", "Read"]], ["Food", ["Eat"]], ["Hide, climb & gather", ["Hide", "Stand", "Warm"]], ["Weapons", ["Wield", "Shoot"]], ["Sports", ["Play"]]];
 
 function lighten(hex, k = 0.35) {
   const n = parseInt(hex.slice(1), 16);
@@ -1070,6 +1071,8 @@ function itemSvg(def, hex, cls = "doodle") {
   // Live-drawn parts.
   if (def.verbs.includes("Hammock")) svg.append(s("path", { d: "M-44 -42 Q0 -2 44 -42 L44 -40 Q0 4 -44 -40 Z", fill: hex, ...ink }));
   if (def.verbs.includes("Warm")) for (const [x, h] of [[-5, 13], [0, 17], [5, 12]]) svg.append(s("polygon", { points: `${x - 4.5},-3 ${x},${-h} ${x + 4.5},-3`, fill: fixed[19] }), s("polygon", { points: `${x - 2},-3 ${x},${-h * 0.6} ${x + 2},-3`, fill: fixed[20] }));
+  const WHEELS = { bike: [[-13, 6, 6], [13, 6, 6]], skateboard: [[-7.5, 1.2, 1.4], [7.5, 1.2, 1.4]], gokart: [[-13, 4.2, 4.2], [13, 4.2, 4.2]] };
+  for (const [x, y, r] of WHEELS[def.key] || []) svg.append(s("circle", { cx: x, cy: -y, r, fill: def.key === "bike" ? "none" : "#222", stroke: "#222", "stroke-width": def.key === "bike" ? 1.6 : 1 }));
   if (def.verbs.includes("Dance")) svg.append(s("text", { x: 4, y: -20, "font-size": 9, fill: "var(--ink)" }, "♪"));
   return svg;
 }
@@ -1148,10 +1151,10 @@ PAGES.toys = {
         S.props.length ? armed("Clear all balls", "Sure?", () => send({ t: "clear", what: "balls" }), "btn small danger") : null));
 
     add(root, h("h2", null, "Everything they know how to use"));
-    const TOWN = ["shopstall", "foodcart", "stage", "schoolboard", "fort", "treehouse"];
+    const TOWN = ["shopstall", "foodcart", "stage", "schoolboard", "fort", "treehouse", "lamp", "fairylights", "lantern", "finishflag"];
     const HIDDEN = ["buildsite", "dropping", "poop", "puddle", "seedpatch"];
     const inGroup = c => GROUPS.some(g => c.verbs.some(v => g[1].includes(v)));
-    const sections = [["Town", INIT.catalog.filter(c => TOWN.includes(c.key))],
+    const sections = [["Town & lights", INIT.catalog.filter(c => TOWN.includes(c.key))],
       ...GROUPS.map(([title, verbs]) => [title, INIT.catalog.filter(c => !TOWN.includes(c.key) && c.verbs.some(v => verbs.includes(v)) && !GROUPS.slice(0, GROUPS.findIndex(g => g[0] === title)).some(g => c.verbs.some(v => g[1].includes(v))))]),
       ["Everything else", INIT.catalog.filter(c => !TOWN.includes(c.key) && !HIDDEN.includes(c.key) && !inGroup(c))]];
     for (const [title, defs] of sections) {
@@ -1234,7 +1237,7 @@ PAGES.settings = {
       check("Romance", "Crushes, blushing, confessions, couples holding hands, jealousy and breakups. Off: just friends.", () => st().romance !== false, v => setS("romance", v)),
       check("They ask for things", "A thought bubble when they want something (a snack, a ball, a bed). Click it to give it to them.", () => st().wishes !== false, v => setS("wishes", v)),
     ];
-    const weatherChips = [["off", "Never"], ["rare", "Rarely"], ["sometimes", "Sometimes"], ["often", "Often"]].map(([k, l]) => {
+    const weatherChips = [["off", "Never"], ["rare", "Rarely"], ["sometimes", "Sometimes"], ["often", "Often"], ["real", "🌦 Your real weather"]].map(([k, l]) => {
       const c = h("button", { class: "chip", onclick: () => { touched(c); setS("weather", k); } }, l);
       c.key = k;
       return c;
@@ -1246,6 +1249,18 @@ PAGES.settings = {
     const lassoC = check("Figures can lasso your cursor", "A figure with a lasso may rope your cursor, spin it round and fling it. Only when you've left the mouse alone for a few seconds; move it yourself and it breaks free.", () => st().lassoCursor !== false, v => setS("lassoCursor", v));
     const breedC = check("Pet litters", "Bonded pairs of animals can have kittens, puppies, bunnies and so on.", () => st().petBreeding !== false, v => setS("petBreeding", v));
     const petHelpC = check("Figures help with the pets", "Your figures fill empty bowls and scoop the litter box now and then.", () => st().petHelp !== false, v => setS("petHelp", v));
+    const placeIn = h("input", { type: "text", placeholder: "Your town or city", style: { width: "200px" } });
+    const placeBtn = h("button", { class: "btn small", onclick: () => { if (placeIn.value.trim()) send({ t: "weatherPlace", v: placeIn.value.trim() }); } }, "Use this place");
+    placeIn.addEventListener("keydown", e => { if (e.key === "Enter") placeBtn.click(); });
+    const wxStatus = h("p", { class: "hint" });
+    const realBox = h("div", { class: "field" }, h("label", null, "Real weather for"), placeIn, placeBtn);
+    const eventsC = check("Town events", "Now and then the town holds a festival, a talent show or a race day.", () => st().events !== false, v => setS("events", v));
+    const hapLine = h("p", { class: "hint" });
+    const hapBtns = h("div", { class: "row" },
+      h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "festival" }) }, "🎪 Hold a festival"),
+      h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "talent" }) }, "🎤 Talent show"),
+      h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "race" }) }, "🏁 Race day"),
+      h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "stop" }) }, "Stop"));
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1274,8 +1289,9 @@ PAGES.settings = {
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
       h("h2", null, "Weather & time"),
-      h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Not your real weather: nothing is looked up online."),
+      h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Or pick \"your real weather\" and type your town: the sky follows the actual weather there, and they feel the heat and the cold. Only then is anything looked up online (Open-Meteo, free and keyless): the place name once, then just its map coordinates every 20 minutes."),
       h("div", { class: "row" }, weatherChips),
+      realBox, wxStatus,
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
       dayNight, celebrations, babies,
       h("h2", null, "Pets and bodies"),
@@ -1286,6 +1302,7 @@ PAGES.settings = {
       h("h2", null, "Town"),
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
+      eventsC, hapBtns, hapLine,
       h("p", { class: "hint" }, "With ageing on, figures count their years: kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
@@ -1308,7 +1325,11 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update();
+      realBox.style.display = st().weather === "real" ? "" : "none";
+      if (idle(placeIn) && !placeIn.value) placeIn.value = st().weatherPlace || "";
+      wxStatus.textContent = st().weather === "real" ? (st().weatherStatus || (st().weatherPlace ? st().weatherPlace : "Type your town or city and press \"Use this place\".")) : "";
+      hapLine.textContent = st().happening ? `On now: ${st().happening}.` : "";
       paceChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().lifePace || "off")); });
       careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
     };

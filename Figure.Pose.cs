@@ -33,7 +33,7 @@ sealed partial class Figure
         if (Mode == Mode.Control && Grounded && Action is Act.SitFront or Act.SitBack) { FrontPose(dt); return; }
         float speed = MathF.Abs(Vel.X);
         float run = M.Clamp01((speed - 90 * S) / (120 * S));
-        bool sitting = Grounded && Action is Act.SitEdge or Act.SitFloor or Act.Lie or Act.Curl or Act.Eat or Act.Read or Act.Warm;
+        bool sitting = (Grounded && Action is Act.SitEdge or Act.SitFloor or Act.Lie or Act.Curl or Act.Eat or Act.Read or Act.Warm) || FeetFreeRideSwim;
         bool feetFree = !Grounded || sitting;
         float br = MathF.Sin(_time * 2.3f + Id);
 
@@ -56,7 +56,8 @@ sealed partial class Figure
         }
         else if (Grounded)
         {
-            if (JumpPending)
+            if (RideSwimPose(ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref fN, ref fF, ref eN, ref eF, ref kPref)) { }
+            else if (JumpPending)
             {
                 hipT = StandHip * 0.6f; leanT = 0.4f; handW = 20;
                 hN = new(-Arm * 0.55f, Arm * 0.6f); hF = new(-Arm * 0.65f, Arm * 0.55f);

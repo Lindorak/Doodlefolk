@@ -165,7 +165,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -306,6 +306,8 @@ sealed partial class App
                     break;
                 case "fig": FigureEdit(m); break;
                 case "pet": PetEdit(m); break;
+                case "weatherPlace": SetWeatherPlace(Str(m, "v")); break;
+                case "happening": World.Log("happening: " + (Str(m, "kind") == "stop" ? (_w.Happening is { } hp ? "stopped" : "none") : StartHappening(Str(m, "kind")))); if (Str(m, "kind") == "stop" && _w.Happening is { } hs) EndHappening(hs, false); break;
                 case "sky":
                     if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk)) _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
                     break;
@@ -618,6 +620,7 @@ sealed partial class App
             case "lassoCursor": _settings.LassoCursor = v.GetBoolean(); break;
             case "jobs": _settings.Jobs = v.GetBoolean(); break;
             case "lifePace": _settings.LifePace = v.GetString() ?? "off"; break;
+            case "events": _settings.Events = v.GetBoolean(); break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

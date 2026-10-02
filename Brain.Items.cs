@@ -74,7 +74,7 @@ sealed partial class Brain
                                                      + (w.Weather.Raining && !LovesRain ? 1.2f + Wet * 2 : 0) : 0,
                     Verb.Dance => it.Playing ? MathF.Max(0, f.Tastes.Of(Thing.Dancing) + 0.35f) * 1.3f * (0.5f + Joy) : 0,
                     Verb.Read => it.Holder == null ? (P.Curiosity * (1 - E) * 0.7f + 0.05f) * Taste(Thing.Reading) : 0,
-                    Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
+                    Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f + Cold(w) * 2) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
                     Verb.Wield or Verb.Shoot => WeaponWant(it, v),
                     Verb.Collect => it.Holder == null ? (Hobby == Hobby.Collecting ? 1.5f : 0.12f + P.Curiosity * 0.35f) * (0.5f + Boredom) * Taste(Thing.Exploring) : 0,

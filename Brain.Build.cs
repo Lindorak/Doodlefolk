@@ -79,6 +79,7 @@ sealed partial class Brain
             var owner = w.Figures.FirstOrDefault(o => o.Id == planter);
             var newOwner = owner != null && owner.Brain.Home(w) == null ? owner : w.Figures.Where(o => o.Brain.Home(w) == null && !o.Brain.Baby).OrderByDescending(o => owner != null ? owner.Brain.AffinityWith(o) : 0).FirstOrDefault();
             newOwner?.Brain.ClaimHome(built, w);
+            w.Sticker("built");
             w.News("town", $"A new {kind} is finished{(owner != null ? $", built by {owner.Name}" : "")}", 3);
         }
         f.Emote(V("finished!", "IT'S DONE!!!", "built. obviously.", "w-we did it!", "the work is complete"), 1.8f);

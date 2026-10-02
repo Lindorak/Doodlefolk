@@ -57,6 +57,16 @@ static class Stickers
         new("litter", "🐣", "Growing family", "A litter is born"),
         new("trick", "🎪", "Show-off", "Teach a pet a trick"),
         new("dressup", "🎀", "Dress-up", "Put clothes on a pet"),
+        new("built", "🔨", "Master builder", "A fort or treehouse gets built"),
+        new("shopping", "🪙", "Retail therapy", "A figure buys something with coins it earned"),
+        new("dream", "💭", "Sweet dreams", "Catch a figure dreaming"),
+        new("ride", "🚲", "On a roll", "A figure goes for a ride"),
+        new("swim", "🏊", "Making a splash", "A figure goes for a swim"),
+        new("fish", "🎣", "Gone fishing", "A figure catches a fish"),
+        new("festival", "🎪", "Festival!", "Hold a town festival"),
+        new("talent", "🎤", "Star of the show", "Win a talent show"),
+        new("race", "🏁", "Photo finish", "See a race day through"),
+        new("realweather", "🌦️", "Same sky", "Turn on your real weather"),
     };
 
     public static StickerDef? Find(string key) => All.FirstOrDefault(s => s.Key == key) is { Key.Length: > 0 } d ? d : null;

@@ -222,6 +222,7 @@ sealed partial class App : ApplicationContext
         _w.Babies = _settings.Babies;
         PhotoFrame(now);
         WeatherFrame(dt, now);
+        HappeningFrame(dt, now);
         SmartFps(dt);
         if (World.Debug && now > _nextAuditSample)
         {
@@ -859,10 +860,10 @@ sealed partial class App : ApplicationContext
             Hunter = f.Hunter,
             Look = f.Look.Clone(),
             Traits = f.Traits.Clone(),
-            Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
+            Affinity = _w.Figures.Where(o => o != f).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
             Gender = f.Gender,
             Attraction = f.Attraction,
-            Love = _w.Figures.Where(o => o != f && f.Brain.LoveFor(o) > 0.01f).ToDictionary(o => o.Name, o => MathF.Round(f.Brain.LoveFor(o), 3)),
+            Love = _w.Figures.Where(o => o != f && f.Brain.LoveFor(o) > 0.01f).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => MathF.Round(f.Brain.LoveFor(o), 3)),
             Sweetheart = f.Brain.Sweetheart(_w)?.Name,
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
             Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
@@ -870,7 +871,7 @@ sealed partial class App : ApplicationContext
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
-            Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
+            Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
             Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins,
         }).ToList();
@@ -908,6 +909,9 @@ sealed partial class App : ApplicationContext
         RestoreItems(_settings.Items);
         RestoreClubs();
         RestorePets();
+        // Older saves could have two pets with the same name.
+        foreach (var g in _w.Pets.GroupBy(pt => pt.Name).Where(g => g.Count() > 1))
+            foreach (var (pt, i) in g.Skip(1).Select((pt, i) => (pt, i))) pt.Name = $"{g.Key} {new[] { "II", "III", "IV", "V", "VI" }[Math.Min(i, 4)]}";
         foreach (var s in _settings.Props)
         {
             var p = SpawnProp(s.Kind);
@@ -1153,6 +1157,11 @@ sealed partial class App : ApplicationContext
                 case "game": if (p[1] == "stop") StopGame(); else { World.Log(StartGame(Enum.Parse<GameKind>(p[1], true), p.Length > 2 ? _w.Figures.FirstOrDefault(f => f.Name == p[2]) : null)); if (_w.Game != null && p.Contains("quick")) _w.Game.Count = MathF.Min(_w.Game.Count, 0.3f); } break;
                 case "photo": TakePhoto(); break;
                 case "tourney": World.Log(StartTourney()); break;
+                case "happening":
+                    if (p.Length > 1 && p[1] == "stop") { if (_w.Happening is { } hp) EndHappening(hp, false); }
+                    else if (p.Length > 1 && p[1] == "next" && _w.Happening is { } hn) { hn.PhaseT = 999; }
+                    else World.Log("happening: " + StartHappening(p.Length > 1 ? p[1] : "festival"));
+                    break;
                 case "remove": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } remF) _w.RemoveFigure(remF); break;
                 case "baby": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ba && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } bb) MakeBaby(ba, bb); break;
                 case "grow": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } growF) growF.Brain.Grown = Math.Clamp(float.Parse(p[2], inv), 0, 1); _growAt = 0; break;
@@ -1189,6 +1198,18 @@ sealed partial class App : ApplicationContext
                     break;
                 case "story": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } storyF) World.Log("story: " + storyF.Brain.DebugStory(_w)); break;
                 case "items": World.Log("items: " + string.Join("; ", _w.Items.Select(i => $"{i.Def.Key}@({i.Pos.X:0},{i.Pos.Y:0}){(i.Growth > 0 ? $" g={i.Growth:0.00}" : "")}"))); break;
+                case "save":
+                    try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
+                    break;
+                case "snapfig":
+                {
+                    // snapfig Name w h [zoom]: the live scene around a figure (centred on it, ground at the bottom).
+                    if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is not { } sf2) break;
+                    float sw = float.Parse(p[2], inv), sh = float.Parse(p[3], inv);
+                    var ar2 = new RectangleF(sf2.Base.X - sw / 2, sf2.Base.Y - sh + 12, sw, sh);
+                    _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
+                    break;
+                }
                 case "snaparea":
                 {
                     // snaparea x y w h [zoom]: the live scene in that area, offscreen, to %TEMP%\stickfight_snap.png.
@@ -1363,8 +1384,8 @@ sealed partial class App : ApplicationContext
         {
             _disposed = true;
             World.Log("dispose: start");
-            if (_settings.RememberCast) SaveCast();
-            World.Log("dispose: saved");
+            try { if (_settings.RememberCast) SaveCast(); World.Log("dispose: saved"); }
+            catch (Exception e) { World.Log("dispose: save failed: " + e); }
             SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
             Application.Idle -= OnIdle;
             if (_fineTimer) timeEndPeriod(1);

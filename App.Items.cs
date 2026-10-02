@@ -64,6 +64,11 @@ sealed partial class App
     {
         if (!quiet) _w.Sticker("pet");
         var pet = new Pet(kind, _w.Scale, _w.Rng);
+        // Names are how pets know each other in the save file: no two alike.
+        for (int i = 0; i < 12 && _w.Pets.Any(o => o.Name == pet.Name); i++) pet.Name = pet.RandomName();
+        string[] numerals = { "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };
+        string first = pet.Name;
+        for (int i = 0; _w.Pets.Any(o => o.Name == pet.Name); i++) pet.Name = $"{first} {(i < numerals.Length ? numerals[i] : (i + 2).ToString())}";
         var plat = RandomSpawnPlatform(40 * _w.Scale);
         float x = plat != null ? _w.Rng.Range(plat.X1 + 20, MathF.Max(plat.X1 + 21, plat.X2 - 20)) : _w.Env.Virtual.Left + _w.Env.Virtual.Width / 2f;
         var (_, _, top) = _w.Env.BoundsAt(x);

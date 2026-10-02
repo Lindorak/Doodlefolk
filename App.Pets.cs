@@ -266,7 +266,7 @@ sealed partial class App
         Restraint = p.Restraint.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
         Skills = p.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
         Vocabulary = p.Vocabulary.ToList(),
-        PetBonds = _w.Pets.Where(o => o != p).ToDictionary(o => o.Name, o => MathF.Round(p.PetBond(o), 3)),
+        PetBonds = _w.Pets.Where(o => o != p).GroupBy(o => o.Name).ToDictionary(g => g.Key, g => MathF.Round(p.PetBond(g.First()), 3)),
         Log = p.CareLog.TakeLast(40).Select(l => new SavedLog { When = l.When, Text = l.Text }).ToList(),
         Sprays = p.Sprays, Treats = p.TreatsGiven,
         Health = p.Health, Clean = p.Clean, Sick = p.Sick.ToString(),

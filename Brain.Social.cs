@@ -171,6 +171,7 @@ sealed partial class Brain
         f.SetAction(speaking ? Act.Talk : Act.Stand);
         if (_t > _dur)
         {
+            if (_initiator) w.Witness(f, o, SocialAct.Kind, 0.3f);
             AddAffinity(o, (0.08f + P.Sociability * 0.05f) * (1 + MathF.Max(0, f.Tastes.Similarity(o.Tastes))));
             if (AffinityWith(o) > 0.5f) f.Emote("♥", 1.2f);
             Cheered(0.2f);
@@ -247,6 +248,8 @@ sealed partial class Brain
             o.Brain.AddAffinity(f, 0.15f);
             Cheered(0.5f);
             o.Brain.Cheered(0.5f);
+            w.Witness(f, o, SocialAct.Kind, 0.6f);
+            w.Witness(o, f, SocialAct.Kind, 0.6f);
         }
         if (_t > _dur) Go(P.Playfulness > 0.6f ? G.Cheer : G.Idle, 0.8f);
     }

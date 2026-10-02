@@ -181,7 +181,7 @@ sealed partial class Brain
     {
         _t += dt;
         _t0 += dt;
-        _watchCd -= dt; _swatCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
+        _watchCd -= dt; _swatCd -= dt; _witnessCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
 
         Vector2 cur = w.Cursor;

@@ -370,6 +370,7 @@ sealed partial class Brain
             b.ThrownByUser = false;
             b.PassTarget = _selfCatch ? f : _passTo;
             b.CursorThrow = _fastball ? f : null;
+            if (_passTo != null && !_fastball) w.Witness(f, _passTo, SocialAct.Kind, 0.25f);
             _fastball = false;
             Stamina = MathF.Max(0, Stamina - 0.01f);
         }

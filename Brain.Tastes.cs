@@ -26,6 +26,14 @@ sealed partial class Brain
 
     float FondBaseline => f.Hunter ? -1 : Math.Clamp(0.1f + (P.Sociability - 0.5f) * 0.4f + f.Tastes.Of(Thing.YourCursor) * 0.4f, -1, 1);
 
+    /// <summary>Wipe the slate clean with you (debug / testing).</summary>
+    public void Forgive()
+    {
+        _fondness = null;
+        CursorTrust = 0.6f;
+        Memories.Clear();
+    }
+
     /// <summary>Change how it feels about you, and remember why.</summary>
     void FeelUser(float delta, string what)
     {
@@ -75,6 +83,7 @@ sealed partial class Brain
         float like = (Tastes.ForProp(b.Kind) is Thing k ? f.Tastes.Of(k) : 0) + f.Tastes.Of(Thing.PlayingBall);
         if (like < -0.4f) { FeelUser(-0.02f, "Threw a ball at them"); return; }
         FeelUser(0.03f + MathF.Max(0, like) * 0.03f, "Played ball with them");
+        World.Current?.Witness(null, f, SocialAct.Kind, 0.4f);
         if (f.CurrentEmote == null) f.Emote(like > 0.5f ? "♥" : "♪", 0.9f);
     }
 
@@ -192,6 +201,7 @@ sealed partial class Brain
         float o = f.Tastes.Of(Thing.YourCursor);
         FeelUser(dt * (0.01f + MathF.Max(0, o) * 0.03f), "Petted them");
         if (o > 0.35f && _pettingT > 0.7f && f.CurrentEmote == null) { f.Emote("♥", 1.2f); Cheered(0.15f); }
+        if (_pettingT > 0.7f && _pettingT - dt <= 0.7f) w.Witness(null, f, SocialAct.Kind, 0.5f);
     }
 
     // ---------------- things it loves or hates nearby ----------------

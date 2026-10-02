@@ -176,6 +176,7 @@ sealed partial class Figure
             Poise = 100;
             KnockedBy = from;
             Brain.OnStruck(from, false, true, w);   // before the ragdoll, so the brain still knows what fight this was
+            if (!Brain.IsSparringWith(from)) w.Witness(from, this, SocialAct.Hurt, 1);
             GoRagdoll(knock * (HP <= 0 ? 1.3f : 1));
             if (HP <= 0) OutOfHealth(from, w);
             return;
@@ -184,6 +185,7 @@ sealed partial class Figure
         Vel.X += knock.X * (blocked ? 0.5f : 0.7f);
         _leanV -= Facing * (blocked ? 2 : 5);
         _hipV -= 6 * S;
+        if (!blocked && !Brain.IsSparringWith(from)) w.Witness(from, this, SocialAct.Hurt, 0.35f);
         Brain.OnStruck(from, blocked, false, w);
     }
 

@@ -474,6 +474,7 @@ sealed partial class Brain
         f.SetAction(Act.SitFloor);
         if (_t < _dur) return;
         o.Revive(f);
+        w.Witness(f, o, SocialAct.Help, 1);
         f.Emote("♥", 1.2f);
         Cheered(0.4f);
         o.Brain.Cheered(0.4f);

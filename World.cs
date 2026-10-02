@@ -3,7 +3,7 @@ using Vortice.Mathematics;
 
 namespace StickFight;
 
-sealed class World
+sealed partial class World
 {
     public const float Dt = 1 / 120f;
     /// <summary>The one world (brains use it to look up the colour rules).</summary>

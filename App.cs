@@ -781,6 +781,21 @@ sealed partial class App : ApplicationContext
                         tb.SinceTouch = 0;
                     }
                     break;
+                case "witness":
+                    // witness <Actor|user> <Target> <hurt|help|kind> [mag]: everyone nearby sees it
+                    if (p.Length >= 4 && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } wt && Enum.TryParse<SocialAct>(p[3], true, out var act))
+                    {
+                        var actor = p[1] == "user" ? null : _w.Figures.FirstOrDefault(f => f.Name == p[1]);
+                        foreach (var o in _w.Figures.Where(o => o != wt && o != actor))
+                            World.Log($"before: {o.Name} feels {(actor != null ? o.Brain.AffinityWith(actor) : o.Brain.UserFondness):0.00} about {p[1]}, {o.Brain.AffinityWith(wt):0.00} about {wt.Name}");
+                        _w.Witness(actor, wt, act, p.Length > 4 ? float.Parse(p[4], inv) : 1);
+                        foreach (var o in _w.Figures.Where(o => o != wt && o != actor))
+                            World.Log($"after:  {o.Name} feels {(actor != null ? o.Brain.AffinityWith(actor) : o.Brain.UserFondness):0.00} about {p[1]}, state {o.Brain.State}, emote {o.CurrentEmote}");
+                    }
+                    break;
+                case "forgive":
+                    foreach (var ff2 in _w.Figures.Where(x => !x.Hunter && (p.Length < 2 || x.Name == p[1]))) ff2.Brain.Forgive();
+                    break;
                 case "duck":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } dkf) dkf.DuckT = 1.2f;
                     break;

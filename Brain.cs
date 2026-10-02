@@ -62,6 +62,9 @@ sealed partial class Brain
     /// <summary>Debug: log this figure's goal changes (and who caused them) for a while.</summary>
     public float TraceUntil;
 
+    /// <summary>Hold still in whatever action it's been given (the animation sheets): the brain does nothing for a while.</summary>
+    public void Puppet(float seconds) => Go(G.Busy, seconds);
+
     void Go(G g, float dur, [System.Runtime.CompilerServices.CallerMemberName] string by = "")
     {
         if (_t0 < TraceUntil) World.Log($"trace {f.Name}: {_g} -> {g} ({dur:0.0}s) by {by}");
@@ -585,6 +588,7 @@ sealed partial class Brain
         else f.SetAction(Act.Stand);
         KeepSpace(w);
 
+        if (_sneezeAt > 0 && _t > _sneezeAt) { _sneezeAt = -1; f.Emote(Gestures ? "🤧" : "ACHOO!", 1.2f); World.Play(Sfx.Sneeze, f.Jt[J.Head], 0.4f, 1.1f); }
         // Little habits while standing around, more often when bored or fidgety by nature.
         float rate = f.Style.FidgetRate * (1 + Boredom) * (1 + f.Mood.Tired * 0.5f);
         if (_t > 0.8f && f.DesiredVX == 0 && rng.NextDouble() < rate * World.Dt) { f.StartFidget(PickFidget()); return; }
@@ -600,21 +604,70 @@ sealed partial class Brain
         }
     }
 
+    Fidget _lastFidget = (Fidget)(-1);
+
+    /// <summary>The few fidgets that come with a sound or a word.</summary>
+    void FidgetSound(Fidget k)
+    {
+        switch (k)
+        {
+            case Fidget.Whistle: f.Emote("♪", 1.4f); break;
+            case Fidget.Sneeze: _sneezeAt = _t + 1.0f; break;
+            case Fidget.Hiccup: f.Emote(Gestures ? "😮" : "hic!", 0.8f); break;
+            case Fidget.Facepalm: if (rng.NextDouble() < 0.4) f.Emote(Gestures ? "🤦" : V("ugh", "WHY", "…", "oh no…", "alas"), 1.2f); break;
+            case Fidget.Shiver: f.Emote(Gestures ? "🥶" : "brrr", 1.2f); break;
+            case Fidget.FanSelf: if (rng.NextDouble() < 0.5) f.Emote(Gestures ? "🥵" : V("phew", "SO HOT", "too hot.", "it's warm…", "sweltering"), 1.2f); break;
+            case Fidget.AirGuitar: f.Emote("♫", 1.2f); break;
+        }
+    }
+
+    float _sneezeAt = -1;
+
     Fidget PickFidget()
     {
         var md = f.Mood;
+        var w = World.Current;
+        float hot = w != null ? Hot(w) : 0, cold = w != null ? MathF.Max(Cold(w), w.Weather.Snowing ? 0.5f : 0) : 0;
+        float happy = md.Happy, bored = Boredom;
         var opts = new (float w, Fidget k)[]
         {
             (0.5f + md.Tired, Fidget.Stretch),
-            (0.4f + P.Curiosity * 0.6f, Fidget.ScratchHead),
-            (0.2f + P.Energy * 0.5f + Boredom * 0.6f, Fidget.CheckWatch),
-            (0.2f + P.Energy * 0.6f + Boredom * 0.5f, Fidget.FootTap),
-            (md.Tired * 2.5f + Boredom * 0.3f, Fidget.Yawn),
-            (0.3f + P.Sociability * 0.4f, Fidget.Shrug),
-            (P.Playfulness * 0.8f * (0.5f + Joy), Fidget.Groove),
+            (0.3f + P.Curiosity * 0.5f, Fidget.ScratchHead),
+            (0.15f + P.Energy * 0.4f + bored * 0.5f, Fidget.CheckWatch),
+            (0.15f + P.Energy * 0.5f + bored * 0.5f, Fidget.FootTap),
+            (md.Tired * 2.5f + bored * 0.3f, Fidget.Yawn),
+            (0.25f + P.Sociability * 0.3f, Fidget.Shrug),
+            (P.Playfulness * 0.6f * (0.5f + Joy), Fidget.Groove),
+            (0.4f + P.Curiosity * 0.6f, Fidget.LookAround),
+            (happy * 1.2f + P.Playfulness * 0.3f, Fidget.Whistle),
+            (bored * 1.0f + P.Playfulness * 0.3f, Fidget.KickPebble),
+            (md.Angry * 1.2f + P.Aggression * 0.4f, Fidget.CrackKnuckles),
+            (0.15f + md.Tired * 0.6f, Fidget.NeckRoll),
+            (0.06f + (w?.Weather.Raining == true || cold > 0.3f ? 0.25f : 0), Fidget.Sneeze),
+            (P.Playfulness * 0.5f * (0.5f + happy) + bored * 0.3f, Fidget.Balance),
+            (P.Energy * 0.4f * (1 - md.Tired), Fidget.TouchToes),
+            (P.Curiosity * 0.7f + (1 - P.Energy) * 0.2f, Fidget.Think),
+            (happy * P.Playfulness * 1.2f, Fidget.AirGuitar),
+            (0.12f + P.Bravery * 0.2f, Fidget.DustOff),
+            (happy * 0.9f * P.Sociability, Fidget.Clap),
+            (md.Sad * 1.0f + Annoyance * 0.8f, Fidget.Facepalm),
+            (cold * 3.0f, Fidget.Shiver),
+            (hot * 3.0f, Fidget.FanSelf),
+            (md.Tired * 1.6f, Fidget.RubEyes),
+            (0.25f + (1 - P.Energy) * 0.4f + bored * 0.3f, Fidget.Pockets),
+            (0.04f, Fidget.Hiccup),
+            (P.Curiosity * 0.5f, Fidget.Peek),
+            (md.Angry * 1.5f, Fidget.Stomp),
+            (P.Energy * 0.35f * (1 - md.Tired) * (Stamina > 0.6f ? 1 : 0.2f), Fidget.Squats),
         };
-        float roll = rng.Range(0, opts.Sum(o => o.w));
-        foreach (var (wt, k) in opts) { roll -= wt; if (roll <= 0) return k; }
+        // Not the same thing twice in a row.
+        float roll = rng.Range(0, opts.Where(o => o.k != _lastFidget).Sum(o => o.w));
+        foreach (var (wt, k) in opts)
+        {
+            if (k == _lastFidget) continue;
+            roll -= wt;
+            if (roll <= 0) { _lastFidget = k; FidgetSound(k); return k; }
+        }
         return Fidget.Stretch;
     }
 

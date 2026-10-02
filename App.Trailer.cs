@@ -34,7 +34,8 @@ sealed partial class App
 
     void TrailerPrepare(string[] args)
     {
-        int i = Math.Max(Array.IndexOf(args, "--trailer"), Array.IndexOf(args, "--cardart"));
+        int i = Math.Max(Math.Max(Array.IndexOf(args, "--trailer"), Array.IndexOf(args, "--cardart")), Array.IndexOf(args, "--animsheet"));
+        if (_animSheet && i + 2 < args.Length && !args[i + 2].StartsWith("--")) _animFilter = args[i + 2];
         _trailerPath = Path.GetFullPath(i + 1 < args.Length && !args[i + 1].StartsWith("--") ? args[i + 1] : _cardArt ? "Doodlefolk card art" : "Doodlefolk-trailer.mp4");
         int k = Array.IndexOf(args, "--tagline");
         if (k >= 0 && k + 1 < args.Length) _trailerTagline = args[k + 1];
@@ -211,7 +212,7 @@ sealed partial class App
         SyncStagedWindows();
         _tNight = _w.NightOverride ?? 0;
         // The festival's fireworks, where the camera can see them.
-        if (!_cardArt && t > 35 && t < TrailerLength - 1 && t > _tFireAt)
+        if (!_cardArt && !_animSheet && t > 35 && t < TrailerLength - 1 && t > _tFireAt)
         {
             _tFireAt = t + _w.Rng.Range(0.25f, 0.55f);
             var at = new Vector2(_tCam.X + _tCam.Width * _w.Rng.Range(0.15f, 0.85f), _tCam.Y + _tCam.Height * _w.Rng.Range(0.12f, 0.4f));
@@ -267,6 +268,7 @@ sealed partial class App
     void TrailerFrame()
     {
         if (_cardArt) { CardArtFrame(); return; }
+        if (_animSheet) { AnimSheetFrame(); return; }
         double t = _tFrame / (double)TFps;
         var cam = TrailerCamera(t);
         float zoom = TW / cam.Width;

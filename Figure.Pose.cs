@@ -116,9 +116,7 @@ sealed partial class Figure
                     break;
                 }
                 case Act.Talk:
-                    hN = new(Arm * 0.42f + MathF.Sin(ActionT * 7) * Arm * 0.13f, Torso * 0.35f + MathF.Cos(ActionT * 5.3f) * Arm * 0.13f);
-                    eN = new(-1, 0.8f); handW = 16;
-                    tiltT = MathF.Sin(ActionT * 6) * 0.07f;
+                    TalkPose(ActionT, ref tiltT, ref leanT, ref handW, ref hN, ref hF, ref eN, ref eF);
                     break;
                 case Act.HighFive:
                     hN = new(Arm * 0.55f, -Arm * 0.72f); eN = new(0.2f, 1); handW = 24; leanT = 0.08f;

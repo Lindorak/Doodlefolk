@@ -84,6 +84,7 @@ sealed partial class Pet
 
     void Think(World w, float dt)
     {
+        if (PuppetStep(w, dt)) return;
         _t += dt;
         _t0 += dt;
         _leashTug = MathF.Max(0, _leashTug - dt);

@@ -9,7 +9,12 @@ enum FightStyle { Auto, Boxer, Kicker, Brawler, Acrobat, Turtle }
 enum CelebrateStyle { Auto, Cheer, Flex, Dance, Taunt, Bow }
 enum RopeStyle { Auto, Never, Rappel, Haul, Zip }
 enum GrappleSpin { Overhead, SideWhirl, QuickToss }
-enum Fidget { Stretch, ScratchHead, CheckWatch, FootTap, Yawn, Shrug, Groove }
+enum Fidget
+{
+    Stretch, ScratchHead, CheckWatch, FootTap, Yawn, Shrug, Groove,
+    LookAround, Whistle, KickPebble, CrackKnuckles, NeckRoll, Sneeze, Balance, TouchToes, Think, AirGuitar, DustOff,
+    Clap, Facepalm, Shiver, FanSelf, RubEyes, Pockets, Hiccup, Peek, Stomp, Squats,
+}
 
 /// <summary>The user's body-language choices for a figure (Auto = derive from personality) plus the
 /// random seed behind its individual quirks. Persisted with the figure.</summary>

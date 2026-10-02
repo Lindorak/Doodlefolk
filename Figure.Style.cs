@@ -32,8 +32,13 @@ sealed partial class Figure
 
     public static float FidgetLength(Fidget k) => k switch
     {
-        Fidget.Stretch => 1.6f, Fidget.ScratchHead => 1.4f, Fidget.CheckWatch => 1.4f, Fidget.FootTap => 1.6f,
-        Fidget.Yawn => 1.8f, Fidget.Shrug => 0.9f, _ => 2.4f,
+        Fidget.Stretch => 1.8f, Fidget.ScratchHead => 1.4f, Fidget.CheckWatch => 1.4f, Fidget.FootTap => 1.6f,
+        Fidget.Yawn => 1.8f, Fidget.Shrug => 1.1f, Fidget.Groove => 2.4f,
+        Fidget.LookAround => 2.6f, Fidget.Whistle => 3.2f, Fidget.KickPebble => 1.6f, Fidget.CrackKnuckles => 1.4f, Fidget.NeckRoll => 2.2f,
+        Fidget.Sneeze => 1.8f, Fidget.Balance => 3.0f, Fidget.TouchToes => 2.4f, Fidget.Think => 3.0f, Fidget.AirGuitar => 3.0f,
+        Fidget.DustOff => 1.8f, Fidget.Clap => 1.6f, Fidget.Facepalm => 1.8f, Fidget.Shiver => 2.2f, Fidget.FanSelf => 2.2f,
+        Fidget.RubEyes => 1.6f, Fidget.Pockets => 3.6f, Fidget.Hiccup => 2.6f, Fidget.Peek => 2.2f, Fidget.Stomp => 1.4f, Fidget.Squats => 3.6f,
+        _ => 2,
     };
 
     public void StartFidget(Fidget k)
@@ -181,12 +186,13 @@ sealed partial class Figure
                     ref Vector2 hN, ref Vector2 hF, ref Vector2 eN, ref Vector2 eF)
     {
         float t = ActionT, p = M.Clamp01(t / MathF.Max(FidgetDur, 0.1f));
-        float env = MathF.Sin(MathF.PI * p);   // ease in and back out
+        float env = Envelope(p);   // ease in, hold, ease back out
         handW = 18;
+        if (MoreFidgetPose(t, p, ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF)) return;
         switch (FidgetKind)
         {
             case Fidget.Stretch:
-                if (env > 0.25f) { hN = new(Arm * 0.1f, -Arm * 0.98f); hF = new(-Arm * 0.05f, -Arm * 0.98f); eN = eF = new(0.3f, 1); }
+                hN = Vector2.Lerp(hN, new(Arm * 0.1f, -Arm * 0.98f), env); hF = Vector2.Lerp(hF, new(-Arm * 0.05f, -Arm * 0.98f), env); if (env > 0.3f) eN = eF = new(0.3f, 1);
                 leanT = -0.15f * env;
                 hipT = StandHip * (1 + 0.02f * env);
                 tiltT -= 0.2f * env * Facing;
@@ -207,30 +213,18 @@ sealed partial class Figure
                 eN = eF = new(-1, 0);
                 break;
             case Fidget.Yawn:
-                if (env > 0.3f) { hN = new(Arm * 0.35f, -Arm * 0.62f); hF = new(-Arm * 0.3f, -Arm * 0.55f); eN = eF = new(0.2f, 1); }
+                hN = Vector2.Lerp(hN, new(Arm * 0.35f, -Arm * 0.62f), env); hF = Vector2.Lerp(hF, new(-Arm * 0.3f, -Arm * 0.55f), env); if (env > 0.3f) eN = eF = new(0.2f, 1);
                 leanT = -0.12f * env;
                 tiltT -= 0.3f * env * Facing;
                 break;
             case Fidget.Shrug:
-                if (env > 0.2f) { hN = new(Arm * 0.55f, Torso * 0.42f); hF = new(-Arm * 0.45f, Torso * 0.42f); eN = eF = new(-0.5f, 1); }
+                hN = Vector2.Lerp(hN, new(Arm * 0.55f, Torso * 0.42f), env); hF = Vector2.Lerp(hF, new(-Arm * 0.45f, Torso * 0.42f), env); if (env > 0.2f) eN = eF = new(-0.5f, 1);
                 hipT = StandHip + 1.2f * S * env;
                 tiltT += 0.12f * env * Facing;
                 break;
             case Fidget.Groove:
-            {
-                // In time with the music when there's a steady beat: down on the beat, a sway across two.
-                bool onBeat = World.BeatPhase >= 0;
-                float s = onBeat ? MathF.Cos(World.BeatPhase * MathF.Tau) : MathF.Sin(t * 10);
-                float sway = onBeat ? MathF.Sin(World.BarPhase * MathF.PI) : MathF.Sin(t * 5);
-                hipT = StandHip * 0.94f + s * 1.6f * S - (onBeat ? MathF.Max(0, s) * 1.4f * S : 0);
-                pdxT = sway * 2.5f * S;
-                hN = new(Arm * 0.4f, -Arm * 0.25f + s * Arm * 0.3f);
-                hF = new(-Arm * 0.2f, -Arm * 0.1f - s * Arm * 0.3f);
-                eN = eF = new(0, 1);
-                tiltT += sway * 0.12f;
-                handW = onBeat ? 32 : 24;
+                DancePose(t, ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF);
                 break;
-            }
         }
     }
 
@@ -238,7 +232,7 @@ sealed partial class Figure
     Vector2 FidgetFoot(Vector2 foot) =>
         Action == Act.Fidget && FidgetKind == Fidget.FootTap
             ? foot + new Vector2(Facing * 1 * S, -MathF.Max(0, MathF.Sin(ActionT * 15)) * 2.2f * S)
-            : foot;
+            : MoreFidgetFoot(foot);
 
     // ---------------- celebrating ----------------
 

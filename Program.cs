@@ -7,11 +7,11 @@ static class Program
     {
         AppPaths.Configure(args);
         // The self-test runs alongside your Doodlefolk, with its own data, and reports by exit code.
-        if (args.Contains("--selftest") || args.Contains("--trailer") || args.Contains("--cardart"))
+        if (args.Contains("--selftest") || args.Contains("--trailer") || args.Contains("--cardart") || args.Contains("--animsheet"))
         {
             if (!args.Contains("--data"))
             {
-                AppPaths.DataDir = Path.Combine(Path.GetTempPath(), args.Contains("--trailer") ? "Doodlefolk-trailer" : args.Contains("--cardart") ? "Doodlefolk-cardart" : "Doodlefolk-selftest");
+                AppPaths.DataDir = Path.Combine(Path.GetTempPath(), args.Contains("--trailer") ? "Doodlefolk-trailer" : args.Contains("--cardart") ? "Doodlefolk-cardart" : args.Contains("--animsheet") ? "Doodlefolk-animsheet" : "Doodlefolk-selftest");
                 AppPaths.PicturesDir = Path.Combine(AppPaths.DataDir, "pictures");
             }
             // Start from nothing every time, but only ever wipe a folder the self-test made itself.

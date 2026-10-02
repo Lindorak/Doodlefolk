@@ -43,7 +43,8 @@ sealed partial class Brain
     (float, Action)? BallOption(World w)
     {
         if (NearestFreeBall(w, 1600 * S) is not { } b) return null;
-        float weight = P.Playfulness * (0.5f + Boredom) * Stamina * 1.8f;
+        float kindLove = Tastes.ForProp(b.Kind) is Thing k ? f.Tastes.Of(k) : 0;
+        float weight = P.Playfulness * (0.5f + Boredom) * Stamina * 1.8f * Taste(Thing.PlayingBall) * MathF.Max(0.2f, 1 + kindLove);
         return (weight, () => GoToBall(b, w, () => ChoosePlay(b, w, null)));
     }
 
@@ -103,7 +104,7 @@ sealed partial class Brain
                 (0.4f + P.Energy * 0.6f, BallPlay.Dribble),
             };
             if (friend != null) opts.Add((P.Sociability * 1.2f + MathF.Max(0, AffinityWith(friend)) + 0.3f, BallPlay.Pass));
-            if (small) opts.Add((P.Playfulness * 1.3f, BallPlay.Juggle));
+            if (small) opts.Add((P.Playfulness * 1.3f * Taste(Thing.Juggling), BallPlay.Juggle));
             if (small) opts.Add((0.5f, BallPlay.Carry));
             float roll = rng.Range(0, opts.Sum(o => o.w));
             play = opts[0].p;
@@ -328,6 +329,7 @@ sealed partial class Brain
     {
         var b = _ball;
         if (b == null || f.Carrying != b) { Go(G.Idle, 1); return; }
+        if (BringBallToUser(w)) return;
         if (_passTo == null) MoveToward(_carryX, 5 * S);
         else { f.DesiredVX = 0; FaceTo(_passTo.Base.X); f.LookAt = _passTo.Jt[J.Head]; }
         if (_t < _dur) return;

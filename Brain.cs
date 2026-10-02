@@ -11,13 +11,15 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive,
+        Fight, Victory, CursorFight, Revive, DanceWith,
     }
 
     readonly Figure f;
     readonly Random rng;
     G _g = G.Busy;
     float _t, _dur;
+    /// <summary>Total time alive (for cooldowns that outlive a goal).</summary>
+    float _t0;
 
     // ---- needs & mood (0..1) ----
     public float Stamina = 1, Boredom = 0.3f, Loneliness = 0.3f, Annoyance, CursorTrust = 0.6f;
@@ -45,10 +47,11 @@ sealed partial class Brain
 
     void Go(G g, float dur)
     {
-        if (_g is G.Chat or G.HighFive or G.SitWith or G.Follow && g != _g) EndSocial();
+        if (_g is G.Chat or G.HighFive or G.SitWith or G.Follow or G.DanceWith && g != _g) EndSocial();
         if (_g is G.Carry or G.Throw && g is not (G.Carry or G.Throw) && f.Carrying != null) f.DropCarried(Vector2.Zero);
         if (_ball != null && _ball.Juggler == f && g != G.Juggle) _ball.Juggler = null;
         if (_g is G.Fight or G.CursorFight && g != _g) EndFight();
+        if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
         _g = g;
@@ -65,10 +68,11 @@ sealed partial class Brain
     public void CopyFrom(Brain o)
     {
         Stamina = o.Stamina; Boredom = o.Boredom; Loneliness = o.Loneliness; Annoyance = o.Annoyance; CursorTrust = o.CursorTrust;
+        _fondness = o._fondness;
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
     }
 
-    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f;
+    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o);
     public float AffinityWith(Figure o) => Math.Clamp(Baseline(o) + (Affinity.TryGetValue(o.Id, out var a) ? a : 0), -1, 1);
     public float AffinityDelta(Figure o) => Affinity.TryGetValue(o.Id, out var a) ? a : 0;
     public void AddAffinity(Figure o, float d) =>
@@ -78,7 +82,7 @@ sealed partial class Brain
 
     public void OnSpawned() => Go(G.Idle, rng.Range(0.6f, 1.4f));
     public void OnRagdoll() { EndSocial(); _g = G.Busy; }
-    public void OnGrabbed() { EndSocial(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - 0.08f); }
+    public void OnGrabbed() { EndSocial(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - (f.Tastes.Likes(Thing.BeingPickedUp) ? 0 : 0.08f)); FeelAboutBeingPickedUp(); }
     public void OnLanded(float impact) { if (impact > 1200 * S) Stamina = MathF.Max(0, Stamina - 0.02f); }
     public void OnUnexpectedFall() { if (_g != G.Busy) Go(G.Idle, 1.2f); }
 
@@ -94,6 +98,7 @@ sealed partial class Brain
     public void OnRecovered(float throwSpeed, World w)
     {
         if (throwSpeed < 1 && AfterKnockdown(w)) return;
+        if (FeelAboutBeingThrown(throwSpeed)) return;
         float k = M.Clamp01(throwSpeed / (2500 * S));
         Annoyance = M.Clamp01(Annoyance + 0.2f + 0.4f * k);
         CursorTrust = MathF.Max(0, CursorTrust - 0.05f - 0.25f * k);
@@ -104,8 +109,11 @@ sealed partial class Brain
     public void OnPoked(World w)
     {
         if (f.Mode != Mode.Control || !f.Grounded) return;
-        CursorTrust = MathF.Max(0, CursorTrust - 0.05f);
-        Annoyance = M.Clamp01(Annoyance + 0.12f);
+        FeelAboutPoke();
+        bool tickled = f.Tastes.Likes(Thing.YourCursor);
+        CursorTrust = MathF.Max(0, CursorTrust - (tickled ? 0 : 0.05f));
+        Annoyance = M.Clamp01(Annoyance + (tickled ? 0 : 0.12f));
+        if (tickled && _g != G.Sleep) { Go(G.Cheer, 0.8f); return; }
         if (_g == G.Sleep) { f.Emote("!", 1); Go(G.Annoyed, 1.2f); return; }
         if (_g == G.CursorFight) return;
         if (WantsCursorFight() && rng.NextDouble() < 0.6) BeginCursorFight();
@@ -116,7 +124,7 @@ sealed partial class Brain
     public void OnHit(Figure? from, bool knockedDown, World w)
     {
         Annoyance = M.Clamp01(Annoyance + (knockedDown ? 0.35f : 0.15f));
-        if (from == null) CursorTrust = MathF.Max(0, CursorTrust - (knockedDown ? 0.2f : 0.08f));
+        if (from == null) { CursorTrust = MathF.Max(0, CursorTrust - (knockedDown ? 0.2f : 0.08f)); UserFondness -= knockedDown ? 0.12f : 0.05f; }
         else if (from != f)
         {
             from.Brain.NoticeIHit(f);
@@ -143,6 +151,7 @@ sealed partial class Brain
     public void Update(float dt, World w)
     {
         _t += dt;
+        _t0 += dt;
         _watchCd -= dt; _swatCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
 
@@ -151,6 +160,7 @@ sealed partial class Brain
         float cspeed = w.CursorVel.Length();
         bool near = dist < 280 * S;
         _hoverT = w.Hover == f ? _hoverT + dt : 0;
+        FeelPetting(w, dt);
         if (near && cspeed < 300 * S && _g != G.Sleep) CursorTrust = MathF.Min(1, CursorTrust + dt * 0.01f);
 
         f.LookAt = null;
@@ -213,7 +223,7 @@ sealed partial class Brain
             case G.Annoyed:
                 KeepSpace(w);
                 if (_glareAt != null && w.Figures.Contains(_glareAt)) { f.LookAt = _glareAt.Jt[J.Head]; FaceTo(_glareAt.Base.X); }
-                else if (near) FaceTo(cur.X);
+                else { FaceTo(cur.X); f.LookAt = cur; }
                 f.SetAction(Act.HandsHips);
                 f.HeadShake = _t < 0.8f;
                 if (_t > _dur) { _glareAt = null; Go(G.Idle, 1); }
@@ -258,6 +268,7 @@ sealed partial class Brain
             case G.Fight: DoFight(w); break;
             case G.CursorFight: DoCursorFight(w); break;
             case G.Revive: DoRevive(w); break;
+            case G.DanceWith: DoDanceWith(w); break;
             case G.Victory:
                 f.SetAction(Act.Cheer);
                 KeepSpace(w);
@@ -286,7 +297,7 @@ sealed partial class Brain
 
         bool stimulating = _g is G.Walk or G.Chat or G.HighFive or G.Juggle or G.Dribble or G.Kick or G.Catch or G.Throw or G.Carry or G.Trick or G.Watch or G.Fight or G.CursorFight;
         Boredom = M.Clamp01(Boredom + dt * (stimulating ? -0.06f : 0.012f * (0.5f + P.Curiosity)));
-        bool social = _g is G.Chat or G.HighFive or G.Follow or G.SitWith || _partner != null;
+        bool social = _g is G.Chat or G.HighFive or G.Follow or G.SitWith or G.DanceWith || _partner != null;
         Loneliness = M.Clamp01(Loneliness + dt * (social ? -0.08f : 0.01f * P.Sociability * (w.Figures.Count > 1 ? 1 : 0.3f)));
         Annoyance = M.Clamp01(Annoyance - dt * 0.04f);
         Joy = M.Clamp01(Joy - dt * 0.04f);
@@ -311,6 +322,7 @@ sealed partial class Brain
     void ScanOthers(World w)
     {
         WatchFights(w);
+        NoticeTastes(w);
         foreach (var o in w.Figures)
         {
             if (o == f) continue;
@@ -497,22 +509,27 @@ sealed partial class Brain
         var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (seg == null || !f.Grounded) { Go(G.Idle, 0.5f); return; }
         float E = P.Energy, tired = 1 - Stamina;
+        // Likes and dislikes tilt every choice: loved things are up to ~2.5x as likely, hated ones rare.
+        float L(Thing t) => Taste(t);
         var opts = new List<(float weight, Action act)>
         {
             (0.5f + (1 - E) * 0.5f, () => Go(G.Idle, rng.Range(1.5f, 4.5f))),
-            (tired * 0.8f + (1 - E) * 0.3f, () => Go(G.SitFloor, rng.Range(4, 12))),
+            ((tired * 0.8f + (1 - E) * 0.3f) * L(Thing.Sitting), () => Go(G.SitFloor, rng.Range(4, 12))),
         };
-        if (Stamina < 0.3f) opts.Add(((0.3f - Stamina) * 10, () => Go(G.Sleep, rng.Range(15, 40))));
+        if (Stamina < 0.3f || (Stamina < 0.55f && f.Tastes.Likes(Thing.Napping)))
+            opts.Add(((0.55f - Stamina) * 8 * L(Thing.Napping), () => Go(G.Sleep, rng.Range(15, 40))));
         if (seg.X2 - seg.X1 > 60 * S) opts.Add(((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg)));
         if (Stamina > 0.35f && PickExplore(env, seg, out var explore))
-            opts.Add((P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina, explore));
+            opts.Add((P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore));
         if (!seg.Solid && PickEdge(env, seg, out float edgeX, out int dir))
-            opts.Add((tired + (1 - E) * 0.6f + 0.1f, () => { _sitDir = dir; WalkTo(edgeX - dir * 3.5f * S, false, () => Go(G.SitEdge, rng.Range(5, 15))); }));
-        if (Stamina > 0.4f) opts.Add((P.Playfulness * E * 0.25f, () => { Go(G.Trick, 3); f.RequestFlip(70 * S); }));
+            opts.Add(((tired + (1 - E) * 0.6f + 0.1f) * L(Thing.Ledges), () => { _sitDir = dir; WalkTo(edgeX - dir * 3.5f * S, false, () => Go(G.SitEdge, rng.Range(5, 15))); }));
+        if (Stamina > 0.4f) opts.Add((P.Playfulness * E * 0.25f * L(Thing.Tricks), () => { Go(G.Trick, 3); f.RequestFlip(70 * S); }));
         if (Stamina > 0.3f) opts.Add((P.Playfulness * 0.15f, () => Go(G.Cheer, 0.9f)));
+        if (Stamina > 0.3f && f.Tastes.Likes(Thing.Dancing)) opts.Add((0.25f * L(Thing.Dancing) * (0.5f + Joy), () => { Go(G.Idle, 3); f.StartFidget(Fidget.Groove); }));
         if (SocialOption(w) is { } social) opts.Add(social);
         if (FightOption(w) is { } fight) opts.Add(fight);
         if (Stamina > 0.3f && BallOption(w) is { } ball) opts.Add(ball);
+        if (UserOption(w) is { } user) opts.Add(user);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);
@@ -560,7 +577,8 @@ sealed partial class Brain
             float x = rng.Range(p.X1 + 12 * S, p.X2 - 12 * S);
             if (!CanReach(env, seg, p, x)) continue;
             float d = MathF.Abs(x - f.Base.X) + MathF.Abs(p.Y - seg.Y);
-            float score = 1f / (1 + d / (500 * S)) * (p.Y < seg.Y ? 1.3f : 1f) * (p.Solid ? 0.6f : 1f);
+            float score = 1f / (1 + d / (500 * S)) * (p.Y < seg.Y ? 1.3f * Taste(Thing.HighPlaces) : 1f) * (p.Solid ? 0.6f * Taste(Thing.Taskbar) : 1f);
+            if (!CanReachByJump(env, seg, p, x)) score *= Taste(Thing.Climbing);
             cands.Add((p, x, score));
         }
         if (cands.Count == 0) return false;

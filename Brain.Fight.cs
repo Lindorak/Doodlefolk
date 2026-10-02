@@ -65,7 +65,7 @@ sealed partial class Brain
         if (best == null) return null;
         var foe = best;
         bool sp = bestSpar;
-        return (bestScore * Rules.Frequency * Stamina, () => Engage(foe, sp, w));
+        return (bestScore * Rules.Frequency * Stamina * Taste(sp ? Thing.Sparring : Thing.Fighting), () => Engage(foe, sp, w));
     }
 
     void Engage(Figure o, bool spar, World w)

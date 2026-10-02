@@ -101,6 +101,16 @@ sealed partial class Brain
                 if (!MoveToward(_takeoffX, 3 * S)) break;
                 if (_hopLand.Resolve(env) is Vector2 land && SolveJump(f.Base, land, out var v))
                 {
+                    // Big drops: a lob that slowly falls a long way barely moves sideways at first, and would
+                    // come back down on this same window. Make sure the arc clears the edge we're leaving.
+                    if (land.Y > f.Base.Y + 20 * S && (land.X > seg.X2 || land.X < seg.X1))
+                    {
+                        float dir = MathF.Sign(land.X - f.Base.X);
+                        float edge = dir > 0 ? seg.X2 : seg.X1;
+                        float tUp = -v.Y / f.Gravity;
+                        float need = (MathF.Abs(edge - f.Base.X) + 12 * S) / MathF.Max(0.05f, 2 * tUp);
+                        if (MathF.Abs(v.X) < need) v.X = dir * MathF.Min(need, 700 * S);
+                    }
                     _jRise = f.Base.Y - land.Y;
                     f.RequestJump(v, styled: true);
                     _nav = Nav.InAir;
@@ -173,6 +183,14 @@ sealed partial class Brain
 
     bool CanReach(Env env, Platform seg, Platform tp, float x) => PlanHop(env, seg, tp, x, false);
 
+    bool CanReachByJump(Env env, Platform seg, Platform tp, float x)
+    {
+        float side = MathF.Sign(x - f.Base.X);
+        if (side == 0) side = 1;
+        float tk = Math.Clamp(x - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        return SolveJump(new(tk, seg.Y), new(x, tp.Y), out _);
+    }
+
     /// <summary>How fast to climb: energetic and hurried figures scramble, tired ones plod; a little random.</summary>
     float ClimbPace(bool urgent) =>
         (0.8f + 0.6f * P.Energy + (urgent ? 0.35f : 0) + rng.Range(-0.12f, 0.12f)) * (0.65f + 0.35f * Stamina);
@@ -241,6 +259,9 @@ sealed partial class Brain
             case "chat": return Other() is { } o1 && StartSocialWith(o1, SocialKind.Chat, w);
             case "highfive": return Other() is { } o2 && StartSocialWith(o2, SocialKind.HighFive, w);
             case "follow": return Other() is { } o3 && StartSocialWith(o3, SocialKind.Follow, w);
+            case "dance": return Other() is { } o6 && StartSocialWith(o6, SocialKind.Dance, w);
+            case "meet": if (Other() is { } o7) { Approach(o7, w); return true; } return false;
+            case "fan": if (UserOption(w) is { } uo) { uo.Item2(); return true; } return false;
             case "fight": if (Other() is { } o4) { Engage(o4, false, w); return true; } return false;
             case "spar": if (Other() is { } o5) { Engage(o5, true, w); return true; } return false;
             case "boxcursor": BeginCursorFight(); return true;

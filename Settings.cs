@@ -9,6 +9,10 @@ sealed class SavedFigure
     public float Size { get; set; } = 1;
     public Gear Gear { get; set; }
     public StyleChoice? Style { get; set; }
+    public Tastes? Tastes { get; set; }
+    /// <summary>How it feels about the user: fondness -1..1 and trust 0..1.</summary>
+    public float? Fondness { get; set; }
+    public float? Trust { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();

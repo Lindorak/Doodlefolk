@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Vortice.Mathematics;
 
 namespace StickFight;
@@ -97,6 +97,9 @@ sealed partial class Figure
     public Color4 Color;
     public readonly float S;
     public readonly Personality Traits;
+    /// <summary>Likes and dislikes (Sims-style), editable.</summary>
+    public Tastes Tastes;
+    public string Team => FightSettings.Team(Color);
     public readonly Brain Brain;
     public readonly Ragdoll Rag;
 
@@ -151,6 +154,7 @@ sealed partial class Figure
         Brain = new Brain(this, rng);
         _rng = rng;
         StyleChoice = new StyleChoice { Seed = rng.Next() };
+        Tastes = Tastes.Generate(traits, rng);
         _time = rng.Range(0, 10);
         Facing = rng.Next(2) == 0 ? 1 : -1;
     }

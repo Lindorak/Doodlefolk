@@ -495,6 +495,7 @@ sealed class App : ApplicationContext
         f.Brain.CopyFrom(old.Brain);
         f.Gear = old.Gear;
         f.StyleChoice = old.StyleChoice;
+        f.Tastes = old.Tastes;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
         f.PlaceAt(plat, Math.Clamp(old.Base.X, plat.X1 + 4, plat.X2 - 4));
@@ -534,6 +535,9 @@ sealed class App : ApplicationContext
             Size = f.SizeMul,
             Gear = f.Gear,
             Style = f.StyleChoice.Clone(),
+            Tastes = f.Tastes.Clone(),
+            Fondness = f.Brain.UserFondness,
+            Trust = f.Brain.CursorTrust,
             Traits = f.Traits.Clone(),
         });
         _settings.Save();
@@ -546,8 +550,17 @@ sealed class App : ApplicationContext
         {
             f.Gear = s.Gear;
             if (s.Style != null) f.StyleChoice = s.Style.Clone();
+            ApplySaved(f, s);
         }
         return f;
+    }
+
+    /// <summary>Likes, dislikes and feelings about the user carried by a saved figure.</summary>
+    static void ApplySaved(Figure f, SavedFigure s)
+    {
+        if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
+        if (s.Fondness is float fond) f.Brain.UserFondness = fond;
+        if (s.Trust is float trust) f.Brain.CursorTrust = Math.Clamp(trust, 0, 1);
     }
 
     void ShowFigureMenu(Figure f)
@@ -621,6 +634,9 @@ sealed class App : ApplicationContext
             Size = f.SizeMul,
             Gear = f.Gear,
             Style = f.StyleChoice.Clone(),
+            Tastes = f.Tastes.Clone(),
+            Fondness = f.Brain.UserFondness,
+            Trust = f.Brain.CursorTrust,
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
         }).ToList();
@@ -636,6 +652,7 @@ sealed class App : ApplicationContext
             {
                 f.Gear = s.Gear;
                 if (s.Style != null) f.StyleChoice = s.Style.Clone();
+                ApplySaved(f, s);
                 made.Add((f, s));
             }
         foreach (var (f, s) in made)
@@ -849,6 +866,23 @@ sealed class App : ApplicationContext
                         }
                     }
                     break;
+                case "taste":
+                    // taste <Name> <Thing> <-1..1>   |   taste <Name> fav|hate <Colour>
+                    if (p.Length >= 4 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } tf)
+                    {
+                        if (p[2] == "fav") tf.Tastes.FavoriteColour = p[3];
+                        else if (p[2] == "hate") tf.Tastes.DislikedColour = p[3];
+                        else if (Enum.TryParse<Thing>(p[2], true, out var th)) tf.Tastes.Set(th, float.Parse(p[3], inv));
+                        else result = "failed";
+                    }
+                    break;
+                case "fond":
+                    if (p.Length >= 3 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } fdf)
+                    {
+                        fdf.Brain.UserFondness = float.Parse(p[2], inv);
+                        if (p.Length >= 4) fdf.Brain.CursorTrust = float.Parse(p[3], inv);
+                    }
+                    break;
                 case "ko":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } kf) kf.DebugKnockOut(_w);
                     break;
@@ -879,7 +913,12 @@ sealed class App : ApplicationContext
                     break;
                 case "fling":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ff && p.Length >= 4)
-                        ff.GoRagdoll(new Vector2(float.Parse(p[2], inv), float.Parse(p[3], inv)));
+                    {
+                        // Counts as a throw by the user (like flinging with the mouse).
+                        var fv = new Vector2(float.Parse(p[2], inv), float.Parse(p[3], inv));
+                        ff.GoRagdoll(fv);
+                        ff.LastThrowSpeed = fv.Length();
+                    }
                     break;
                 default:
                     var fig = _w.Figures.FirstOrDefault(f => f.Name.Equals(p[0], StringComparison.OrdinalIgnoreCase));
@@ -916,6 +955,10 @@ sealed class App : ApplicationContext
                 hp = f.HP,
                 atk = f.Atk?.Kind.ToString(),
                 emote = f.CurrentEmote,
+                fond = f.Brain.UserFondness,
+                trust = f.Brain.CursorTrust,
+                feels = f.Brain.FeelingsAboutYou(),
+                tastes = f.Tastes.Describe(),
                 bbox = new[] { f.Jt.Min(j => j.X), f.Jt.Min(j => j.Y), f.Jt.Max(j => j.X), f.Jt.Max(j => j.Y) },
             }),
             props = _w.Props.Select(p => new { kind = p.Kind.ToString(), x = p.Pos.X, y = p.Pos.Y, vx = p.Vel.X, vy = p.Vel.Y, held = p.Holder?.Name, r = p.Radius }),

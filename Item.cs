@@ -630,16 +630,21 @@ sealed class Item
     int _lastKey;
 
     /// <summary>Does this object need redrawing this frame (it moved, changed, animates, or someone's using it)?</summary>
-    public bool Changed()
-    {
-        bool animated = Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
+    /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
+    public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || Def.Key is "puddle" or "poop" or "fishtank" || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
-        int key = HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
-                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt));
+
+    /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>
+    public int StateKey() => HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
+                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt, MathF.Round(ScaleX * 100), MathF.Round(ScaleY * 100), PlantKind));
+
+    public bool Changed()
+    {
+        int key = StateKey();
         bool changed = key != _lastKey;
         _lastKey = key;
-        return animated || changed;
+        return Animating || changed;
     }
 
     // ---------------- bounds + hit testing ----------------

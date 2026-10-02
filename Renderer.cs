@@ -144,6 +144,7 @@ sealed class Renderer : IDisposable
         if (rects.Count == 0) return;
 
         long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        EnsureSprites();
         _ctx.BeginDraw();
         _ctx.Transform = Matrix3x2.Identity;
         foreach (var r in rects)
@@ -201,48 +202,91 @@ sealed class Renderer : IDisposable
     ID2D1LinearGradientBrush? _shadeLin;
     ID2D1RadialGradientBrush? _shadeRad, _soft;
 
-    ID2D1RadialGradientBrush? _fireGlow;
+    ID2D1Bitmap1? _softSprite, _glowSprite;
+
+    /// <summary>Soft round gradients are drawn once into small pictures and stretched into place: far cheaper than
+    /// filling a gradient every time.</summary>
+    ID2D1Bitmap1? _under, _over;
+
+    /// <summary>Redraw the cached layers of things sitting still (see App.Layers). Must be called outside a frame.</summary>
+    public void BuildLayers(Action under, Action over)
+    {
+        EnsureSprites();
+        Layer(ref _under, under);
+        Layer(ref _over, over);
+    }
+
+    void Layer(ref ID2D1Bitmap1? bmp, Action draw)
+    {
+        if (bmp == null || bmp.PixelSize.Width != _bounds.Width || bmp.PixelSize.Height != _bounds.Height)
+        {
+            bmp?.Dispose();
+            var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
+            bmp = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(Math.Max(1, _bounds.Width), Math.Max(1, _bounds.Height)), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+        }
+        var old = _ctx.Target;
+        _ctx.Target = bmp;
+        _ctx.BeginDraw();
+        _ctx.Clear(new Color4(0, 0, 0, 0));
+        _ctx.Transform = Matrix3x2.CreateTranslation(-_bounds.X, -_bounds.Y);
+        draw();
+        _ctx.Transform = Matrix3x2.Identity;
+        _ctx.EndDraw();
+        _ctx.Target = old;
+    }
+
+    /// <summary>Copy the part of a cached layer that this region needs.</summary>
+    public void BlitLayer(bool over, System.Drawing.RectangleF clip)
+    {
+        var b = over ? _over : _under;
+        if (b == null) return;
+        var src = new Vortice.RawRectF(clip.Left - _bounds.X, clip.Top - _bounds.Y, clip.Right - _bounds.X, clip.Bottom - _bounds.Y);
+        _ctx.DrawBitmap(b, new Vortice.RawRectF(clip.Left, clip.Top, clip.Right, clip.Bottom), 1, Vortice.Direct2D1.InterpolationMode.NearestNeighbor, src, null);
+    }
+
+    void EnsureSprites()
+    {
+        if (_softSprite != null) return;
+        _softSprite = Sprite(128, 64, new[]
+        {
+            new GradientStop(0, new Color4(0, 0, 0, 1)), new GradientStop(0.3f, new Color4(0, 0, 0, 0.82f)),
+            new GradientStop(0.6f, new Color4(0, 0, 0, 0.4f)), new GradientStop(0.82f, new Color4(0, 0, 0, 0.12f)), new GradientStop(1, new Color4(0, 0, 0, 0)),
+        });
+        _glowSprite = Sprite(128, 128, new[]
+        {
+            new GradientStop(0, new Color4(1, 0.82f, 0.45f, 0.9f)), new GradientStop(0.25f, new Color4(1, 0.6f, 0.2f, 0.55f)),
+            new GradientStop(0.6f, new Color4(1, 0.42f, 0.1f, 0.18f)), new GradientStop(1, new Color4(1, 0.35f, 0.05f, 0)),
+        });
+    }
+
+    ID2D1Bitmap1 Sprite(int w, int h, GradientStop[] stops)
+    {
+        var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
+        var bmp = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(w, h), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+        var old = _ctx.Target;
+        _ctx.Target = bmp;
+        _ctx.BeginDraw();
+        _ctx.Clear(new Color4(0, 0, 0, 0));
+        using (var coll = _ctx.CreateGradientStopCollection(stops))
+        using (var brush = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(new Vector2(w / 2f, h / 2f), Vector2.Zero, w / 2f, h / 2f), coll))
+            _ctx.FillEllipse(new Ellipse(new Vector2(w / 2f, h / 2f), w / 2f, h / 2f), brush);
+        _ctx.EndDraw();
+        _ctx.Target = old;
+        return bmp;
+    }
+
+    void Blit(ID2D1Bitmap1? sprite, Vector2 c, float rx, float ry, float alpha)
+    {
+        if (sprite == null || alpha <= 0.003f) return;
+        _ctx.DrawBitmap(sprite, new Vortice.RawRectF(c.X - rx, c.Y - ry, c.X + rx, c.Y + ry), Math.Clamp(alpha, 0, 1), Vortice.Direct2D1.InterpolationMode.Linear, null, null);
+    }
 
     /// <summary>Warm firelight: a smooth radial glow, hot in the middle and fading to nothing.</summary>
-    public void FireGlow(Vector2 c, float rx, float ry, float alpha)
-    {
-        if (_fireGlow == null)
-        {
-            using var stops = _ctx.CreateGradientStopCollection(new[]
-            {
-                new GradientStop(0, new Color4(1, 0.82f, 0.45f, 0.9f)), new GradientStop(0.25f, new Color4(1, 0.6f, 0.2f, 0.55f)),
-                new GradientStop(0.6f, new Color4(1, 0.42f, 0.1f, 0.18f)), new GradientStop(1, new Color4(1, 0.35f, 0.05f, 0)),
-            });
-            _fireGlow = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(Vector2.Zero, Vector2.Zero, 1, 1), stops);
-        }
-        _fireGlow.Center = c;
-        _fireGlow.RadiusX = rx;
-        _fireGlow.RadiusY = ry;
-        _fireGlow.Opacity = Math.Clamp(alpha, 0, 1);
-        _ctx.FillEllipse(new Ellipse(c, rx, ry), _fireGlow);
-    }
+    public void FireGlow(Vector2 c, float rx, float ry, float alpha) => Blit(_glowSprite, c, rx, ry, alpha);
 
     /// <summary>A soft shadow: one smooth radial falloff (no rings), darkest in the middle.</summary>
-    public void SoftShadow(Vector2 c, float rx, float ry, float alpha)
-    {
-        if (_soft == null)
-        {
-            using var stops = _ctx.CreateGradientStopCollection(new[]
-            {
-                new GradientStop(0, new Color4(0, 0, 0, 1)), new GradientStop(0.3f, new Color4(0, 0, 0, 0.82f)),
-                new GradientStop(0.6f, new Color4(0, 0, 0, 0.4f)), new GradientStop(0.82f, new Color4(0, 0, 0, 0.12f)), new GradientStop(1, new Color4(0, 0, 0, 0)),
-            });
-            _soft = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(Vector2.Zero, Vector2.Zero, 1, 1), stops);
-        }
-        _soft.Center = c;
-        _soft.RadiusX = rx;
-        _soft.RadiusY = ry;
-        _soft.GradientOriginOffset = Vector2.Zero;
-        _soft.Opacity = alpha;
-        _ctx.FillEllipse(new Ellipse(c, rx, ry), _soft);
-    }
+    public void SoftShadow(Vector2 c, float rx, float ry, float alpha) => Blit(_softSprite, c, rx, ry, alpha);
 
-    /// <summary>Light-and-shade overlays (white towards the light, dark away from it), made once and moved per draw.</summary>
     void EnsureShading()
     {
         if (_shadeLin != null) return;
@@ -407,7 +451,7 @@ sealed class Renderer : IDisposable
         foreach (var f in _fonts.Values) f.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
         foreach (var g in _shapes.Values) g.geo.Dispose();
-        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _soft?.Dispose(); _fireGlow?.Dispose();
+        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _softSprite?.Dispose(); _glowSprite?.Dispose(); _under?.Dispose(); _over?.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

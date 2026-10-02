@@ -113,7 +113,7 @@ sealed partial class App
     {
         double t = _clock.Elapsed.TotalSeconds;
         if (_skipItems) return;
-        foreach (var it in _w.Items) if (it.Holder == null && Dirty(it.Bounds())) it.Draw(_r, over, t);
+        foreach (var it in _w.Items) if (it.Holder == null && !IsStatic(it) && Dirty(it.Bounds())) it.Draw(_r, over, t);
     }
 
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.

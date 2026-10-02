@@ -511,6 +511,7 @@ sealed partial class App : ApplicationContext
         MergeRects(_regAll);
         _regPrev2.Clear(); _regPrev2.AddRange(_regPrev);
         _regPrev.Clear(); _regPrev.AddRange(_regNow);
+        UpdateLayers();
         if (_regAll.Count == 0) return false;
         _r.Frame(_regAll, (Action<RectangleF>)DrawScene);
         return true;
@@ -531,9 +532,10 @@ sealed partial class App : ApplicationContext
             foreach (var wl in _w.Env.Walls)
                 if (wl.ReachesTop) _r.Line(new(wl.X, wl.Y1), new(wl.X, wl.Y2), new Color4(0.3f, 0.7f, 1, 0.6f), 2);
         }
+        _r.BlitLayer(false, clip);
         foreach (var it in _w.Items)
         {
-            if (!Dirty(it.Bounds())) continue;
+            if (IsStatic(it) || !Dirty(it.Bounds())) continue;
             it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
             if (ia > 0) Gfx.GroundShadow(_r, ic, irx, iry, ia);
         }
@@ -546,7 +548,7 @@ sealed partial class App : ApplicationContext
             // Everything's shadow on the window behind, as one layer (so overlaps don't darken).
             var drop = Gfx.DropInk;
             _r.BeginShadowLayer(Gfx.DropOpacity);
-            foreach (var it in _w.Items) if (Dirty(it.Bounds())) it.DrawDropShadow(_r);
+            foreach (var it in _w.Items) if (!IsStatic(it) && Dirty(it.Bounds())) it.DrawDropShadow(_r);
             foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop);
             foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop);
             for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].DrawDropShadow(_r);
@@ -567,6 +569,7 @@ sealed partial class App : ApplicationContext
         DrawLeashes();
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(true);
+        _r.BlitLayer(true, clip);
         DrawLassos();
         foreach (var it in _w.Items)
         {
@@ -640,7 +643,7 @@ sealed partial class App : ApplicationContext
                 for (int j = i + 1; j < rects.Count; j++)
                 {
                     var grown = rects[i];
-                    grown.Inflate(40, 40);
+                    grown.Inflate(14, 14);
                     if (!grown.IntersectsWith(rects[j])) continue;
                     rects[i] = Rectangle.Union(rects[i], rects[j]);
                     rects.RemoveAt(j);
@@ -649,7 +652,7 @@ sealed partial class App : ApplicationContext
                 }
         }
         // Each region means drawing the scene again: past a handful, merge the pairs that waste the least area.
-        while (rects.Count > 8)
+        while (rects.Count > 14)
         {
             int bi = 0, bj = 1;
             long best = long.MaxValue;

@@ -67,10 +67,11 @@ sealed partial class App
     }
 
     /// <summary>A little flag on someone's home, in their colour with their name.</summary>
-    void DrawHomeFlags()
+    void DrawHomeFlags(bool onlyStatic = false)
     {
         foreach (var it in _w.Items)
         {
+            if (IsStatic(it) != onlyStatic) continue;
             if (it.OwnerId == 0 || it.Holder != null || it.FlagRect() is not { } fr || !Dirty(fr)) continue;
             float s = it.Scale;
             Vector2 pole = new(fr.Left + 2 * s, fr.Bottom);

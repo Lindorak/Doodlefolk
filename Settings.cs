@@ -186,6 +186,11 @@ sealed class Settings
     public bool CheckUpdates { get; set; } = true;
     public DateTime? LastUpdateCheck { get; set; }
     public string BatterySaver { get; set; } = "battery";
+    /// <summary>Optional AI conversations: on/off, the key (encrypted with Windows DPAPI for this user), model, daily cap.</summary>
+    public bool AiChat { get; set; }
+    public string AiKeyProtected { get; set; } = "";
+    public string AiModel { get; set; } = "gpt-5-mini";
+    public int AiDailyLimit { get; set; } = 150;
     public bool NoticeFrustration { get; set; } = true;
     public List<Reminder> Reminders { get; set; } = new();
     public string PauseFrom { get; set; } = "09:00";

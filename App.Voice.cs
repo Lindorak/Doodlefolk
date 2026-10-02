@@ -84,7 +84,7 @@ sealed partial class App
             if (!(low == n || low.StartsWith(n + " ") || low.StartsWith(n + ","))) continue;
             string rest = t[f.Name.Length..].TrimStart(',', ' ');
             if (rest.StartsWith("come", StringComparison.OrdinalIgnoreCase)) return f.Brain.CalledByUser(_w);
-            return $"{f.Name}: {f.Brain.Talk(rest.Length > 0 ? rest : "hello", _w)}";
+            return $"{f.Name}: {TalkTo(f, rest.Length > 0 ? rest : "hello")}";
         }
         foreach (var p in _w.Pets)
             if (low.StartsWith(p.Name.ToLowerInvariant()))
@@ -113,6 +113,6 @@ sealed partial class App
             if (low.StartsWith(lead)) return Summon(t[lead.Length..]);
         // Otherwise, whoever's closest to your cursor answers.
         var near = _w.Figures.Where(f => f.Mode == Mode.Control).OrderBy(f => Vector2.Distance(f.Jt[J.Head], _w.Cursor)).FirstOrDefault();
-        return near != null ? $"{near.Name}: {near.Brain.Talk(t, _w)}" : "Nobody's here to hear it.";
+        return near != null ? $"{near.Name}: {TalkTo(near, t)}" : "Nobody's here to hear it.";
     }
 }

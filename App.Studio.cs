@@ -175,7 +175,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
             installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
             mods = new { loaded = Mods.Loaded, errors = Mods.Errors, items = Mods.ItemCount, hats = Mods.HatCount, jokes = Mods.Jokes.Count, dir = Mods.Dir }, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
@@ -422,7 +422,7 @@ sealed partial class App
         }
         catch (Exception e) when (e is KeyNotFoundException or InvalidOperationException or FormatException)
         {
-            World.Log($"Studio: bad message {m}: {e.Message}");
+            World.Log($"Studio: bad message {(m.ToString().Contains("aiKey") ? "(aiKey setting, not logged)" : m.ToString())}: {e.Message}");
         }
         _nextStudioPush = 0;   // reflect the change right away
     }
@@ -531,7 +531,7 @@ sealed partial class App
             case "job": if (Enum.TryParse<Job>(Str(m, "v"), out var job)) { f.Brain.Job = job; f.Brain.JobChanged(); } break;
             case "coins": f.Brain.Coins += (int)Num(m, "v"); f.Brain.GotCoins((int)Num(m, "v")); break;
             case "call": PostAll(new { t = "toast", text = f.Brain.CalledByUser(_w) }); break;
-            case "talk": PostAll(new { t = "said", id = f.Id, text = f.Brain.Talk(Str(m, "v"), _w) }); break;
+            case "talk": PostAll(new { t = "said", id = f.Id, text = TalkTo(f, Str(m, "v")) }); break;
             case "dance": if (f.Mode == Mode.Control && f.Grounded) f.StartFidget(Fidget.Groove); break;
         }
     }
@@ -682,6 +682,9 @@ sealed partial class App
             case "events": _settings.Events = v.GetBoolean(); break;
             case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
             case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
+            case "aiChat": _settings.AiChat = v.GetBoolean(); break;
+            case "aiModel": if (v.GetString() is { Length: > 0 and < 60 } am) _settings.AiModel = am.Trim(); break;
+            case "aiKey": SetAiKey(v.GetString() ?? ""); break;
             case "startWithWindows": _settings.StartWithWindows = v.GetBoolean(); SetStartWithWindows(_settings.StartWithWindows); break;
             case "checkUpdates": _settings.CheckUpdates = v.GetBoolean(); if (_settings.CheckUpdates) _updateCheckAt = 0; break;
             case "batterySaver": _settings.BatterySaver = v.GetString() ?? "battery"; PowerFrame(_clock.Elapsed.TotalSeconds, true); break;

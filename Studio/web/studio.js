@@ -1314,6 +1314,14 @@ PAGES.settings = {
     const dayChips = DAYS.map((d, i) => { const c = h("button", { class: "chip", onclick: () => { touched(c); const cur = new Set(st().pauseDays || []); cur.has(i) ? cur.delete(i) : cur.add(i); setS("pauseDays", [...cur].sort()); } }, d); c.key = i; return c; });
     const quietBox = h("div", null, h("div", { class: "field" }, h("label", null, "From"), qFrom, h("label", null, "to"), qTo), h("div", { class: "row tight" }, dayChips));
     const voiceC = check("Talk out loud", "A 🎤 Speak button (in the quick panel) listens once: say a figure's name and what to tell them (\"Sparky, come here\"), ask for something (\"make a pizza\"), or call for an event, a photo, a clip or weather. Uses Windows' own speech recognition on this PC; nothing is sent anywhere.", () => !!st().voiceInput, v => setS("voiceInput", v));
+    const aiC = check("AI conversations", "When you talk to a figure, a language model answers in their voice (their personality, mood, likes, friends and feelings about you are sent along with what you said). Needs your own OpenAI API key and uses its credit. Off: they answer the usual way, all on this PC.", () => !!st().aiChat, v => setS("aiChat", v));
+    const aiKey = h("input", { type: "password", placeholder: "sk-… (stored encrypted on this PC)", autocomplete: "off", style: { width: "240px" } });
+    const aiModel = h("input", { type: "text", style: { width: "130px" }, onchange: () => setS("aiModel", aiModel.value.trim()) });
+    const aiLine = h("p", { class: "hint" });
+    const aiBox = h("div", null, h("div", { class: "field" }, h("label", null, "API key"), aiKey,
+      h("button", { class: "btn small", onclick: () => { if (aiKey.value.trim()) { setS("aiKey", aiKey.value.trim()); aiKey.value = ""; } } }, "Save key"),
+      h("button", { class: "btn small", onclick: () => setS("aiKey", "") }, "Remove key")),
+      h("div", { class: "field" }, h("label", null, "Model"), aiModel), aiLine);
     const dlC = check("Notice downloads", "A cheer when a download finishes. Only the kind of file is noticed (a picture, a document…), from its extension; nothing is opened or read.", () => st().noticeDownloads !== false, v => setS("noticeDownloads", v));
     const frC = check("Notice when you're frustrated", "Lots of clicks in one spot, or a run of windows slammed shut: a friend comes over to check you're okay.", () => st().noticeFrustration !== false, v => setS("noticeFrustration", v));
     const remText = h("input", { type: "text", placeholder: "Remind me to…", maxlength: 120, style: { width: "220px" } });
@@ -1376,7 +1384,7 @@ PAGES.settings = {
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month. Everything stays on this PC."),
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
-      remList, dlC, frC, voiceC,
+      remList, dlC, frC, voiceC, aiC, aiBox,
       h("h2", null, "Accessibility & quiet hours"),
       calmC, cbC, quietC, quietBox,
       h("h2", null, "Your screen"),
@@ -1412,7 +1420,10 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
+      aiBox.style.display = st().aiChat ? "" : "none";
+      if (idle(aiModel)) aiModel.value = st().aiModel || "gpt-5-mini";
+      aiLine.textContent = (st().aiHasKey ? (st().aiEnvKey ? "Using the key from the OPENAI_API_KEY environment variable (or the one you saved). " : "A key is saved. ") : "No key yet. ") + (st().aiStatus || "");
       batChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().batterySaver || "battery")); });
       updLine.textContent = `Version ${st().version || ""}${st().installed ? " (installed)" : ""}. ${st().updateStatus || ""}`;
       updBtn.style.display = st().updateReady ? "" : "none";

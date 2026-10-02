@@ -47,7 +47,11 @@ sealed partial class App : ApplicationContext
     {
         _debug = args.Contains("--debug");
         World.Debug = _debug;
+        var boot = System.Diagnostics.Stopwatch.StartNew();
+        var marks = new List<string>();
+        void Mark(string what) { marks.Add($"{what} {boot.ElapsedMilliseconds}"); }
         Mods.Load();
+        Mark("mods");
         CleanUpOldVersion();
         _showPlatforms = args.Contains("--platforms");
         _w.Scale = ComputeScale(args);
@@ -57,7 +61,9 @@ sealed partial class App : ApplicationContext
         var vs = _w.Env.Virtual;
         _overlay = new Overlay(vs);
         _overlay.Show();
+        Mark("overlay");
         _r = new Renderer(_overlay.Handle, vs);
+        Mark("renderer");
         _refresh = RefreshRate();
         ApplyFps();
         var full = new List<Rectangle> { _r.Bounds };
@@ -70,16 +76,26 @@ sealed partial class App : ApplicationContext
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;
 
+        Mark("tray");
         _w.Env.Refresh(_overlay.Handle);
-        try
+        Mark("env");
+        // Sound effects are synthesised on a worker thread so the figures appear sooner; until then it's quiet.
+        World.Voices = _settings.Voices;
+        var screen = (_w.Env.Virtual.Left, _w.Env.Virtual.Width);
+        Task.Run(() =>
         {
-            _w.Sound = new Sound(_settings.SoundVolume) { Enabled = _settings.SoundOn };
-            World.Voices = _settings.Voices;
-            _w.Sound.SetScreen(_w.Env.Virtual.Left, _w.Env.Virtual.Width);
-        }
-        catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
+            try
+            {
+                var snd = new Sound(_settings.SoundVolume) { Enabled = _settings.SoundOn };
+                snd.SetScreen(screen.Left, screen.Width);
+                _overlay.BeginInvoke(() => { if (!_disposed) _w.Sound = snd; else snd.Dispose(); });
+            }
+            catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
+        });
+        Mark("sound");
         Gfx.Q = _settings.Gfx;
         InitScreen();
+        Mark("screen");
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeBaby = MakeBaby;
         _w.MakePet = k => SpawnPet(k, quiet: true);
@@ -91,6 +107,8 @@ sealed partial class App : ApplicationContext
         else if (_settings.RememberCast && (_settings.Figures.Count > 0 || _settings.Pets.Count > 0)) RestoreCast();
         else if (!_settings.PetMode) Spawn(null);
         if (_settings.PetMode) { _settings.PetMode = false; SetPetMode(true); }
+        Mark("cast");
+        World.Log("startup steps (ms): " + string.Join(", ", marks));
     }
 
     // ---------------- frame rate ----------------
@@ -142,11 +160,28 @@ sealed partial class App : ApplicationContext
 
     // ---------------- main loop ----------------
 
+    bool _startLogged, _memLogged;
+
     void OnIdle(object? sender, EventArgs e)
     {
         while (!PeekMessage(out _, IntPtr.Zero, 0, 0, 0))
         {
-            try { Frame(); }
+            try
+            {
+                Frame();
+                if (!_startLogged)
+                {
+                    _startLogged = true;
+                    using var me = System.Diagnostics.Process.GetCurrentProcess();
+                    World.Log($"startup: first frame after {(DateTime.Now - me.StartTime).TotalMilliseconds:0} ms");
+                }
+                else if (!_memLogged && _clock.Elapsed.TotalSeconds > 30)
+                {
+                    _memLogged = true;
+                    using var me = System.Diagnostics.Process.GetCurrentProcess();
+                    World.Log($"memory: managed {GC.GetTotalMemory(false) / 1048576} MB, private {me.PrivateMemorySize64 / 1048576} MB, working set {me.WorkingSet64 / 1048576} MB, {_r.TileCount} layer tiles");
+                }
+            }
             catch (Exception ex)
             {
                 File.AppendAllText(_logPath, $"{DateTime.Now:O} {ex}\n");

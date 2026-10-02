@@ -241,42 +241,71 @@ sealed class Renderer : IDisposable
 
     /// <summary>Soft round gradients are drawn once into small pictures and stretched into place: far cheaper than
     /// filling a gradient every time.</summary>
-    ID2D1Bitmap1? _under, _over;
+    // Cached layers of things sitting still, kept as 256-pixel tiles only where there's something to cache (a whole
+    // screen's worth of picture per layer was most of the app's memory).
+    const int TileSize = 256;
+    readonly Dictionary<long, ID2D1Bitmap1> _tilesUnder = new(), _tilesOver = new();
+    static long TileKey(int tx, int ty) => ((long)tx << 32) | (uint)ty;
+    public int TileCount => _tilesUnder.Count + _tilesOver.Count;
 
-    /// <summary>Redraw the cached layers of things sitting still (see App.Layers). Must be called outside a frame.</summary>
-    public void BuildLayers(Action under, Action over)
+    /// <summary>Redraw the cached layers of things sitting still (see App.Layers): <paramref name="under"/> and
+    /// <paramref name="over"/> draw whatever falls in the tile they're given, and the areas say where anything is.
+    /// Must be called outside a frame.</summary>
+    public void BuildLayers(Action<System.Drawing.RectangleF> under, IReadOnlyList<System.Drawing.RectangleF> underAreas,
+                            Action<System.Drawing.RectangleF> over, IReadOnlyList<System.Drawing.RectangleF> overAreas)
     {
         EnsureSprites();
-        Layer(ref _under, under);
-        Layer(ref _over, over);
+        BuildTiles(_tilesUnder, under, underAreas);
+        BuildTiles(_tilesOver, over, overAreas);
     }
 
-    void Layer(ref ID2D1Bitmap1? bmp, Action draw)
+    void BuildTiles(Dictionary<long, ID2D1Bitmap1> tiles, Action<System.Drawing.RectangleF> draw, IReadOnlyList<System.Drawing.RectangleF> areas)
     {
-        if (bmp == null || bmp.PixelSize.Width != _bounds.Width || bmp.PixelSize.Height != _bounds.Height)
+        var need = new HashSet<long>();
+        foreach (var a0 in areas)
         {
-            bmp?.Dispose();
-            var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
-            bmp = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(Math.Max(1, _bounds.Width), Math.Max(1, _bounds.Height)), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+            var a = System.Drawing.RectangleF.Intersect(a0, new System.Drawing.RectangleF(_bounds.X, _bounds.Y, _bounds.Width, _bounds.Height));
+            if (a.Width <= 0 || a.Height <= 0) continue;
+            int tx0 = (int)MathF.Floor(a.Left / TileSize), tx1 = (int)MathF.Floor((a.Right - 0.01f) / TileSize);
+            int ty0 = (int)MathF.Floor(a.Top / TileSize), ty1 = (int)MathF.Floor((a.Bottom - 0.01f) / TileSize);
+            for (int tx = tx0; tx <= tx1; tx++)
+                for (int ty = ty0; ty <= ty1; ty++) need.Add(TileKey(tx, ty));
         }
+        foreach (var k in tiles.Keys.Where(k => !need.Contains(k)).ToList()) { tiles[k].Dispose(); tiles.Remove(k); }
+        var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
         var old = _ctx.Target;
-        _ctx.Target = bmp;
-        _ctx.BeginDraw();
-        _ctx.Clear(new Color4(0, 0, 0, 0));
-        _ctx.Transform = Matrix3x2.CreateTranslation(-_bounds.X, -_bounds.Y);
-        draw();
-        _ctx.Transform = Matrix3x2.Identity;
-        _ctx.EndDraw();
+        foreach (var k in need)
+        {
+            if (!tiles.TryGetValue(k, out var bmp))
+                tiles[k] = bmp = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(TileSize, TileSize), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+            int tx = (int)(k >> 32), ty = (int)(k & 0xFFFFFFFF);
+            _ctx.Target = bmp;
+            _ctx.BeginDraw();
+            _ctx.Clear(new Color4(0, 0, 0, 0));
+            _ctx.Transform = Matrix3x2.CreateTranslation(-tx * TileSize, -ty * TileSize);
+            draw(new System.Drawing.RectangleF(tx * TileSize, ty * TileSize, TileSize, TileSize));
+            _ctx.Transform = Matrix3x2.Identity;
+            _ctx.EndDraw();
+        }
         _ctx.Target = old;
     }
 
-    /// <summary>Copy the part of a cached layer that this region needs.</summary>
     public void BlitLayer(bool over, System.Drawing.RectangleF clip)
     {
-        var b = over ? _over : _under;
-        if (b == null) return;
-        var src = new Vortice.RawRectF(clip.Left - _bounds.X, clip.Top - _bounds.Y, clip.Right - _bounds.X, clip.Bottom - _bounds.Y);
-        _ctx.DrawBitmap(b, new Vortice.RawRectF(clip.Left, clip.Top, clip.Right, clip.Bottom), 1, Vortice.Direct2D1.InterpolationMode.NearestNeighbor, src, null);
+        var tiles = over ? _tilesOver : _tilesUnder;
+        if (tiles.Count == 0) return;
+        int tx0 = (int)MathF.Floor(clip.Left / TileSize), tx1 = (int)MathF.Floor((clip.Right - 0.01f) / TileSize);
+        int ty0 = (int)MathF.Floor(clip.Top / TileSize), ty1 = (int)MathF.Floor((clip.Bottom - 0.01f) / TileSize);
+        for (int tx = tx0; tx <= tx1; tx++)
+            for (int ty = ty0; ty <= ty1; ty++)
+            {
+                if (!tiles.TryGetValue(TileKey(tx, ty), out var bmp)) continue;
+                float x0 = MathF.Max(clip.Left, tx * TileSize), y0 = MathF.Max(clip.Top, ty * TileSize);
+                float x1 = MathF.Min(clip.Right, (tx + 1) * TileSize), y1 = MathF.Min(clip.Bottom, (ty + 1) * TileSize);
+                if (x1 <= x0 || y1 <= y0) continue;
+                _ctx.DrawBitmap(bmp, new Vortice.RawRectF(x0, y0, x1, y1), 1, Vortice.Direct2D1.InterpolationMode.NearestNeighbor,
+                                new Vortice.RawRectF(x0 - tx * TileSize, y0 - ty * TileSize, x1 - tx * TileSize, y1 - ty * TileSize), null);
+            }
     }
 
     void EnsureSprites()
@@ -486,7 +515,8 @@ sealed class Renderer : IDisposable
         foreach (var f in _fonts.Values) f.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
         foreach (var g in _shapes.Values) g.geo.Dispose();
-        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _softSprite?.Dispose(); _glowSprite?.Dispose(); _under?.Dispose(); _over?.Dispose();
+        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _softSprite?.Dispose(); _glowSprite?.Dispose();
+        foreach (var t in _tilesUnder.Values.Concat(_tilesOver.Values)) t.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

@@ -24,9 +24,15 @@ sealed partial class App
         var saved = _clip;
         _clip = new RectangleF(-1e7f, -1e7f, 2e7f, 2e7f);
         double t = _clock.Elapsed.TotalSeconds;
-        _r.BuildLayers(() =>
+        // Where each still thing reaches: its outline plus room for its shadow and any glow.
+        float pad = 90 * _w.Scale;
+        var reach = _static.ToDictionary(it => it, it => { var b = it.Bounds(); b.Inflate(pad, pad); return b; });
+        var overAreas = _static.Where(it => it.Def.Shapes.Any(s => s.Over)).Select(it => reach[it]).ToList();
+        _r.BuildLayers(tile =>
         {
-            foreach (var it in _static)
+            var here = _static.Where(it => reach[it].IntersectsWith(tile)).ToList();
+            if (here.Count == 0) return;
+            foreach (var it in here)
             {
                 it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
                 if (ia > 0) Gfx.GroundShadow(_r, ic, irx, iry, ia);
@@ -34,15 +40,15 @@ sealed partial class App
             if (Gfx.Q.DropShadows)
             {
                 _r.BeginShadowLayer(Gfx.DropOpacity);
-                foreach (var it in _static) it.DrawDropShadow(_r);
+                foreach (var it in here) it.DrawDropShadow(_r);
                 _r.EndShadowLayer();
             }
-            if (!_skipItems) foreach (var it in _static) it.Draw(_r, false, t);
+            if (!_skipItems) foreach (var it in here) it.Draw(_r, false, t);
             DrawHomeFlags(onlyStatic: true);
-        }, () =>
+        }, reach.Values.ToList(), tile =>
         {
-            if (!_skipItems) foreach (var it in _static) it.Draw(_r, true, t);
-        });
+            if (!_skipItems) foreach (var it in _static) if (reach[it].IntersectsWith(tile)) it.Draw(_r, true, t);
+        }, overAreas);
         _clip = saved;
         ForceFullRedraw();
     }

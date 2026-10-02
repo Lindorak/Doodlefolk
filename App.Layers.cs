@@ -39,7 +39,7 @@ sealed partial class App
             if (Gfx.Q.DropShadows)
             {
                 _r.BeginShadowLayer(Gfx.DropOpacity);
-                foreach (var it in here) it.DrawDropShadow(_r);
+                foreach (var it in here) { _r.PushAbove(GroundUnder(it.Pos)); it.DrawDropShadow(_r); _r.PopClip(); }
                 _r.EndShadowLayer();
             }
             if (!_skipItems) foreach (var it in here) it.Draw(_r, false, t);

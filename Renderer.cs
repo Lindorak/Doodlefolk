@@ -221,6 +221,10 @@ sealed class Renderer : IDisposable
 
     public void EndShadowLayer() => _ctx.PopLayer();
 
+    /// <summary>Draw only above this line (a shadow cast on the window behind stops at the surface its owner stands on).</summary>
+    public void PushAbove(float y) => _ctx.PushAxisAlignedClip(new Rect(-1e5f, -1e5f, 2e5f, y + 1e5f), AntialiasMode.Aliased);
+    public void PopClip() => _ctx.PopAxisAlignedClip();
+
     public void Line(Vector2 a, Vector2 b, Color4 c, float width)
     {
         _brush.Color = c;

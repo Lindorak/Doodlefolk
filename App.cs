@@ -661,10 +661,11 @@ sealed partial class App : ApplicationContext
             // Everything's shadow on the window behind, as one layer (so overlaps don't darken).
             var drop = Gfx.DropInk;
             _r.BeginShadowLayer(Gfx.DropOpacity);
-            foreach (var it in _w.Items) if (!IsStatic(it) && Dirty(it.Bounds())) it.DrawDropShadow(_r);
-            foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop);
-            foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop);
-            for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].DrawDropShadow(_r);
+            // Each shadow stops at the surface its owner is on: it's cast on the window behind, not below the floor.
+            foreach (var it in _w.Items) if (!IsStatic(it) && Dirty(it.Bounds())) { _r.PushAbove(GroundUnder(it.Pos)); it.DrawDropShadow(_r); _r.PopClip(); }
+            foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) { _r.PushAbove(GroundUnder(p.Pos + new Vector2(0, p.Radius))); _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop); _r.PopClip(); }
+            foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) { _r.PushAbove(GroundUnder(pet.Pos)); _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop); _r.PopClip(); }
+            for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) { var fg = _w.Figures[i]; _r.PushAbove(GroundUnder(fg.Base)); fg.DrawDropShadow(_r); _r.PopClip(); }
             _r.EndShadowLayer();
         }
         // Hide-and-seek: hiders crouch behind things, so they're drawn before them.
@@ -704,6 +705,9 @@ sealed partial class App : ApplicationContext
         DrawGameCurtain();
         DrawFlash();
     }
+
+    /// <summary>The surface under a point (where its drop shadow stops); far below the screen if there's none.</summary>
+    float GroundUnder(Vector2 feet) => _w.Env.Below(feet.X, feet.Y - 3 * _w.Scale)?.Y ?? 1e5f;
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
     {

@@ -1171,6 +1171,9 @@ sealed partial class App : ApplicationContext
                     break;
                 case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;
                 case "petmode": SetPetMode(p[1] == "on"); break;
+                case "bout":
+                    if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } bw && _w.Figures.FirstOrDefault(x => x.Name == p[2]) is { } bl) { bw.Brain.RecordBout(bl, true); bl.Brain.RecordBout(bw, false); }
+                    break;
                 case "season": _w.Seasons.Override = Enum.TryParse<Season>(p[1], true, out var sn) ? sn : null; _w.Seasons.Gust(_clock.Elapsed.TotalSeconds); break;
                 case "garden": foreach (var gi in _w.Items.Where(i => i.IsPlant)) gi.Growth = float.Parse(p[1], inv); _gardenAt = 0; break;
                 case "trinket": _trinketAt = 0; break;

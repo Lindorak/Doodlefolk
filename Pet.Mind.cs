@@ -313,7 +313,7 @@ sealed partial class Pet
                 return;
             }
             // Being chased.
-            if (o._st == State.ChasePet && o._other == this && d < 260 * _s) { DefendOrFlee(o, w); return; }
+            if (o._st == State.ChasePet && o._other == this && !o._playful && d < 260 * _s) { DefendOrFlee(o, w); return; }
         }
     }
 

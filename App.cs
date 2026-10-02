@@ -199,6 +199,7 @@ sealed partial class App : ApplicationContext
         _w.Nav.Refresh();
         WishFrame();
         EventsFrame(now);
+        WeatherFrame(dt, now);
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
@@ -434,6 +435,7 @@ sealed partial class App : ApplicationContext
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
         if (OfferRect() is RectangleF ofr) _regNow.Add(ToRect(ofr));
         if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
+        if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
         _regAll.Clear();
@@ -469,6 +471,7 @@ sealed partial class App : ApplicationContext
             it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
             if (ia > 0) _r.Oval(ic, irx, iry, new Color4(0, 0, 0, ia));
         }
+        _w.Weather.DrawCover(_r, _w.Env, _w.Scale);
         DrawItems(false);
         var figVisible = new bool[_w.Figures.Count];
         for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
@@ -492,6 +495,7 @@ sealed partial class App : ApplicationContext
         foreach (var p in _w.Props) if (Dirty(p.Bounds(_w.Env))) p.Draw(_r);
         DrawOffer();
         DrawWish();
+        if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
     }
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
@@ -967,6 +971,7 @@ sealed partial class App : ApplicationContext
                         World.Log("love: " + la.Brain.ForceLove(lb, p.Length > 3 ? float.Parse(p[3], inv) : 0.8f));
                     break;
                 case "testwin": TestWindow(p); break;
+                case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sayf) sayf.Emote(string.Join(' ', p.Skip(2)), 5);

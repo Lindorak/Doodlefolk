@@ -100,6 +100,14 @@ sealed partial class Figure
     void WeaponArms(ref Vector2 hN, ref float handW, ref Vector2 eN)
     {
         if (Weapon is not { } w) return;
+        if (w.Def.Verbs.Contains(Verb.Shelter) && w.Open && Atk == null)
+        {
+            // Holding the umbrella up.
+            hN = new Vector2(Arm * 0.22f, -Arm * 0.82f);
+            eN = new(0.4f, 1);
+            handW = 40;
+            return;
+        }
         if (w.Def.Ranged)
         {
             if (AimAt is Vector2 at)

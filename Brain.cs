@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman,
     }
 
     readonly Figure f;
@@ -57,6 +57,7 @@ sealed partial class Brain
         f.AimAt = null;
         if (g != G.Walk) f.AllowWalkOff = false;
         f.FloorSit = false;
+        if (g != G.Groove) _rainDance = false;
         if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
         if (g != G.Walk) _itemPending = false;
         if (_g == G.Sport && g != G.Sport && Match != null && !(g == G.Walk && _toMatch)) LeaveMatch();
@@ -205,6 +206,7 @@ sealed partial class Brain
         _watchCd -= dt; _swatCd -= dt; _witnessCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
         UpdateLove(dt, w);
+        UpdateWeather(dt, w);
 
         Vector2 cur = w.Cursor;
         float dist = Vector2.Distance(cur, f.Jt[J.Head]);
@@ -329,6 +331,8 @@ sealed partial class Brain
             case G.Groove: DoGroove(w); break;
             case G.Create: DoCreate(w); break;
             case G.Confess: DoConfess(w); break;
+            case G.Snowball: DoSnowball(w); break;
+            case G.Snowman: DoSnowman(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -356,6 +360,7 @@ sealed partial class Brain
         else if (speed > 4 * S) cost += 0.006f;
         if (f.Climbing) cost += 0.03f;
         if (cost > 0) cost *= 1.3f - 0.6f * P.Energy;   // energetic figures tire more slowly
+        if (_g != G.Sleep) cost += World.Current.Night * 0.004f;   // late at night everyone flags
         Stamina = M.Clamp01(Stamina - cost * dt);
 
         bool stimulating = _g is G.Walk or G.Chat or G.HighFive or G.Juggle or G.Dribble or G.Kick or G.Catch or G.Throw or G.Carry or G.Trick or G.Watch or G.Fight or G.CursorFight;
@@ -640,6 +645,7 @@ sealed partial class Brain
         ScreenOptions(w, opts);
         WishOptions(w, opts);
         RomanceOptions(w, opts);
+        WeatherOptions(w, opts);
         Decide(opts);
     }
 

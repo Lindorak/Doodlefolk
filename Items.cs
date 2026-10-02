@@ -22,9 +22,10 @@ enum Verb
     Shoot,      // toy blaster, water gun: carry it and fire it
     Play,       // sports gear: goals, hoops, nets (figures organise games around it)
     Create,     // the Creator's Pencil: whoever holds it can draw things into the world
+    Shelter,    // umbrella: carry it and stay dry
 }
 
-enum Ammo { Dart, Water }
+enum Ammo { Dart, Water, Snow }
 
 /// <summary>How seated figures face.</summary>
 enum SeatFacing { Side, Out, In }
@@ -263,6 +264,20 @@ static class ItemCatalog
             Key = "stick", Name = "Stick", Words = new[] { "stick", "branch", "twig", "staff", "pole", "broom" }, W = 6, H = 32, Color = M.Hex(0x7B5134),
             Shapes = new[] { C(0, 2, 0, -2, 0.5f, 14, -0.5f, 32), C(0, 1.2f, 0.3f, 18, 3.5f, 23) },
             Verbs = new[] { Verb.Wield }, Carry = true, Reach = 30, Damage = 0.8f, Knock = 1, Likes = new[] { Thing.Exploring, Thing.Sparring },
+        });
+        Add(new ItemDef
+        {
+            Key = "umbrella", Name = "Umbrella", Words = new[] { "umbrella", "brolly", "parasol" }, W = 7, H = 34, Color = M.Hex(0xE53935),
+            Shapes = new[] { L(0, 0, 0, 33, 13, 1.4f), C(13, 1.4f, 0, 0, -2.5f, -1.2f, -3.5f, 1.5f), P(0, -3.4f, 10, 3.4f, 10, 0.8f, 32, -0.8f, 32), L(-1, 12, -0.4f, 30, 1, 0.6f) },
+            Verbs = new[] { Verb.Shelter }, Carry = true, Reach = 32, Damage = 0.35f, Knock = 0.5f, Likes = new[] { Thing.Exploring },
+        });
+        Add(new ItemDef
+        {
+            Key = "snowman", Name = "Snowman", Words = new[] { "snowman", "snow man", "snowwoman", "frosty" }, W = 26, H = 47, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { E(0, 9, 13, 9, 7), E(0, 25.5f, 10, 8, 7), E(0, 39, 7.5f, 7.5f, 7), E(-2.6f, 40.5f, 1, 1, 8), E(2.6f, 40.5f, 1, 1, 8),
+                             P(12, 0, 39.6f, 0, 37.6f, 7, 38.4f), E(0, 27, 0.9f, 0.9f, 8), E(0, 23, 0.9f, 0.9f, 8),
+                             L(-9, 26, -19, 33, 13, 1.3f), L(9, 26, 19, 33, 13, 1.3f), R(-6, 45.5f, 6, 47, 8), R(-4, 47, 4, 53, 8) },
+            Verbs = Array.Empty<Verb>(), Likes = new[] { Thing.Tricks },
         });
         Add(new ItemDef
         {

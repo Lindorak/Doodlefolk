@@ -35,6 +35,22 @@ sealed partial class App
         }
     }
 
+    void WeatherFrame(float dt, double now)
+    {
+        _w.DayNight = _settings.DayNight;
+        _w.UpdateClock();
+        _w.Weather.Step(_w, dt, now, _settings.WeatherMode);
+        // Snowmen melt once the snow's gone.
+        if (!_w.Weather.Snowing)
+            foreach (var it in _w.Items.Where(i => i.Def.Key == "snowman" && i.Holder == null).ToList())
+            {
+                var seg = _w.Env.SupportAt(it.Pos.X, it.Pos.Y, it.GroundHwnd);
+                if (seg != null && _w.Weather.SnowOn(seg) > 0.5f) continue;
+                it.SizeMul -= dt * 0.006f;
+                if (it.SizeMul < 0.35f) _w.RemoveItem(it);
+            }
+    }
+
     void EventsFrame(double now)
     {
         if (_testWin != null && !_testWin.IsDisposed && now < _shakeUntil)

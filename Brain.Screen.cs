@@ -201,7 +201,7 @@ sealed partial class Brain
     {
         f.DesiredVX = 0;
         var m = w.Media;
-        _quietT = m.Music ? 0 : _quietT + World.Dt;
+        _quietT = m.Music || (_rainDance && w.Weather.Raining) ? 0 : _quietT + World.Dt;
         if (_quietT > 2.5f) { f.Emote("aw", 1); Go(G.Idle, rng.Range(1, 2)); return; }
         if (f.Action != Act.Fidget || f.ActionT >= f.FidgetDur) f.StartFidget(Fidget.Groove);
         if (m.BeatAt != _lastBeat)

@@ -1092,6 +1092,12 @@ PAGES.settings = {
       check("Romance", "Crushes, blushing, confessions, couples holding hands, jealousy and breakups. Off: just friends.", () => st().romance !== false, v => setS("romance", v)),
       check("They ask for things", "A thought bubble when they want something (a snack, a ball, a bed). Click it to give it to them.", () => st().wishes !== false, v => setS("wishes", v)),
     ];
+    const weatherChips = [["off", "Never"], ["rare", "Rarely"], ["sometimes", "Sometimes"], ["often", "Often"]].map(([k, l]) => {
+      const c = h("button", { class: "chip", onclick: () => { touched(c); setS("weather", k); } }, l);
+      c.key = k;
+      return c;
+    });
+    const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
     const screen = [
       check("Stand on text", "Lines of text and pictures in the window you're using become ledges they can walk, sit and land on.", () => st().screenTerrain, v => setS("screenTerrain", v)),
       check("React to words", "They wander over to words they know (pizza, cats, spiders...) and love them, hate them, or run.", () => st().screenReact, v => setS("screenReact", v)),
@@ -1107,6 +1113,11 @@ PAGES.settings = {
       h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
+      h("h2", null, "Weather & time"),
+      h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Not your real weather: nothing is looked up online."),
+      h("div", { class: "row" }, weatherChips),
+      h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
+      dayNight,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1123,6 +1134,8 @@ PAGES.settings = {
       soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
+      weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
+      dayNight.update();
     };
   },
 };

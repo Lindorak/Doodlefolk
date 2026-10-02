@@ -65,6 +65,9 @@ sealed class Settings
     /// <summary>Notice when you finish typing (timing only) and when notifications pop up.</summary>
     public bool NoticeTyping { get; set; } = true;
     public bool Notifications { get; set; } = true;
+    /// <summary>How often weather happens: off, rare, sometimes, often. And whether night makes them sleepy.</summary>
+    public string WeatherMode { get; set; } = "sometimes";
+    public bool DayNight { get; set; } = true;
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
     /// <summary>Crushes, dating, jealousy and breakups.</summary>

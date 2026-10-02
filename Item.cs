@@ -200,6 +200,7 @@ sealed class Item
         float k = 1;
         if (Def.Verbs.Contains(Verb.Eat)) k = MathF.Sqrt(MathF.Max(0.15f, BitesLeft / (float)Def.Bites));
         if (Def.Verbs.Contains(Verb.Read) && Open) { if (!over) DrawOpenBook(r); return; }
+        if (Def.Verbs.Contains(Verb.Shelter) && Open && Holder is { } holder) { if (over) DrawOpenUmbrella(r, holder); return; }
         foreach (var sh in Def.Shapes)
         {
             if (sh.Over != over) continue;
@@ -297,6 +298,29 @@ sealed class Item
             Vector2 at = Local(-6 + i * 6 + MathF.Sin(ph * 9 + i) * 3, 16 + ph * 22);
             r.Text(i % 2 == 0 ? "♪" : "♫", at, 9 * sc, Ui.Ink.A((1 - ph) * 0.85f));
         }
+    }
+
+    /// <summary>An umbrella up over its holder's head.</summary>
+    void DrawOpenUmbrella(Renderer r, Figure h)
+    {
+        float sc = Sc;
+        Vector2 hand = h.Jt[J.HandN], top = h.Jt[J.Head] + new Vector2(0, -(h.HeadR + 10 * sc));
+        var shaft = new Color4(0.25f, 0.2f, 0.15f, 1);
+        r.Line(hand, top, shaft, 1.4f * sc);
+        Span<Vector2> canopy = stackalloc Vector2[14];
+        float rx = 17 * sc, ry = 9 * sc;
+        for (int i = 0; i < 13; i++)
+        {
+            float a = MathF.PI + MathF.PI * i / 12;
+            canopy[i] = top + new Vector2(MathF.Cos(a) * rx, 4 * sc + MathF.Sin(a) * ry);
+        }
+        canopy[13] = canopy[0];
+        r.FillPolygon(canopy[..13], Color);
+        var dark = new Color4(Color.R * 0.6f, Color.G * 0.6f, Color.B * 0.6f, 1);
+        for (int i = 0; i < 12; i++) r.Line(canopy[i], canopy[i + 1], dark, 1.1f * sc);
+        r.Line(canopy[0], canopy[12], dark, 1.1f * sc);
+        for (int i = 3; i <= 9; i += 3) r.Line(top, canopy[i], dark, 0.8f * sc);
+        r.Disc(top + new Vector2(0, -ry + 3 * sc), 1.2f * sc, shaft);
     }
 
     void DrawOpenBook(Renderer r)

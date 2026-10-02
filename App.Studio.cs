@@ -159,6 +159,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume,
+            weather = _settings.WeatherMode, dayNight = _settings.DayNight, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -272,6 +273,9 @@ sealed partial class App
                     else OpenStudio();
                     break;
                 case "fig": FigureEdit(m); break;
+                case "sky":
+                    if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk)) _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
+                    break;
                 case "spawn":
                 {
                     Personality? traits = m.TryGetProperty("preset", out var pr) && pr.GetInt32() is int pi && pi >= 0 && pi < Personality.Presets.Length
@@ -510,6 +514,8 @@ sealed partial class App
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
+            case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;
+            case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;
             case "wishes": _settings.Wishes = v.GetBoolean(); if (!_settings.Wishes) _w.Wish = null; break;

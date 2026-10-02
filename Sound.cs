@@ -11,6 +11,7 @@ enum Sfx
     BounceBall, BounceSoccer, BounceBasket, BounceTennis, BounceBeach, BallKick,
     Pew, Squirt, DartHit, Boing, Clank, Whirr, Munch, Snore, Scribble, Thud,
     Pip, Chime, Grumble, Laugh, Tune, TaDa, Whistle, Swish,
+    Thunder, Splat, Bark, Meow, Purr,
 }
 
 /// <summary>Dynamic sound effects, synthesized at start-up (no sound files): every effect is a few short
@@ -206,7 +207,33 @@ sealed class Sound : IDisposable
         Add(Sfx.TaDa, Make(0.8f, (t, p) => (Sine(t, p < 0.2f ? 523 : p < 0.4f ? 659 : 784) * 0.6f + Sine(t, p < 0.4f ? 1047 : 1568) * 0.15f) * Env(p, 0.01f) * 0.3f));
         Add(Sfx.Whistle, Make(0.35f, (t, p) => Sine(t, 2300 + 120 * MathF.Sin(t * 180)) * MathF.Sin(MathF.PI * p) * 0.18f));
         Add(Sfx.Swish, Lp(Make(0.25f, (t, p) => Rnd() * MathF.Sin(MathF.PI * p) * 0.3f), 0.7f));
+        // Thunder: a crack, then a long low rumble.
+        Add(Sfx.Thunder, Lp(Make(3.2f, (t, p) => Rnd() * (p < 0.03f ? 1 : MathF.Pow(1 - p, 1.6f) * (0.55f + 0.45f * MathF.Sin(t * 9) * MathF.Sin(t * 2.3f))) * 0.9f), 0.025f));
+        Add(Sfx.Splat, Lp(Make(0.12f, (t, p) => Rnd() * Env(p, 0.005f) * 0.5f), 0.3f));
+        Add(Sfx.Bark, Make(0.18f, (t, p) => MathF.Sign(Sine(t, 260 - 90 * p)) * (Sine(t, 4) * 0.2f + 0.8f) * Env(p, 0.02f) * 0.14f + Rnd() * Env(p) * 0.05f),
+                       Make(0.14f, (t, p) => MathF.Sign(Sine(t, 300 - 120 * p)) * Env(p, 0.02f) * 0.14f + Rnd() * Env(p) * 0.05f));
+        Add(Sfx.Meow, Make(0.5f, (t, p) => Sine(t, 520 + 260 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.16f + Sine(t, 1040 + 400 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.05f));
+        Add(Sfx.Purr, Lp(Make(1.2f, (t, p) => Rnd() * (0.5f + 0.5f * MathF.Sin(t * MathF.Tau * 26)) * MathF.Sin(MathF.PI * p) * 0.25f), 0.06f));
+        _rainLoop = Lp(Make(2.4f, (t, p) => Rnd() * 0.5f + (r.NextDouble() < 0.0015 ? 0.8f : 0)), 0.35f);
+        // Crossfade the ends so the loop doesn't click.
+        for (int i = 0; i < 2000; i++) { float k = i / 2000f; _rainLoop[i] = _rainLoop[i] * k + _rainLoop[^(2000 - i)] * (1 - k); }
         _tune = Chiptune(r);
+    }
+
+    float[] _rainLoop = Array.Empty<float>();
+    LoopVoice? _rain;
+
+    /// <summary>The patter of rain, louder the heavier it falls (0 = silent).</summary>
+    public void Rain(float level)
+    {
+        if (_out == null) return;
+        if (level > 0.01f && Enabled)
+        {
+            if (_rain == null) { _rain = new LoopVoice(_rainLoop); _mixer.AddMixerInput(_rain); }
+            _rain.Target = 0.12f * level;
+        }
+        else if (_rain != null) _rain.Target = 0;
+        if (_rain is { Done: true }) _rain = null;
     }
 
     /// <summary>A short, happy, generated loop for radios: pentatonic melody over a bass line.</summary>

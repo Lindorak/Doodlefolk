@@ -13,7 +13,7 @@ sealed partial class Brain
     {
         Verb.Sit => "Sit in", Verb.Lie => "Nap on", Verb.Hammock => "Swing in", Verb.Bounce => "Bounce on", Verb.Eat => "Eat",
         Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot => "Grab",
-        Verb.Create => "Grab", _ => "Climb on",
+        Verb.Create => "Grab", Verb.Shelter => "Take", _ => "Climb on",
     };
     Item? _item;
     Verb _verb;
@@ -70,12 +70,14 @@ sealed partial class Brain
                     Verb.Bounce => Stamina > 0.4f ? (P.Playfulness * 0.8f + E * 0.6f) * Taste(Thing.Tricks) : 0,
                     Verb.Eat => it.Holder == null ? (Hunger > 0.35f ? Hunger * 3 : Hunger * 0.4f) * Taste(Thing.Eating) : 0,
                     // Real fear sends them into hiding; a cursor hunter nearby only spooks the timid.
-                    Verb.Hide => it.User == null ? (Fear > 0.4f ? 2 + Fear * 3 : HunterAround(w) ? (1 - P.Bravery) * 0.6f : P.Playfulness * 0.12f) : 0,
+                    Verb.Hide => it.User == null ? (Fear > 0.4f ? 2 + Fear * 3 : HunterAround(w) ? (1 - P.Bravery) * 0.6f : P.Playfulness * 0.12f)
+                                                     + (w.Weather.Raining && !LovesRain ? 1.2f + Wet * 2 : 0) : 0,
                     Verb.Dance => it.Playing ? MathF.Max(0, f.Tastes.Of(Thing.Dancing) + 0.35f) * 1.3f * (0.5f + Joy) : 0,
                     Verb.Read => it.Holder == null ? (P.Curiosity * (1 - E) * 0.7f + 0.05f) * Taste(Thing.Reading) : 0,
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
                     Verb.Wield or Verb.Shoot => WeaponWant(it, v),
+                    Verb.Shelter => it.Holder == null && !HasUmbrella ? (w.Weather.Raining && !LovesRain ? 2.5f + Wet * 3 : 0.04f * P.Curiosity) : 0,
                     // Everyone's curious about the Creator's Pencil; the playful and creative most of all.
                     Verb.Create => it.Holder == null && !HasPencil ? (0.25f + P.Curiosity * 0.6f + P.Playfulness * 0.6f) * (0.5f + Boredom) * (_t0 > _pencilBreak ? 1 : 0) : 0,
                     _ => 0,
@@ -128,7 +130,7 @@ sealed partial class Brain
     {
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
-        if (_verb is Verb.Wield or Verb.Shoot or Verb.Create) { Equipped(it); return; }
+        if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter) { Equipped(it); return; }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {

@@ -17,10 +17,10 @@ sealed class Projectile
     public Projectile(Ammo kind, Vector2 pos, Vector2 vel, Figure? owner, float scale, bool atCursor)
     {
         Kind = kind; Pos = Prev = pos; Vel = vel; Owner = owner; _s = scale; AtCursor = atCursor;
-        Life = kind == Ammo.Water ? 0.9f : 1.8f;
+        Life = kind == Ammo.Water ? 0.9f : kind == Ammo.Snow ? 2.5f : 1.8f;
     }
 
-    float Grav => (Kind == Ammo.Water ? 1400 : 500) * _s;
+    float Grav => (Kind == Ammo.Water ? 1400 : Kind == Ammo.Snow ? 900 : 500) * _s;
 
     /// <summary>Returns false when it's done (hit something or ran out).</summary>
     public bool Step(float dt, World w)
@@ -44,7 +44,13 @@ sealed class Projectile
         {
             if (f == Owner || f.Mode == Mode.Spawning || f.Dead) continue;
             if (f.BodyDistance(Pos) > 3 * _s) continue;
-            if (Kind == Ammo.Water)
+            if (Kind == Ammo.Snow)
+            {
+                f.Brain.OnSnowballed(Owner, w);
+                World.Play(Sfx.Splat, Pos, 0.4f);
+                w.Fx.Spark(Pos, _s * 0.8f, w.Rng, 0.6f, new Color4(1, 1, 1, 1));
+            }
+            else if (Kind == Ammo.Water)
             {
                 f.Brain.OnSplashed(Owner, w);
                 w.Fx.Dust(Pos, _s * 0.5f, 2, 0.2f, w.Rng);
@@ -62,6 +68,7 @@ sealed class Projectile
         if (Vel.Y > 0 && w.Env.FindLanding(Pos.X, Prev.Y, Pos.Y) is { } p)
         {
             if (Kind == Ammo.Water) w.Fx.Dust(new Vector2(Pos.X, p.Y), _s * 0.5f, 2, 0.15f, w.Rng);
+            if (Kind == Ammo.Snow) w.Fx.Spark(new Vector2(Pos.X, p.Y), _s * 0.6f, w.Rng, 0.5f, new Color4(1, 1, 1, 1));
             return false;
         }
         return true;
@@ -69,6 +76,12 @@ sealed class Projectile
 
     public void Draw(Renderer r)
     {
+        if (Kind == Ammo.Snow)
+        {
+            r.Disc(Pos, 3.4f * _s, new Color4(0.6f, 0.65f, 0.75f, 0.8f));
+            r.Disc(Pos, 2.8f * _s, new Color4(1, 1, 1, 1));
+            return;
+        }
         if (Kind == Ammo.Water)
         {
             r.Disc(Pos, 1.6f * _s, new Color4(0.45f, 0.75f, 1, 0.85f));

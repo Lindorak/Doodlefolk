@@ -77,6 +77,7 @@ sealed class Prop
         Spin = -Vel.X / Radius * 0.6f;
         OnGround = false;
         LastTouch = by;
+        if (by != null && ThrownByUser && SinceTouch < 6) by.Brain.GotBallFromUser(this);
         ThrownByUser = by == null;
         SinceTouch = 0;
     }

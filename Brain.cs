@@ -47,6 +47,7 @@ sealed partial class Brain
 
     void Go(G g, float dur)
     {
+        _snub = false;
         if (f.GrappleBusy && !f.Climbing) f.CancelGrapple();
         if (_g is G.Chat or G.HighFive or G.SitWith or G.Follow or G.DanceWith && g != _g) EndSocial();
         if (_g is G.Carry or G.Throw && g is not (G.Carry or G.Throw) && f.Carrying != null) f.DropCarried(Vector2.Zero);
@@ -118,6 +119,7 @@ sealed partial class Brain
     public void OnRecovered(float throwSpeed, World w)
     {
         if (throwSpeed < 1 && AfterKnockdown(w)) return;
+        if (throwSpeed > 900 * S) TellWitnesses(w, M.Clamp01(throwSpeed / (2500 * S)));
         if (FeelAboutBeingThrown(throwSpeed)) return;
         float k = M.Clamp01(throwSpeed / (2500 * S));
         Annoyance = M.Clamp01(Annoyance + 0.2f + 0.4f * k);
@@ -144,7 +146,12 @@ sealed partial class Brain
     public void OnHit(Figure? from, bool knockedDown, World w)
     {
         Annoyance = M.Clamp01(Annoyance + (knockedDown ? 0.35f : 0.15f));
-        if (from == null) { CursorTrust = MathF.Max(0, CursorTrust - (knockedDown ? 0.2f : 0.08f)); UserFondness -= knockedDown ? 0.12f : 0.05f; }
+        if (from == null)
+        {
+            CursorTrust = MathF.Max(0, CursorTrust - (knockedDown ? 0.2f : 0.08f));
+            FeelUser(knockedDown ? -0.12f : -0.05f, knockedDown ? "Knocked them down" : "Hit them");
+            if (knockedDown) TellWitnesses(w, 0.8f);
+        }
         else if (from != f)
         {
             from.Brain.NoticeIHit(f);
@@ -181,6 +188,7 @@ sealed partial class Brain
         bool near = dist < 280 * S;
         _hoverT = w.Hover == f ? _hoverT + dt : 0;
         FeelPetting(w, dt);
+        DriftFondness(dt);
         if (near && cspeed < 300 * S && _g != G.Sleep) CursorTrust = MathF.Min(1, CursorTrust + dt * 0.01f);
 
         f.LookAt = null;
@@ -224,7 +232,7 @@ sealed partial class Brain
                 f.LookAt = cur;
                 float dx = cur.X - f.Base.X;
                 if (MathF.Abs(dx) > 12 * S) f.Facing = MathF.Sign(dx);
-                bool approach = CursorTrust > 0.4f && P.Curiosity > 0.55f && MathF.Abs(dx) > 150 * S;
+                bool approach = CursorTrust > 0.4f && (P.Curiosity > 0.55f || UserFondness > 0.4f) && MathF.Abs(dx) > (UserFondness > 0.4f ? 90 : 150) * S;
                 f.DesiredVX = approach ? MathF.Sign(dx) * f.WalkSpeed : 0;
                 _stillT = cspeed < 40 * S ? _stillT + dt : 0;
                 if (_stillT > 2.5f || dist > 600 * S) { _watchCd = rng.Range(5, 12); Go(G.Idle, 1); }
@@ -243,6 +251,7 @@ sealed partial class Brain
             case G.Annoyed:
                 KeepSpace(w);
                 if (_glareAt != null && w.Figures.Contains(_glareAt)) { f.LookAt = _glareAt.Jt[J.Head]; FaceTo(_glareAt.Base.X); }
+                else if (_snub) { f.LookAt = null; f.Facing = cur.X > f.Base.X ? -1 : 1; }
                 else { FaceTo(cur.X); f.LookAt = cur; }
                 f.SetAction(Act.HandsHips);
                 f.HeadShake = _t < 0.8f;
@@ -388,6 +397,25 @@ sealed partial class Brain
             return true;
         }
         if (errand) return false;
+        // How it feels about you shows when your cursor comes by.
+        float fond = UserFondness;
+        if (near && fond < -0.35f && _awayT > 0.6f && _swatCd <= 0 && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch)
+        {
+            _swatCd = rng.Range(4, 8);
+            if (P.Bravery < 0.4f) { f.Emote("!", 1); RunFromCursor(w, cur); }
+            else if (WantsCursorFight() && rng.NextDouble() < 0.35) BeginCursorFight();
+            else if (P.Aggression > 0.5f) { f.Emote("#@!", 1.2f); Go(G.Annoyed, 1.6f); }
+            else Snub(cur);
+            return true;
+        }
+        if (near && fond > 0.55f && CursorTrust > 0.4f && _awayT > 6 && _waveCd <= 0)
+        {
+            _waveCd = rng.Range(15, 30);
+            _awayT = 0;
+            if (rng.NextDouble() < 0.5) { f.Emote("♥", 1); Go(G.Wave, 1.5f); }
+            else Go(G.Cheer, 1);
+            return true;
+        }
         // Figures that have learned to distrust the cursor keep their distance (or square up to it).
         if (near && CursorTrust < 0.25f && _awayT > 0.5f && _swatCd <= 0 && _g is G.Idle or G.Walk or G.SitFloor)
         {
@@ -406,7 +434,7 @@ sealed partial class Brain
         if (near && cspeed > 150 * S && _watchCd <= 0 && (_g == G.Idle || (_g == G.Walk && _purpose == WalkPurpose.Wander)))
         {
             _watchCd = 4;
-            if (rng.NextDouble() < P.Curiosity) { _stillT = 0; Go(G.Watch, 30); return true; }
+            if (rng.NextDouble() < P.Curiosity + MathF.Max(0, UserFondness) * 0.5f) { _stillT = 0; Go(G.Watch, 30); return true; }
         }
         return false;
     }

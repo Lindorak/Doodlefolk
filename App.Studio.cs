@@ -132,6 +132,7 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             trust = R(b.CursorTrust),
+            memories = b.Memories.AsEnumerable().Reverse().Select(m => new { what = m.What, delta = R(m.Delta), ago = MathF.Round(b.Age - m.At) }),
             hp = R(f.HP),
             ko = f.KO,
             dead = f.Dead,
@@ -302,6 +303,7 @@ sealed partial class App
             case "save": SaveToLibrary(f); break;
             case "remove": _w.RemoveFigure(f); break;
             case "heal": f.HP = 100; break;
+            case "call": _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = f.Brain.CalledByUser(_w) }, Json)); break;
         }
     }
 

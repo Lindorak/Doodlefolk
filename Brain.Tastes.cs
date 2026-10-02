@@ -7,7 +7,7 @@ namespace StickFight;
 sealed partial class Brain
 {
     float? _fondness;
-    float _pettingT, _heightWorryCd, _likeSeenCd;
+    float _pettingT, _strokeT, _heightWorryCd, _likeSeenCd;
     readonly HashSet<int> _greetedBalls = new();
 
     /// <summary>How much this figure likes you (the user), -1..1. Separate from CursorTrust (fear vs comfort).</summary>
@@ -15,6 +15,98 @@ sealed partial class Brain
     {
         get => _fondness ??= Math.Clamp(0.1f + (P.Sociability - 0.5f) * 0.4f + f.Tastes.Of(Thing.YourCursor) * 0.4f, -1, 1);
         set => _fondness = Math.Clamp(value, -1, 1);
+    }
+
+    // ---------------- how it remembers you ----------------
+
+    public sealed class UserMemory { public string What = ""; public float Delta, At; }
+    /// <summary>The last few things you did to it, newest last (shown in the Studio).</summary>
+    public readonly List<UserMemory> Memories = new();
+    public float Age => _t0;
+
+    float FondBaseline => Math.Clamp(0.1f + (P.Sociability - 0.5f) * 0.4f + f.Tastes.Of(Thing.YourCursor) * 0.4f, -1, 1);
+
+    /// <summary>Change how it feels about you, and remember why.</summary>
+    void FeelUser(float delta, string what)
+    {
+        UserFondness += delta;
+        var last = Memories.Count > 0 ? Memories[^1] : null;
+        if (last != null && last.What == what && _t0 - last.At < 90) { last.Delta += delta; last.At = _t0; return; }
+        Memories.Add(new UserMemory { What = what, Delta = delta, At = _t0 });
+        if (Memories.Count > 8) Memories.RemoveAt(0);
+    }
+
+    /// <summary>Feelings fade back toward its nature over many minutes; forgiving souls let go faster,
+    /// grudge-holders (aggressive, unsociable) much slower.</summary>
+    void DriftFondness(float dt)
+    {
+        if (_fondness is not float v) return;
+        float forgive = 0.3f + P.Sociability * 0.5f + (1 - P.Aggression) * 0.5f;
+        _fondness = v + (FondBaseline - v) * MathF.Min(1, 0.0007f * forgive * dt);
+    }
+
+    /// <summary>Someone it cares about (or can't stand) just got roughed up by you.</summary>
+    public void WitnessUserHurt(Figure victim, float severity)
+    {
+        if (f.Mode != Mode.Control || _g == G.Sleep || victim == f) return;
+        float a = AffinityWith(victim);
+        if (a > 0.25f)
+        {
+            FeelUser(-0.12f * severity * a, $"Hurt {victim.Name}");
+            if (P.Aggression > 0.5f && rng.NextDouble() < 0.5) { f.Emote("#@!", 1.2f); if (_g is G.Idle or G.Watch or G.SitFloor) Go(G.Annoyed, 1.4f); }
+            else f.Emote("!", 1);
+        }
+        else if (a < -0.3f && P.Aggression > 0.45f)
+        {
+            FeelUser(0.04f * severity, $"Roughed up {victim.Name}");
+            f.Emote("ha", 1);
+        }
+    }
+
+    void TellWitnesses(World w, float severity)
+    {
+        foreach (var o in w.Figures)
+            if (o != f && Vector2.Distance(o.Base, f.Base) < 900 * S) o.Brain.WitnessUserHurt(f, severity);
+    }
+
+    /// <summary>A ball you threw reached it.</summary>
+    public void GotBallFromUser(Prop b)
+    {
+        float like = (Tastes.ForProp(b.Kind) is Thing k ? f.Tastes.Of(k) : 0) + f.Tastes.Of(Thing.PlayingBall);
+        if (like < -0.4f) { FeelUser(-0.02f, "Threw a ball at them"); return; }
+        FeelUser(0.03f + MathF.Max(0, like) * 0.03f, "Played ball with them");
+        if (f.CurrentEmote == null) f.Emote(like > 0.5f ? "♥" : "♪", 0.9f);
+    }
+
+    /// <summary>Studio: you waved them over. What they do depends entirely on how they feel about you.</summary>
+    public string CalledByUser(World w)
+    {
+        if (f.Mode != Mode.Control || !f.Grounded || f.Climbing || InFight || _g == G.CursorFight) return $"{f.Name} is busy right now";
+        float fond = UserFondness;
+        if (_g == G.Sleep && fond < 0.4f) return $"{f.Name} is asleep";
+        if (fond > 0.2f && CursorTrust > 0.3f)
+        {
+            f.Emote(fond > 0.6f ? "♥" : "!", 1.1f);
+            ComeToCursor(w);
+            return fond > 0.6f ? $"{f.Name} comes running!" : $"{f.Name} is on the way";
+        }
+        if (fond < -0.3f) { Snub(w.Cursor); return $"{f.Name} turns their back on you"; }
+        if (CursorTrust < 0.3f) { f.Emote("…", 1); RunFromCursor(w, w.Cursor); return $"{f.Name} is too nervous"; }
+        if (rng.NextDouble() < 0.45 + fond) { ComeToCursor(w); return $"{f.Name} wanders over"; }
+        f.Emote("?", 1);
+        Go(G.Watch, 8);
+        return $"{f.Name} just looks at you";
+    }
+
+    bool _snub;
+
+    /// <summary>The cold shoulder: arms crossed, facing away from your cursor.</summary>
+    void Snub(Vector2 cur)
+    {
+        Go(G.Annoyed, rng.Range(2, 3.5f));
+        _snub = true;
+        f.Emote(P.Aggression > 0.5f ? "#@!" : "hmph", 1.3f);
+        f.Facing = cur.X > f.Base.X ? -1 : 1;
     }
 
     /// <summary>Choice multiplier from an opinion: loved ~2.5x, neutral 1x, hated ~0.1x.</summary>
@@ -45,9 +137,13 @@ sealed partial class Brain
     void FeelAboutBeingPickedUp()
     {
         float o = f.Tastes.Of(Thing.BeingPickedUp);
-        if (o > 0.35f) { f.Emote("♪", 1); UserFondness += 0.04f; }
-        else if (o < -0.35f) { f.Emote("#@!", 1); UserFondness -= 0.08f; CursorTrust = MathF.Max(0, CursorTrust - 0.05f); }
-        else UserFondness -= 0.01f;
+        if (o > 0.35f) { f.Emote("♪", 1); FeelUser(0.04f, "Picked them up (loved it)"); }
+        else if (o < -0.35f) { f.Emote("#@!", 1); FeelUser(-0.08f, "Picked them up (hated it)"); CursorTrust = MathF.Max(0, CursorTrust - 0.05f); }
+        else
+        {
+            FeelUser(-0.01f, "Picked them up");
+            if (UserFondness < -0.5f) f.Emote("#@!", 1);   // "put me down!"
+        }
     }
 
     /// <summary>Thrown around: thrill-seekers love it, others hate it.</summary>
@@ -58,13 +154,13 @@ sealed partial class Brain
         if (o > 0.35f)
         {
             f.Emote(rng.NextDouble() < 0.5 ? "!!" : "♪", 1.3f);
-            UserFondness += 0.08f;
+            FeelUser(0.08f, "Threw them (wheee!)");
             CursorTrust = MathF.Min(1, CursorTrust + 0.05f);
             Cheered(0.4f);
             Go(G.Cheer, 1);
             return true;   // "again!"
         }
-        UserFondness -= o < -0.35f ? 0.15f : 0.05f;
+        FeelUser(o < -0.35f ? -0.15f : -0.05f, o < -0.35f ? "Threw them around (hated that)" : "Threw them");
         if (o < -0.35f)
         {
             // Hates it: dusts itself off and glares at you (or cowers, if timid).
@@ -79,18 +175,22 @@ sealed partial class Brain
 
     void FeelAboutPoke()
     {
-        if (f.Tastes.Likes(Thing.YourCursor)) { UserFondness += 0.02f; f.Emote(rng.NextDouble() < 0.5 ? "♥" : "ha", 0.9f); }
-        else UserFondness -= f.Tastes.Dislikes(Thing.YourCursor) ? 0.06f : 0.02f;
+        if (f.Tastes.Likes(Thing.YourCursor)) { FeelUser(0.02f, "Poked them (tickles!)"); f.Emote(rng.NextDouble() < 0.5 ? "♥" : "ha", 0.9f); }
+        else FeelUser(f.Tastes.Dislikes(Thing.YourCursor) ? -0.06f : -0.02f, "Poked them");
     }
 
     /// <summary>Gentle hovering is like petting: cursor-lovers enjoy it.</summary>
     void FeelPetting(World w, float dt)
     {
-        bool petting = w.Hover == f && w.CursorVel.Length() < 250 * S;
+        // Petting is a gentle stroke: the cursor moving slowly over them, not just resting where they walk.
+        float cv = w.CursorVel.Length();
+        bool stroking = w.Hover == f && cv > 20 * S && cv < 250 * S;
+        _strokeT = stroking ? 0.4f : _strokeT - dt;
+        bool petting = w.Hover == f && _strokeT > 0;
         _pettingT = petting ? _pettingT + dt : 0;
         if (!petting) return;
         float o = f.Tastes.Of(Thing.YourCursor);
-        UserFondness += dt * (0.01f + MathF.Max(0, o) * 0.03f);
+        FeelUser(dt * (0.01f + MathF.Max(0, o) * 0.03f), "Petted them");
         if (o > 0.35f && _pettingT > 0.7f && f.CurrentEmote == null) { f.Emote("♥", 1.2f); Cheered(0.15f); }
     }
 
@@ -114,6 +214,7 @@ sealed partial class Brain
             {
                 f.Emote("♥", 1.2f);
                 Cheered(0.2f);
+                FeelUser(0.03f, $"Gave them a {Prop.KindName(b.Kind).ToLowerInvariant()}");
                 if (_g is G.Idle or G.Watch or G.SitFloor && Stamina > 0.3f) GoToBall(b, w, () => ChoosePlay(b, w, null));
             }
             else if (o < -0.4f) f.Emote("…", 1);
@@ -228,7 +329,7 @@ sealed partial class Brain
         _bringToUser = false;
         FaceTo(w.Cursor.X);
         f.Emote("♥", 1.2f);
-        UserFondness += 0.03f;
+        UserFondness += 0.01f;
         BeginThrow(b, w.Cursor, null, false);
         return true;
     }

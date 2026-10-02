@@ -32,6 +32,7 @@ function receive(m) {
     case "go": go(m.page, m.id); break;
     case "spawned": if (!QUICK) { go("figure", m.id); toast("Fresh off the pencil!"); } break;
     case "winstate": document.body.classList.toggle("max", !!m.max); break;
+    case "toast": toast(m.text); break;
   }
 }
 if (host) host.addEventListener("message", e => receive(e.data));
@@ -311,6 +312,7 @@ PAGES.figure = {
     add(root, h("div", { class: "hero" }, big,
       h("div", { class: "meta" }, name, act, feels, sws,
         h("div", { class: "row" },
+          h("button", { class: "btn small primary", title: "Wave them over to your cursor. Whether they come depends on how they feel about you.", onclick: () => send({ t: "fig", id, op: "call" }) }, "👋 Call them over"),
           h("button", { class: "btn small", onclick: () => { send({ t: "fig", id, op: "save" }); toast(`${fig(id)?.name || "Figure"} saved to your library`); } }, "★ Save to library"),
           armed("Erase", "Erase them? Click again", () => { send({ t: "fig", id, op: "remove" }); go("cast"); }, "btn small danger")))));
     const tabs = h("div", { class: "subtabs" }, SUBS.map(([k, label]) =>
@@ -499,11 +501,21 @@ const SUBPANELS = {
         const fond = range(-1, 1, 0.01, f.fond, v => sendSoon("fond", { t: "fig", id, op: "fond", v }));
         const trust = range(0, 1, 0.01, f.trust, v => sendSoon("trust", { t: "fig", id, op: "trust", v }));
         const feel = h("div", { class: "big" });
+        const mem = h("ul", { class: "memories" });
         card.append(h("div", { class: "hint" }, `How ${f.name} feels about you`), feel,
           h("h3", null, "Fondness"), h("div", { class: "relbar" }, fond, h("div", { class: "ends" }, h("span", null, "can't stand you"), h("span", null, "adores you"))),
           h("h3", null, "Trust"), h("div", { class: "relbar" }, trust, h("div", { class: "ends" }, h("span", null, "jumpy around your cursor"), h("span", null, "totally relaxed"))),
-          h("p", { class: "hint" }, "Fans come over to say hi and bring you balls. Being picked up, thrown, poked or punched changes this, depending on what they like."));
-        cardUpdate = f => { feel.textContent = f.feels; setRange(fond, f.fond); setRange(trust, f.trust); };
+          h("h3", null, "What they remember"), mem,
+          h("p", { class: "hint" }, "Fans come over to say hi and bring you balls; people who can't stand you run, glare, turn their back or box your cursor. Picking them up, throwing them, poking, petting, playing ball, and what you do to their friends all count, depending on what they like. Feelings fade slowly; grudge-holders take longer."));
+        let memSig = "";
+        cardUpdate = f => {
+          feel.textContent = f.feels; setRange(fond, f.fond); setRange(trust, f.trust);
+          const sig = f.memories.map(m => m.what + m.delta).join("|");
+          if (sig === memSig) return;
+          memSig = sig;
+          mem.replaceChildren(...(f.memories.length ? f.memories.map(m => h("li", { class: m.delta > 0.005 ? "good" : m.delta < -0.005 ? "bad" : "" },
+            h("span", null, m.what), h("span", { class: "ago" }, ago(m.ago)))) : [h("li", { class: "none" }, "Nothing yet. You're a stranger.")]));
+        };
       } else {
         const r = f.rels.find(r => r.id === route.rel);
         if (!r) { route.rel = "you"; drawCard(); return; }
@@ -621,6 +633,10 @@ function swatchRow(pick) {
   function paint() { btns.forEach((b, i) => b.classList.toggle("on", INIT.palette[i].name === cur)); }
   wrap.set = v => { if (idle(wrap)) { cur = v; paint(); } };
   return wrap;
+}
+
+function ago(sec) {
+  return sec < 45 ? "just now" : sec < 3600 ? `${Math.round(sec / 60)} min ago` : `${Math.round(sec / 3600)} h ago`;
 }
 
 function feelWord(v) {
@@ -899,7 +915,7 @@ const Mock = {
       fps: [{ label: "Match monitor (144 Hz)", value: -1 }, { label: "30", value: 30 }, { label: "60", value: 60 }, { label: "72", value: 72 }, { label: "120", value: 120 }, { label: "Unlimited", value: 0 }],
     });
     const mk = (id, name, hex, acts) => ({
-      id, name, hex, team: name, size: 1, gear: 0, activity: acts, feels: "Likes you", fond: 0.4, trust: 0.6, hp: 80, ko: false, dead: false, facing: 1, pose: STANDING,
+      id, name, hex, team: name, size: 1, gear: 0, activity: acts, feels: "Likes you", fond: 0.4, trust: 0.6, memories: [{ what: "Played ball with them", delta: 0.06, ago: 30 }, { what: "Threw them around (hated that)", delta: -0.15, ago: 400 }], hp: 80, ko: false, dead: false, facing: 1, pose: STANDING,
       mood: { stamina: 0.7, joy: 0.5, sadness: 0.1, fear: 0.05, annoyance: 0.2, boredom: 0.4, loneliness: 0.3 },
       traits: { energy: 0.6, curiosity: 0.7, bravery: 0.5, playfulness: 0.8, aggression: 0.3, sociability: 0.6 },
       describe: "Energetic, curious and playful",

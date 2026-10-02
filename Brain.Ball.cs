@@ -316,6 +316,7 @@ sealed partial class Brain
 
     void PickUp(Prop b, Figure? throwTo)
     {
+        if (b.ThrownByUser && b.SinceTouch < 6) { GotBallFromUser(b); b.ThrownByUser = false; }
         Go(G.Carry, throwTo != null ? rng.Range(0.6f, 1.4f) : rng.Range(2, 5));
         _ball = b;
         _passTo = throwTo;

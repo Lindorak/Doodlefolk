@@ -337,3 +337,11 @@ body[data-mode="quick"] { background: var(--paper-2); }
 .q-toy:hover svg { transform: rotate(-25deg) scale(1.08); }
 .q-checks { margin-top: 10px; }
 .q-foot { margin-top: auto; padding-top: 8px; }
+
+.memories { list-style: none; padding: 0; margin: 4px 0 12px; }
+.memories li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0 3px 22px; position: relative; font-size: 13.5px; }
+.memories li::before { content: "•"; position: absolute; left: 6px; color: var(--pencil); }
+.memories li.good::before { content: "+"; color: var(--good); font-weight: 700; }
+.memories li.bad::before { content: "-"; color: var(--bad); font-weight: 700; }
+.memories li.none { color: var(--pencil); font-style: italic; }
+.memories .ago { color: var(--pencil); font: 13px var(--scrawl); white-space: nowrap; }

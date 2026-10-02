@@ -1678,6 +1678,11 @@ PAGES.settings = {
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "meme", op: "folder" }) }, "Use my own memes folder…"), memeFolderLine,
         h("button", { class: "btn small ghost", onclick: () => send({ t: "meme", op: "noFolder" }) }, "✕")),
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "meme", op: "now" }) }, "😂 Find a meme now")));
+    const devC = check("React to your work", "Your tools can tell the town how things are going: a wince when the build breaks, cheers when the tests pass, \"ship it!\" when you push. They talk to a little listener on this computer only (127.0.0.1); nothing comes in from outside.", () => !!st().devHooks, v => setS("devHooks", v));
+    const devLine = h("p", { class: "hint" });
+    const devCmd = h("pre", { class: "dev-cmd" });
+    const devBox = h("div", { class: "amb-box" }, devLine, devCmd,
+      h("div", { class: "row" }, ["build-passed", "build-failed", "push"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "devtest", kind: k }) }, `Try “${k}”`))));
     const reqC = check("Requests", "Now and then someone asks for something that suits them (a swing, a race, a new hat, a dog…). They're listed on the Cast page; do it within a day and they're thrilled.", () => st().requests !== false, v => setS("requests", v));
     const albumC = check("Photo album", "Big moments (a first date, a baby, a race won) are photographed for the Album: just the town, never your screen.", () => st().autoAlbum !== false, v => send({ t: "album", op: "auto", v }));
     const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
@@ -1730,7 +1735,7 @@ PAGES.settings = {
       eventsC, hapBtns, hapLine, visitC, reqC, albumC,
       h("div", { class: "field" }, h("label", null, "Old age"), h("div", { class: "row tight" }, ageChips)),
       h("p", { class: "hint" }, "Only matters when they age (Life pace). Fights are separate: see Colours & fights."), ghostsC,
-      prankC, prankBox,
+      prankC, prankBox, devC, devBox,
       h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
@@ -1782,6 +1787,8 @@ PAGES.settings = {
       ambBox.style.display = amb().on ? "" : "none";
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
       dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update(); ghostsC.update();
+      devC.update(); devBox.style.display = st().devHooks ? "" : "none"; devLine.textContent = st().devHookStatus || "";
+      devCmd.textContent = `curl -X POST http://127.0.0.1:${st().devHookPort || 47321}/event/build-failed\n"${st().exePath || "Doodlefolk.exe"}" --notify tests-passed\n\nEvents: build-passed, build-failed, tests-passed, tests-failed, commit, push, deploy, error, started, done (add ?text=… for a line to say). See docs/DEVHOOKS.md for git hooks and VS Code tasks.`;
       prankC.update(); memeNetC.update(); memeRealC.update(); prankBox.style.display = st().pranks ? "" : "none";
       memeFolderLine.textContent = st().memeFolder ? ` ${st().memeFolder}` : " (none)";
       ageChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().mortality || "never")); });

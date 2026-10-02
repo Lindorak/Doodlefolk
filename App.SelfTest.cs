@@ -28,6 +28,7 @@ sealed partial class App
     string _albumFile = "", _questText = "", _memoName = "";
     double _perfAt = 5, _scriptLag;
     bool _sawRide, _sawPrint;
+    int _notified = -1;
 
     void Check(string name, bool pass, string detail = "")
     {
@@ -233,6 +234,23 @@ sealed partial class App
             Check("a meme from your folder is ready", _memeReady != null, _memeReady?.Text ?? "");
             if (TakeMeme() is { } path && ItemCatalog.Find("memeframe") is { } fd && SpawnItem(fd) is { } frame) { frame.Label = path; PrankLeft(frame, 1); }
             Check("muddy footprints after the rain", _sawPrint || _w.Items.Any(i => i.Def.Key == "mudprint"), $"{_w.Figures.Count(f => f.Mode == Mode.Control && MathF.Abs(f.Vel.X) > 40)} walking");
+        });
+        At(612.5, "listener", () =>
+        {
+            _settings.DevHooks = true;
+            StartDevHooks();
+            if (_hookListener != null) Task.Run(() => _notified = Notify("tests-passed", "QA"));
+        });
+        At(613.8, "listener heard", () =>
+        {
+            if (_hookListener == null) { World.Log("selftest: port in use (Doodlefolk's own listener?), listener check skipped"); return; }
+            Check("tools can tell the town (127.0.0.1 listener)", _notified == 0 && _lastBuild == "pass", $"notify exit {_notified}, last build {_lastBuild}");
+            _settings.DevHooks = false; StopDevHooks();
+        });
+        At(614, "your work", () =>
+        {
+            DevReact("build-failed", "oops");
+            Check("a failing build is noticed (and memes would know)", _lastBuild == "fail" && MemeNow().Tags.Contains("buildfail"));
         });
         At(616, "pranks off", () => { _settings.Pranks = false; _settings.MemeFolder = ""; });
         At(654, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });

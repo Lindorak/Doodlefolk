@@ -29,6 +29,13 @@ static class Program
             Environment.Exit(test.SelfTestExitCode);
             return;
         }
+        // Tell the running Doodlefolk how your work's going (git hooks, scripts): Doodlefolk.exe --notify build-failed ["text"]
+        int ni = Array.IndexOf(args, "--notify");
+        if (ni >= 0)
+        {
+            Environment.Exit(App.Notify(ni + 1 < args.Length ? args[ni + 1] : "done", ni + 2 < args.Length ? args[ni + 2] : ""));
+            return;
+        }
         if (!args.Contains("--data")) Migration.FromOldName();
         using var mutex = new Mutex(true, "Doodlefolk.SingleInstance", out bool first);
         // Started by an install or an update: wait for the old copy to finish closing.

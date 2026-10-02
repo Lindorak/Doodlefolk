@@ -507,3 +507,5 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
 .song { border: 1.5px solid var(--faint); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
 .song textarea { font: inherit; resize: vertical; }
+
+.dev-cmd { font: 12px Consolas, monospace; white-space: pre-wrap; background: var(--faint-bg, rgba(0,0,0,0.04)); border-radius: 8px; padding: 8px 10px; user-select: text; }

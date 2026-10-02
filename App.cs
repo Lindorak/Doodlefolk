@@ -108,6 +108,7 @@ sealed partial class App : ApplicationContext
         _w.MakeBaby = MakeBaby;
         _w.MakePet = k => SpawnPet(k, quiet: true);
         InitSocial();
+        StartDevHooks();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
         _w.RareSeen = RareSeen;
@@ -307,6 +308,7 @@ sealed partial class App : ApplicationContext
         GhostFrame(now);
         ToyboxFrame(now);
         PrankFrame(now);
+        DevHookFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -1354,6 +1356,7 @@ sealed partial class App : ApplicationContext
                     break;
                 }
                 case "meme": _memeAt = 0; _memeReady = null; World.Log("meme: making one; context " + string.Join(",", MemeNow().Tags)); break;
+                case "dev": World.Log("dev: " + DevReact(p.Length > 1 ? p[1] : "build-passed", p.Length > 2 ? string.Join(' ', p.Skip(2)) : "")); break;
                 case "toy": World.Log("toy: " + Toybox(p.Length > 1 ? p[1] : "")); break;
                 case "ghost": World.Log("ghost: " + (_settings.Memorials.LastOrDefault() is { } gm ? GhostOf(gm) : "nobody to remember")); break;
                 case "passaway": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } paf) paf.PassAway(_w); break;
@@ -1565,6 +1568,7 @@ sealed partial class App : ApplicationContext
             _downloads?.Dispose();
             _sre?.Dispose();
             SteamHub.Shutdown();
+            StopDevHooks();
             _w.Screen?.Dispose();
         }
         base.Dispose(disposing);

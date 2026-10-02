@@ -66,6 +66,8 @@ static class Stickers
         new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
         new("memorial", "🕯", "Remembered", "Say goodbye to someone"),
         new("toybox", "🧸", "Mad scientist", "Play with the toybox (moon gravity, a giant ball…)"),
+        new("greenbuild", "✅", "All green", "The town cheers a passing build (reacting to your work)"),
+        new("redbuild", "🔥", "This is fine", "The town winces at a failing build (reacting to your work)"),
         new("song", "🎤", "Songwriter", "Have someone sing a song you wrote"),
         new("history", "📜", "Historian", "Export the family tree or the town's history"),
         new("prank", "🤡", "Gotcha!", "Someone pulls a prank (prank mode)"),

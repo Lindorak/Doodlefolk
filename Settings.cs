@@ -211,6 +211,8 @@ sealed class Settings
     public int ToyboxMinutes { get; set; } = 5;
     /// <summary>Prank mode: sticky notes, whoopee cushions, muddy footprints, memes. Off by default.</summary>
     public bool Pranks { get; set; }
+    /// <summary>Your tools (git hooks, build scripts) can tell the town how your work's going, on 127.0.0.1 only.</summary>
+    public bool DevHooks { get; set; }
     /// <summary>Memes made from classic templates (pictures from imgflip.com) with captions that fit the moment.</summary>
     public bool InternetMemes { get; set; }
     /// <summary>Also real posts from r/wholesomememes (titles matched to the moment; no NSFW or spoilers).</summary>

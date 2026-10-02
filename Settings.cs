@@ -226,6 +226,16 @@ sealed class Settings
     public int StreamIdleMinutes { get; set; } = 15;
     /// <summary>The stream view's background, for OBS's chroma key: "green", "magenta" or "blue".</summary>
     public string StreamKey { get; set; } = "green";
+    /// <summary>Community goals: what this player added today (capped per stat) and this week.</summary>
+    public string ContribDay { get; set; } = "";
+    public Dictionary<string, int> ContribToday { get; set; } = new();
+    public int ContribWeek { get; set; }
+    public int ContribThisWeek { get; set; }
+    /// <summary>Opt-in: share this week's biggest fish, focus minutes and Doodledex with Steam friends.</summary>
+    public bool ShareWeekly { get; set; }
+    /// <summary>Focus minutes by ISO week (for the friends' board).</summary>
+    public Dictionary<int, int> FocusByWeek { get; set; } = new();
+    public int FocusMinutesWeek(int week) => FocusByWeek.GetValueOrDefault(week);
     /// <summary>How tall the taskbar village is (at 100% scale).</summary>
     public int StripHeight { get; set; } = 170;
     /// <summary>Memes made from classic templates (pictures from imgflip.com) with captions that fit the moment.</summary>

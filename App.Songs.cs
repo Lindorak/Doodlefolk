@@ -21,6 +21,7 @@ sealed partial class App
                   ?? _w.Figures.Where(f => f.Mode == Mode.Control && !f.Brain.Asleep && f.Visitor == VisitorKind.None).OrderByDescending(f => f.Traits.Sociability).FirstOrDefault();
         if (who == null) return "Nobody's awake to sing it.";
         who.Brain.StartSinging(s);
+        Contribute("SONGS_SUNG", 1);
         _w.Sticker("song");
         _settings.Save();
         return $"{who.Name} is singing \"{s.Title}\".";

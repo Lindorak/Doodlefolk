@@ -143,7 +143,7 @@ sealed partial class App
             _w.News("requests", $"{by.Name} got what they asked for and is over the moon", 2, by);
             _w.Sticker("helper");
             if (_settings.QuestsDone >= 10) _w.Sticker("goodfriend");
-            SteamHub.AddStat("REQUESTS_DONE", 1);
+            Contribute("REQUESTS_DONE", 1);
             _settings.Save();
         }
     }

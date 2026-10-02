@@ -103,6 +103,68 @@ static class SteamHub
         catch (Exception e) { World.Log("steam stat: " + e.Message); }
     }
 
+    // ---------------- community goals and the friends' board ----------------
+
+    static CallResult<GlobalStatsReceived_t>? _globalCall;
+    static readonly Dictionary<string, CallResult<LeaderboardFindResult_t>> _findCalls = new();
+    static readonly List<object> _keep = new();
+    /// <summary>Friends' weekly boards, by board name: (name, score) best first.</summary>
+    public static readonly Dictionary<string, List<(string name, int score)>> Boards = new();
+
+    /// <summary>The community's total for a stat over the last few days (Steam keeps daily global history).</summary>
+    public static void WeekTotal(string stat, int days, Action<long> done)
+    {
+        if (!Ready) return;
+        try
+        {
+            var call = SteamUserStats.RequestGlobalStats(Math.Clamp(days, 1, 60));
+            _globalCall = CallResult<GlobalStatsReceived_t>.Create((r, failed) =>
+            {
+                if (failed || r.m_eResult != EResult.k_EResultOK) return;
+                var hist = new long[Math.Clamp(days, 1, 60)];
+                int n = SteamUserStats.GetGlobalStatHistory(stat, hist, (uint)(hist.Length * sizeof(long)));
+                done(n > 0 ? hist.Take(n).Sum() : 0);
+            });
+            _globalCall.Set(call);
+        }
+        catch (Exception e) { World.Log("steam global stats: " + e.Message); }
+    }
+
+    /// <summary>Post this week's number to a friends-only board (made if it isn't there), then fetch friends' numbers.</summary>
+    public static void PostWeekly(string board, int score)
+    {
+        if (!Ready || score <= 0) return;
+        try
+        {
+            var find = SteamUserStats.FindOrCreateLeaderboard(board, ELeaderboardSortMethod.k_ELeaderboardSortMethodDescending, ELeaderboardDisplayType.k_ELeaderboardDisplayTypeNumeric);
+            var cr = CallResult<LeaderboardFindResult_t>.Create((r, failed) =>
+            {
+                if (failed || r.m_bLeaderboardFound == 0) return;
+                var h = r.m_hSteamLeaderboard;
+                var up = CallResult<LeaderboardScoreUploaded_t>.Create((u, f2) =>
+                {
+                    var dl = CallResult<LeaderboardScoresDownloaded_t>.Create((d, f3) =>
+                    {
+                        if (f3) return;
+                        var list = new List<(string, int)>();
+                        for (int i = 0; i < Math.Min(d.m_cEntryCount, 50); i++)
+                            if (SteamUserStats.GetDownloadedLeaderboardEntry(d.m_hSteamLeaderboardEntries, i, out var e, Array.Empty<int>(), 0))
+                                list.Add((SteamFriends.GetFriendPersonaName(e.m_steamIDUser), e.m_nScore));
+                        Boards[board] = list;
+                    });
+                    dl.Set(SteamUserStats.DownloadLeaderboardEntries(h, ELeaderboardDataRequest.k_ELeaderboardDataRequestFriends, 0, 0));
+                    _keep.Add(dl);
+                });
+                up.Set(SteamUserStats.UploadLeaderboardScore(h, ELeaderboardUploadScoreMethod.k_ELeaderboardUploadScoreMethodKeepBest, score, Array.Empty<int>(), 0));
+                _keep.Add(up);
+            });
+            cr.Set(find);
+            _findCalls[board] = cr;
+            if (_keep.Count > 60) _keep.RemoveRange(0, 30);
+        }
+        catch (Exception e) { World.Log("steam board: " + e.Message); }
+    }
+
     // ---------------- workshop ----------------
 
     /// <summary>The folders of the Workshop items you're subscribed to that have finished downloading.</summary>

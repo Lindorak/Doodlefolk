@@ -169,6 +169,11 @@ sealed partial class App
             Check("live wallpaper sits just above the desktop", desk == IntPtr.Zero || Overlay.NextVisibleBelow(_overlay.Handle) == desk, desk == IntPtr.Zero ? "no desktop window (CI?)" : $"desktop {Env.ClassName(desk)}, above it {Env.ClassName(Native.GetWindow(desk, Native.GW_HWNDPREV))} {Native.GetWindow(desk, Native.GW_HWNDPREV)}, us {_overlay.Handle}, below us {Env.ClassName(Native.GetWindow(_overlay.Handle, Native.GW_HWNDNEXT))}");
             _overlay.SetBehind(false);
         });
+        At(161, "community cap", () =>
+        {
+            Contribute("FISH_CAUGHT", 100); Contribute("FISH_CAUGHT", 5);
+            Check("community goals cap what one player adds a day", _settings.ContribToday.GetValueOrDefault("FISH_CAUGHT") == 40, $"{_settings.ContribToday.GetValueOrDefault("FISH_CAUGHT")}");
+        });
         At(162, "request granted", () => Check("a request is granted when you do it", _settings.Quests.LastOrDefault()?.Done == true, _questText));
         At(158, "album saved", () =>
         {

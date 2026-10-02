@@ -103,6 +103,7 @@ sealed partial class App
         var ground = HappeningGround(kind == "race" ? 700 * s : 450 * s);
         if (ground == null) return "nowhere wide enough";
         var h = new Happening { Kind = kind, Y = ground.Y, Hwnd = ground.Hwnd, Custom = custom };
+        Contribute("FESTIVALS_HELD", 1);
         float width = MathF.Min(ground.X2 - ground.X1 - 60 * s, kind == "race" ? 1500 * s : 900 * s);
         float mid = Math.Clamp(_w.Figures.Where(f => f.Mode == Mode.Control).Select(f => f.Base.X).DefaultIfEmpty((ground.X1 + ground.X2) / 2).Average(), ground.X1 + width / 2 + 30 * s, ground.X2 - width / 2 - 30 * s);
         h.Left = mid - width / 2; h.Right = mid + width / 2;

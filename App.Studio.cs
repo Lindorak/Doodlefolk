@@ -120,7 +120,7 @@ sealed partial class App
             fixedColours = ItemDef.Fixed.Select(c => Settings.Hex(c)),
             lookParts = new
             {
-                hat = LookJson(Look.Hats), rareHats = Look.RareHats, hair = LookJson(Look.Hairs), beard = LookJson(Look.Beards), glasses = LookJson(Look.GlassesParts), shoes = LookJson(Look.ShoeParts),
+                hat = LookJson(Look.Hats), rareHats = Look.RareHats.Concat(Look.CommunityHats), hair = LookJson(Look.Hairs), beard = LookJson(Look.Beards), glasses = LookJson(Look.GlassesParts), shoes = LookJson(Look.ShoeParts),
                 body = Look.BodyParts.Select(b => new { slot = b.Slot, key = b.Key, name = b.Name }),
             },
             catalog = ItemCatalog.All.Select(d => new
@@ -170,6 +170,7 @@ sealed partial class App
         toybox = ToyboxState(),
         modContent = ModContentState(),
         stream = StreamState(),
+        community = CommunityState(),
         songs = SongState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -869,6 +870,7 @@ sealed partial class App
                 PostAll(new { t = "toast", text = ApplyLayout() });
                 break;
             case "stripHeight": _settings.StripHeight = Math.Clamp(v.GetInt32(), 110, 400); if (_settings.TownLayout == "strip") ApplyLayout(); break;
+            case "shareWeekly": _settings.ShareWeekly = v.GetBoolean(); _communityAt = 0; break;
             case "streamOn": _settings.StreamOn = v.GetBoolean(); _settings.Save(); StartStream(); break;
             case "streamChannel": _settings.StreamChannel = (v.GetString() ?? "").Trim(); _settings.Save(); StartStream(); break;
             case "streamBubbles": _settings.StreamBubbles = v.GetBoolean(); break;

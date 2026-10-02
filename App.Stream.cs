@@ -95,7 +95,7 @@ sealed partial class App
             case "jump" when joined && Allowed("moves") && me.fig.Grounded: me.fig.RequestJump(new Vector2(0, -MathF.Sqrt(2 * me.fig.Gravity * 120 * _w.Scale)), 0.05f); break;
             case "hat" when joined && Allowed("moves"):
                 if (arg is "none" or "off") me.fig.Look.Hat = "";
-                else if (Look.Hats.FirstOrDefault(h => (h.Key == arg || h.Name.Equals(arg, StringComparison.OrdinalIgnoreCase)) && (!Look.RareHats.Contains(h.Key) || _settings.UnlockedHats.Contains(h.Key))) is { } hat)
+                else if (Look.Hats.FirstOrDefault(h => (h.Key == arg || h.Name.Equals(arg, StringComparison.OrdinalIgnoreCase)) && (!Look.RareHats.Contains(h.Key) && !Look.CommunityHats.Contains(h.Key) || _settings.UnlockedHats.Contains(h.Key))) is { } hat)
                     me.fig.Look.Hat = hat.Key;
                 break;
             case "weather" when Allowed("weather") && now > _streamCdWeather:

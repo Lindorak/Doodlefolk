@@ -29,7 +29,7 @@ sealed partial class App
             _w.News("fish", $"{by.Name} lands a whopper: a {cm:0.#} cm {what}!", 2, by);
         }
         if (kind.Rarity == FishRarity.Legendary) _w.Sticker("legendfish");
-        SteamHub.AddStat("FISH_CAUGHT", 1);
+        Contribute("FISH_CAUGHT", 1);
         return note;
     }
 

@@ -72,6 +72,7 @@ sealed class Look
         new("headband", "Headband", new[] { R(-1.02f, 0.32f, 1.02f, 0.62f, 0) }, new[] { P(0, -0.95f, 0.5f, -1.75f, 0.15f, -1.65f, -0.05f, -0.95f, 0.38f), P(0, -0.95f, 0.45f, -1.55f, -0.35f, -1.4f, -0.45f, -0.9f, 0.35f) }),
         new("bow", "Bow", new[] { P(0, 0.1f, 1.0f, -0.55f, 1.45f, -0.65f, 0.75f), P(0, 0.1f, 1.0f, 0.75f, 1.45f, 0.85f, 0.75f), E(0.1f, 1.0f, 0.16f, 0.16f, 1) }),
         new("halo", "Halo", new[] { Ring(0, 1.55f, 0.75f, 15, 0.16f) }),
+        new("laurel", "Laurel wreath", new[] { C(10, 0.12f, -1.0f, 0.55f, -0.6f, 0.85f, 0, 0.95f, 0.6f, 0.85f, 1.0f, 0.55f), E(-0.85f, 0.75f, 0.24f, 0.13f, 10), E(-0.45f, 0.95f, 0.24f, 0.13f, 10), E(0, 1.02f, 0.22f, 0.13f, 10), E(0.45f, 0.95f, 0.24f, 0.13f, 10), E(0.85f, 0.75f, 0.24f, 0.13f, 10), E(0, 1.02f, 0.08f, 0.08f, 15) }),
         // Rare: only from gift crates.
         new("flowercrown", "Flower crown", new[] { C(10, 0.12f, -1.0f, 0.75f, -0.5f, 0.95f, 0, 1.0f, 0.5f, 0.95f, 1.0f, 0.75f), E(-0.8f, 0.85f, 0.2f, 0.2f, 14), E(-0.3f, 1.0f, 0.22f, 0.22f, 11), E(0.2f, 1.02f, 0.22f, 0.22f, 0), E(0.7f, 0.88f, 0.2f, 0.2f, 14), E(-0.3f, 1.0f, 0.07f, 0.07f, 12), E(0.2f, 1.02f, 0.07f, 0.07f, 11) }),
         new("antlers", "Antlers", new[] { C(4, 0.13f, -0.45f, 0.85f, -0.7f, 1.6f, -1.15f, 2.0f), C(4, 0.11f, -0.62f, 1.35f, -0.25f, 1.75f), C(4, 0.13f, 0.45f, 0.85f, 0.7f, 1.6f, 1.15f, 2.0f), C(4, 0.11f, 0.62f, 1.35f, 0.25f, 1.75f) }),
@@ -84,6 +85,8 @@ sealed class Look
     };
 
     /// <summary>Hats that only come in gift crates (locked until one turns up).</summary>
+    /// <summary>Earned together: the community goal's prize.</summary>
+    public static readonly string[] CommunityHats = { "laurel" };
     public static readonly string[] RareHats = { "flowercrown", "antlers", "propeller", "pirate", "jester", "catears", "bunnyears", "graduation" };
 
     public static readonly LookPart[] Hairs =

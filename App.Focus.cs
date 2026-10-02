@@ -63,6 +63,10 @@ sealed partial class App
         World.Focus = false;
         _settings.FocusSessions++;
         _settings.FocusMinutes += _focusMinutes;
+        int fw = System.Globalization.ISOWeek.GetYear(DateTime.Now) * 100 + System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
+        _settings.FocusByWeek[fw] = _settings.FocusByWeek.GetValueOrDefault(fw) + _focusMinutes;
+        foreach (var old in _settings.FocusByWeek.Keys.Where(k => k < fw - 10).ToList()) _settings.FocusByWeek.Remove(old);
+        Contribute("FOCUS_MINUTES", _focusMinutes);
         foreach (var f in _w.Figures.Where(f => f.Mode == Mode.Control))
         {
             f.Brain.Coins += 3;

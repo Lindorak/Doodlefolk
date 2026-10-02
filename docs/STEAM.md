@@ -94,3 +94,34 @@ those quietly do nothing). Don't publish to the Workshop under 480: it would go 
 | `STICKER_TALENT` | 🎤 Star of the show | Win a talent show |
 | `STICKER_RACE` | 🏁 Photo finish | See a race day through |
 | `STICKER_REALWEATHER` | 🌦️ Same sky | Turn on your real weather |
+## Stats for community goals
+
+Each week has one goal everyone works on together (it rotates: fish, town events, focus minutes, requests, songs).
+Create these stats in Steamworks → Stats & Achievements, each an **INT**, **Increment only**, with **Aggregated**
+ticked (that's what lets the game read the community total and its daily history):
+
+| API name | What counts | Daily cap per player |
+| --- | --- | --- |
+| `FISH_CAUGHT` | anything caught in a pond | 40 |
+| `FESTIVALS_HELD` | town events started | 6 |
+| `FOCUS_MINUTES` | finished focus minutes | 300 |
+| `REQUESTS_DONE` | requests granted | 10 |
+| `SONGS_SUNG` | songs sung on request | 10 |
+
+The caps are applied in the game before anything reaches Steam, so nobody can run the week's goal up on their own.
+When the week's total passes the target, every player who added something gets the **laurel wreath** hat.
+
+## Friends' weekly boards
+
+Opt-in (the player ticks "Share my week with Steam friends"). The game makes its own leaderboards with
+`FindOrCreateLeaderboard` (allowed for clients by default): `W<yyyyww>_BIGGEST_FISH` (tenths of a cm),
+`W<yyyyww>_FOCUS` (minutes) and `W<yyyyww>_DEX` (Doodledex entries), sorted descending, and only ever downloads
+friends' entries. There is deliberately no global ranking.
+
+## Trading cards, badges, emoticons and backgrounds
+
+`Doodlefolk.exe --cardart <folder>` draws the whole set with the game's own renderer (the current set is in
+`steam-art/`): ten 1920×1080 cards under 350 KB and their 206×184 versions, three profile backgrounds faded to black at
+the sides and bottom, five level badges and a foil one (80×80), five emoticons (18×18 and 54×54), the 206×44 logo, and
+`steam-community-items.txt` with every title and description to paste in. Steam turns trading cards on for a game once
+it has enough players; the assets can be uploaded any time before that (Steamworks → Community → Trading Cards).

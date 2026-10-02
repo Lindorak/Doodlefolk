@@ -509,3 +509,7 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .song textarea { font: inherit; resize: vertical; }
 
 .dev-cmd { font: 12px Consolas, monospace; white-space: pre-wrap; background: var(--faint-bg, rgba(0,0,0,0.04)); border-radius: 8px; padding: 8px 10px; user-select: text; }
+
+/* Community goal */
+.goal-bar { height: 12px; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; margin: 6px 0; }
+.goal-bar > div { height: 100%; background: var(--accent); }

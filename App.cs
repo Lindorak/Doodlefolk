@@ -313,6 +313,7 @@ sealed partial class App : ApplicationContext
         PrankFrame(now);
         DevHookFrame(now);
         StreamFrame(now);
+        CommunityFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);

@@ -1130,10 +1130,21 @@ PAGES.paper = {
 // ---------------- Sticker book ----------------
 
 PAGES.stickers = {
-  sig: () => (S.stickers || []).filter(s => s.got).length + "|" + JSON.stringify(S.settings.dex || {}),
+  sig: () => (S.stickers || []).filter(s => s.got).length + "|" + JSON.stringify(S.settings.dex || {}) + "|" + JSON.stringify(S.community || {}),
   build(root) {
     const all = S.stickers || [], got = all.filter(s => s.got).length;
     const dex = S.settings.dex || { visitors: [], hats: [], pets: [] };
+    const cg = S.community;
+    if (cg) {
+      const pct = cg.progress >= 0 ? Math.min(100, cg.progress / cg.target * 100) : 0;
+      add(root, h("div", { class: "requests" }, h("h3", null, "This week, together"),
+        h("p", null, h("b", null, cg.title), cg.laurel ? "  🌿 You've earned the laurel wreath (Look tab)." : "  Reach it and everyone playing this week gets the laurel wreath."),
+        cg.steam ? h("div", { class: "goal-bar" }, h("div", { style: { width: pct + "%" } })) : null,
+        h("p", { class: "hint" }, cg.steam ? (cg.progress >= 0 ? `${cg.progress.toLocaleString()} of ${cg.target.toLocaleString()} ${cg.unit} so far. ` : "Asking Steam how it's going… ") + `Your town added ${cg.mine} this week (up to ${cg.cap} a day count).` : "Community goals need Doodlefolk running through Steam."),
+        cg.steam ? check("Share my week with Steam friends", "Your biggest fish, minutes of focus and Doodledex count, on friends-only weekly boards. Nothing else.", () => S.community.share, v => send({ t: "setting", key: "shareWeekly", v })) : null,
+        (cg.boards || []).filter(b => b.entries.length).map(b => h("div", null, h("b", null, { BIGGEST: "Biggest fish", FOCUS: "Minutes of focus", DEX: "Doodledex found" }[b.title.split("_").slice(1).join("_").replace("_FISH", "")] || b.title),
+          h("ol", null, b.entries.map(e => h("li", null, `${e.Item1 || e.name}: ${b.title.endsWith("FISH") ? ((e.Item2 ?? e.score) / 10) + " cm" : (e.Item2 ?? e.score)}`)))))));
+    }
     add(root, h("h1", null, "Sticker book"), h("p", { class: "sub" }, `${got} of ${all.length} collected. Stickers come from things you do, and things you see happen.`));
     const grid = h("div", { class: "stickers" });
     for (const s of all)

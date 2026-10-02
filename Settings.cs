@@ -209,6 +209,14 @@ sealed class Settings
     public bool Ghosts { get; set; } = true;
     /// <summary>How long the toybox's gravity lasts before drifting back to normal (0: until you change it).</summary>
     public int ToyboxMinutes { get; set; } = 5;
+    /// <summary>Prank mode: sticky notes, whoopee cushions, muddy footprints, memes. Off by default.</summary>
+    public bool Pranks { get; set; }
+    /// <summary>Memes made from classic templates (pictures from imgflip.com) with captions that fit the moment.</summary>
+    public bool InternetMemes { get; set; }
+    /// <summary>Also real posts from r/wholesomememes (titles matched to the moment; no NSFW or spoilers).</summary>
+    public bool RealMemes { get; set; }
+    /// <summary>A folder of your own meme pictures to use (names that fit the moment are preferred).</summary>
+    public string MemeFolder { get; set; } = "";
     public List<Memorial> Memorials { get; set; } = new();
     public List<Quest> Quests { get; set; } = new();
     public int QuestsDone { get; set; }

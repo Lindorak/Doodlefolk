@@ -207,9 +207,9 @@ sealed class StudioWindow : Form
         string path = Uri.UnescapeDataString(new Uri(e.Request.Uri).AbsolutePath.TrimStart('/'));
         if (path == "") path = "index.html";
         // Album photos: only a plain file name, only pictures, only from the album folder.
-        if (path.StartsWith("album/"))
+        if (path.StartsWith("album/") || path.StartsWith("memes/"))
         {
-            string name = path[6..], full = Path.Combine(App.AlbumDir, name);
+            string name = path[6..], full = Path.Combine(path.StartsWith("album/") ? App.AlbumDir : Memes.Dir, name);
             var envA = _web.CoreWebView2.Environment;
             if (name != Path.GetFileName(name) || !name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || !File.Exists(full))
             { e.Response = envA.CreateWebResourceResponse(null, 404, "Not found", ""); return; }

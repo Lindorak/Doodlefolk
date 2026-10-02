@@ -226,6 +226,41 @@ sealed class Renderer : IDisposable
 
     public void Disc(Vector2 center, float r, Color4 c) => Oval(center, r, r, c);
 
+    // ---------------- pictures ----------------
+
+    readonly Dictionary<string, (ID2D1Bitmap1? bmp, int w, int h)> _pictures = new();
+
+    /// <summary>A picture file (a meme in a frame), loaded once (at most 512 px), drawn into a rectangle keeping its
+    /// shape (letterboxed). Unreadable files draw nothing.</summary>
+    public void Picture(string path, System.Drawing.RectangleF dest, float alpha = 1)
+    {
+        if (!_pictures.TryGetValue(path, out var p))
+        {
+            p = (null, 0, 0);
+            try
+            {
+                using var src = new System.Drawing.Bitmap(path);
+                float k = Math.Min(1, 512f / Math.Max(src.Width, src.Height));
+                using var bmp = new System.Drawing.Bitmap(Math.Max(1, (int)(src.Width * k)), Math.Max(1, (int)(src.Height * k)), System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using (var g = System.Drawing.Graphics.FromImage(bmp)) { g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic; g.DrawImage(src, 0, 0, bmp.Width, bmp.Height); }
+                var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                try
+                {
+                    var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
+                    p = (_ctx.CreateBitmap(new SizeI(bmp.Width, bmp.Height), data.Scan0, (uint)data.Stride, new BitmapProperties1(fmt, 96, 96, BitmapOptions.None)), bmp.Width, bmp.Height);
+                }
+                finally { bmp.UnlockBits(data); }
+            }
+            catch (Exception e) { World.Log($"picture {Path.GetFileName(path)}: {e.Message}"); }
+            if (_pictures.Count > 24) { foreach (var old in _pictures.Values) old.bmp?.Dispose(); _pictures.Clear(); }
+            _pictures[path] = p;
+        }
+        if (p.bmp == null || alpha <= 0.003f) return;
+        float s = Math.Min(dest.Width / p.w, dest.Height / p.h), w = p.w * s, h = p.h * s;
+        float x = dest.X + (dest.Width - w) / 2, y = dest.Y + (dest.Height - h) / 2;
+        _ctx.DrawBitmap(p.bmp, new Vortice.RawRectF(x, y, x + w, y + h), Math.Clamp(alpha, 0, 1), Vortice.Direct2D1.InterpolationMode.Linear, null, null);
+    }
+
     public void Oval(Vector2 center, float rx, float ry, Color4 c)
     {
         _brush.Color = c;
@@ -519,6 +554,7 @@ sealed class Renderer : IDisposable
     public void Dispose()
     {
         foreach (var f in _fonts.Values) f.Dispose();
+        foreach (var p in _pictures.Values) p.bmp?.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
         foreach (var g in _shapes.Values) g.geo.Dispose();
         _shadeLin?.Dispose(); _shadeRad?.Dispose(); _softSprite?.Dispose(); _glowSprite?.Dispose();

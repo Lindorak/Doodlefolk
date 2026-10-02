@@ -431,6 +431,30 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
+            Key = "stickynote", Name = "Sticky note", Words = new[] { "sticky note", "post-it", "note", "postit" }, W = 22, H = 20, Color = M.Hex(0xFFF176),
+            Shapes = new[] { R(-11, 0, 11, 20, 0), R(-11, 16, 11, 20, 1) },
+            Mass = 1, Carry = true,
+        });
+        Add(new ItemDef
+        {
+            Key = "memeframe", Name = "Framed picture", Words = new[] { "meme", "framed picture", "picture" }, W = 44, H = 36, Color = M.Hex(0x6E4B26),
+            Shapes = new[] { R(-22, 0, 22, 36, 0), R(-19, 3, 19, 33, 7) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "whoopee", Name = "Whoopee cushion", Words = new[] { "whoopee cushion", "whoopie cushion", "fart cushion" }, W = 14, H = 4, Color = M.Hex(0xF06292),
+            Shapes = new[] { E(0, 2, 7, 2.2f, 0), E(7.5f, 1.8f, 1.6f, 1, 1) },
+            Mass = 1, Carry = true,
+        });
+        Add(new ItemDef
+        {
+            Key = "mudprint", Name = "Muddy footprint", Words = new[] { "footprint", "muddy footprint" }, W = 5, H = 1.4f, Color = M.Hex(0x6D4C41),
+            Shapes = new[] { E(0.6f, 0.6f, 2.2f, 0.6f, 0), E(-1.9f, 0.6f, 0.7f, 0.5f, 0) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
             Key = "memorial", Name = "Headstone", Words = new[] { "headstone", "gravestone", "memorial", "grave" }, W = 22, H = 26, Color = M.Hex(0xA3A8AD),
             Shapes = new[] { E(0, 1, 13, 2.6f, 10), R(-9, 1, 9, 19, 0), E(0, 19, 9, 6, 0), R(-9, 1, -6.5f, 19, 1), L(6, 1, 7.5f, 7, 10, 0.8f), E(7.5f, 7.6f, 1.7f, 1.7f, 14), L(-5, 1, -6.5f, 6, 10, 0.8f), E(-6.5f, 6.5f, 1.5f, 1.5f, 11) },
             Mass = 3,

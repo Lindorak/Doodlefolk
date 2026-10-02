@@ -81,6 +81,12 @@ sealed partial class World
     public static bool OldAge;
     /// <summary>The toybox's gravity (1 normal, 0.3 moon…), applied to everything that falls.</summary>
     public static float GravityMul = 1;
+    /// <summary>Prank mode is on (and nobody's focusing).</summary>
+    public static bool Pranks;
+    public Func<Figure, string>? NoteFor;
+    public Action<Item, double>? PrankLeft;
+    public Func<bool>? MemeReady;
+    public Func<string?>? TakeMeme;
     /// <summary>Something came out of the pond: the app records it (returns a few words for the diary, e.g. " A new kind!").</summary>
     public Func<Figure, FishKind, float, string>? FishCaught;
     /// <summary>Freeze-frame on big impacts: the simulation pauses while this counts down.</summary>

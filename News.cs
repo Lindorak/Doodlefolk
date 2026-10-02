@@ -66,6 +66,8 @@ static class Stickers
         new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
         new("memorial", "🕯", "Remembered", "Say goodbye to someone"),
         new("toybox", "🧸", "Mad scientist", "Play with the toybox (moon gravity, a giant ball…)"),
+        new("prank", "🤡", "Gotcha!", "Someone pulls a prank (prank mode)"),
+        new("meme", "😂", "Meme lord", "Someone hangs up a meme (prank mode)"),
         new("goodfriend", "💛", "Good friend", "Grant ten requests"),
         new("legendfish", "🌟", "The one that didn't get away", "Catch a legendary fish"),
         new("allfish", "🏆", "Master angler", "Catch every kind of thing in the pond"),

@@ -167,6 +167,7 @@ sealed partial class App
         quests = QuestState(),
         memorials = MemorialState(),
         toybox = ToyboxState(),
+        memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -187,7 +188,8 @@ sealed partial class App
                 pets = Pet.RareCoats.Select(c => new { coat = c, seen = _settings.Dex.ContainsKey("pet:" + c) }),
                 fish = FishDex(),
             }, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
-                tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, ambience = AmbienceState(), requests = _settings.Requests, autoAlbum = _settings.AutoAlbum, mortality = _settings.Mortality, ghosts = _settings.Ghosts, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
+                tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, ambience = AmbienceState(), requests = _settings.Requests, autoAlbum = _settings.AutoAlbum,
+            pranks = _settings.Pranks, internetMemes = _settings.InternetMemes, realMemes = _settings.RealMemes, memeFolder = _settings.MemeFolder, memeReady = _memeReady != null, mortality = _settings.Mortality, ghosts = _settings.Ghosts, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
             modFiles = Directory.Exists(Mods.Dir) ? Directory.GetFiles(Mods.Dir, "*.json").Select(Path.GetFileName) : Enumerable.Empty<string?>(), beatDance = _settings.BeatDance, gesturesOnly = _settings.GesturesOnly, breakNudges = _settings.BreakNudges, breakMinutes = _settings.BreakMinutes, tourDone = _settings.TourDone, problems = ProblemsJson(), aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
             installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
             mods = new { loaded = Mods.Loaded, errors = Mods.Errors, items = Mods.ItemCount, hats = Mods.HatCount, jokes = Mods.Jokes.Count, dir = Mods.Dir }, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
@@ -452,6 +454,22 @@ sealed partial class App
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
                     break;
                 }
+                case "meme":
+                    switch (Str(m, "op"))
+                    {
+                        case "now": _memeReady = null; _memeAt = 0; PostAll(new { t = "toast", text = _settings.InternetMemes || _settings.MemeFolder.Length > 0 ? "Someone's finding a meme…" : "Turn on memes (or choose a folder) first." }); break;
+                        case "folder":
+                            using (var dlg = new FolderBrowserDialog { Description = "A folder of meme pictures for prank mode", UseDescriptionForTitle = true, SelectedPath = _settings.MemeFolder })
+                                if (dlg.ShowDialog() == DialogResult.OK) _settings.MemeFolder = dlg.SelectedPath;
+                            break;
+                        case "noFolder": _settings.MemeFolder = ""; break;
+                        case "delete":
+                            var me = Memes.List.FirstOrDefault(x => x.File == Str(m, "file"));
+                            if (me != null) { Memes.List.Remove(me); try { File.Delete(Path.Combine(Memes.Dir, me.File)); } catch { } }
+                            break;
+                    }
+                    _settings.Save();
+                    break;
                 case "toy":
                 {
                     string tr = Toybox(Str(m, "op"));
@@ -789,6 +807,9 @@ sealed partial class App
             case "requests": _settings.Requests = v.GetBoolean(); break;
             case "mortality": _settings.Mortality = v.GetString() == "oldage" ? "oldage" : "never"; _nextTopmost = 0; break;
             case "ghosts": _settings.Ghosts = v.GetBoolean(); break;
+            case "pranks": _settings.Pranks = v.GetBoolean(); if (_settings.Pranks) _memeAt = Math.Min(_memeAt, _clock.Elapsed.TotalSeconds + 120); break;
+            case "internetMemes": _settings.InternetMemes = v.GetBoolean(); break;
+            case "realMemes": _settings.RealMemes = v.GetBoolean(); if (_settings.RealMemes) _settings.InternetMemes = true; break;
             case "toyboxMinutes": _settings.ToyboxMinutes = Math.Clamp(v.GetInt32(), 0, 60); break;
             case "hemisphere": _settings.Hemisphere = v.GetString() is "north" or "south" ? v.GetString()! : "auto"; _nextTopmost = 0; break;
             case "gesturesOnly": _settings.GesturesOnly = World.Gestures = v.GetBoolean(); break;

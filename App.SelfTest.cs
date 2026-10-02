@@ -26,7 +26,7 @@ sealed partial class App
     const double TestSpeed = 6;
 
     string _albumFile = "", _questText = "", _memoName = "";
-    double _perfAt = 5;
+    double _perfAt = 5, _scriptLag;
     bool _sawRide;
 
     void Check(string name, bool pass, string detail = "")
@@ -204,6 +204,25 @@ sealed partial class App
             Check("moon gravity makes things lighter", World.GravityMul < 0.5f && _w.Figures.All(f => f.Gravity < 1000 * f.S));
         });
         At(652, "toybox over", () => { SetGravity("normal"); Check("gravity goes back to normal", World.GravityMul == 1); });
+        At(600, "pranks", () =>
+        {
+            // A local memes folder (no network in the self-test), a meme that fits ("rain"), muddy feet after rain.
+            string dir = Path.Combine(AppPaths.DataDir, "my memes");
+            Directory.CreateDirectory(dir);
+            using (var bmp = new System.Drawing.Bitmap(120, 90)) { using (var g = System.Drawing.Graphics.FromImage(bmp)) g.Clear(System.Drawing.Color.Orange); bmp.Save(Path.Combine(dir, "rain day.png")); }
+            _settings.Pranks = true; _settings.MemeFolder = dir;
+            _w.Weather.Start(WeatherKind.Rain, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
+            _w.Weather.Intensity = 1;
+            MakeMemeSoon();
+        });
+        At(604, "rain stops", () => { _w.Weather.Start(WeatherKind.Clear, _clock.Elapsed.TotalSeconds, _w.Rng, _w); _w.Weather.Intensity = 0; });
+        At(612, "pranks happen", () =>
+        {
+            Check("a meme from your folder is ready", _memeReady != null, _memeReady?.Text ?? "");
+            if (TakeMeme() is { } path && ItemCatalog.Find("memeframe") is { } fd && SpawnItem(fd) is { } frame) { frame.Label = path; PrankLeft(frame, 1); }
+            Check("muddy footprints after the rain", _w.Items.Any(i => i.Def.Key == "mudprint"), $"{_w.Figures.Count(f => f.Mode == Mode.Control && MathF.Abs(f.Vel.X) > 40)} walking");
+        });
+        At(616, "pranks off", () => { _settings.Pranks = false; _settings.MemeFolder = ""; });
         At(654, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });
         At(672, "remembered", () =>
         {
@@ -252,16 +271,19 @@ sealed partial class App
         double t = now - _testStart;
         if (t > 40 && _w.Figures.Any(f => f.Riding != null)) _sawRide = true;
         if (t > _perfAt) { _perfAt = t + 30; World.Log($"selftest perf: {_fps} fps, sim {_msSim:0.0} ms, render {_msRender:0.0} ms (draw {_msDraw:0.0}), refresh {_msRefresh:0.0} ms, {_w.Figures.Count} figures, {_w.Items.Count} items"); }
-        while (_scriptAt < _script.Count && t >= _script[_scriptAt].at)
+        // One step a frame, and if a step runs late (the app stalled and the clock jumped), everything after it moves
+        // back by the same amount, so the steps keep their spacing and each gets the time it was given.
+        if (_scriptAt < _script.Count && t >= _script[_scriptAt].at + _scriptLag)
         {
-            var (_, name, act) = _script[_scriptAt++];
+            var (at, name, act) = _script[_scriptAt++];
+            if (t - (at + _scriptLag) > 0.5) _scriptLag = t - at;
             World.Log("selftest step: " + name);
             try { act(); }
             catch (Exception e) { Check($"step \"{name}\" ran", false, e.ToString()); }
         }
         if (t > _nextInvariant) { _nextInvariant = t + 0.5; SelfTestInvariants(t); }
         // A hard stop, in case a step never comes.
-        if (t > 900 && _testEnd == 0) FinishSelfTest();
+        if (t > 900 + _scriptLag && _testEnd == 0) FinishSelfTest();
     }
 
     void FinishSelfTest()

@@ -65,7 +65,7 @@ sealed partial class App
         {
             double away = now - _awaySince;
             _awaySince = -1;
-            if (away > 300) _w.OnUserBack(away);
+            if (away > 300) { _w.OnUserBack(away); _backAt = _clock.Elapsed.TotalSeconds; }
         }
     }
 

@@ -216,6 +216,22 @@ sealed partial class Item
         if (over) return;
         if (Def.Verbs.Contains(Verb.Hammock)) DrawHammock(r);
         if (Def.Verbs.Contains(Verb.Warm)) DrawFire(r, time);
+        if (Def.Key == "stickynote" && Label.Length > 0)
+        {
+            // Two lines of handwriting.
+            var words = Label.Split(' ');
+            string l1 = "", l2 = "";
+            foreach (var wd in words) { if (l2.Length == 0 && (l1 + " " + wd).Trim().Length <= 11) l1 = (l1 + " " + wd).Trim(); else l2 = (l2 + " " + wd).Trim(); }
+            if (l2.Length > 12) l2 = l2[..11] + "…";
+            var inkc = new Color4(0.15f, 0.14f, 0.2f, 0.9f);
+            r.Text(l1, Local(0, l2.Length > 0 ? 11.5f : 8.5f), 4.6f * Sc, inkc, true);
+            if (l2.Length > 0) r.Text(l2, Local(0, 5.5f), 4.6f * Sc, inkc, true);
+        }
+        if (Def.Key == "memeframe" && Label.Length > 0)
+        {
+            var a = Local(-19, 33); var b2 = Local(19, 3);
+            r.Picture(Label, System.Drawing.RectangleF.FromLTRB(MathF.Min(a.X, b2.X), MathF.Min(a.Y, b2.Y), MathF.Max(a.X, b2.X), MathF.Max(a.Y, b2.Y)));
+        }
         if (Def.Key == "memorial" && Label.Length > 0)
         {
             string n = Label.Length > 9 ? Label[..8] + "…" : Label;

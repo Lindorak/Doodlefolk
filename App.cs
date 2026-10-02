@@ -949,6 +949,12 @@ sealed partial class App : ApplicationContext
                     // wish <Name>: make that figure want something now (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } wf) World.Log($"wish {wf.Name}: {wf.Brain.ForceWish(_w)}");
                     break;
+                case "confess":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } cf) World.Log($"confess {cf.Name}: {cf.Brain.ForceConfess(_w)}");
+                    break;
+                case "romance":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } rf) World.Log($"romance {rf.Name}: {rf.Brain.RomanceDebug(_w)}");
+                    break;
                 case "love":
                     // love <A> <B> [0..1]: A falls for B (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } la && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } lb)

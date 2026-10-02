@@ -134,7 +134,7 @@ sealed partial class Brain
             FaceTo(c.Base.X);
             f.Emote(P.Bravery > 0.65f ? "I like you! ♥" : rng.NextDouble() < 0.5 ? "um… ♥?" : "so, uh… ♥", 1.8f);
             c.Brain.BeingConfessedTo(f);
-        }, WalkPurpose.Social);
+        }, WalkPurpose.Heart);
     }
 
     /// <summary>Someone's about to confess: stop and listen.</summary>
@@ -253,6 +253,23 @@ sealed partial class Brain
             return true;
         }
         return false;
+    }
+
+    /// <summary>Debug: go and confess to the crush right now.</summary>
+    public string ForceConfess(World w)
+    {
+        if (Crush(w) is not { } c) return "no crush";
+        TraceUntil = _t0 + 40;
+        GoConfess(c, w);
+        return $"going to confess to {c.Name}";
+    }
+
+    /// <summary>Debug: why it is or isn't about to confess.</summary>
+    public string RomanceDebug(World w)
+    {
+        var c = Crush(w);
+        return $"romance={w.Romance} sweetheart={SweetheartId} heartbroken={Heartbroken} crush={c?.Name} love={(c != null ? LoveFor(c) : 0):0.00} " +
+               $"awkward={(c != null && Awkward(c))} confessCd={_confessCd:0} crushSweetheart={c?.Brain.SweetheartId} crushMode={c?.Mode} crushFight={c?.Brain.InFight} t0={_t0:0} hb={_heartbreakAt:0}";
     }
 
     /// <summary>Debug: make this figure fall for <paramref name="o"/> right now.</summary>

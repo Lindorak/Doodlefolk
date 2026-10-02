@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Text;
-using System.Windows.Automation;
-using System.Windows.Automation.Text;
+using UIA = Interop.UIAutomationClient;
 using NAudio.CoreAudioApi;
 using static StickFight.Native;
 
@@ -146,7 +145,7 @@ sealed class ScreenSense : IDisposable
     /// <summary>What we remember about reading one window (so the slow parts aren't redone every time).</summary>
     sealed class WinState
     {
-        public AutomationElement? Doc;
+        public UIA.IUIAutomationElement? Doc;
         public double DocAt = -100, ExtrasAt = -100, ExtrasMs, ReadAt = -100;
         public List<Seen> Extras = new(), Words = new();
         public string TextKey = "";
@@ -160,8 +159,33 @@ sealed class ScreenSense : IDisposable
     double _linesMs, _wordsMs, _tVis, _tRects;
     int _rangeCount, _turn;
 
+    // UI Automation through its COM interface (much lighter than pulling in WPF just for this).
+    const int PropBounds = 30001, PropControlType = 30003, PropName = 30005, PropOffscreen = 30022, PropHasText = 30040, PropValue = 30045;
+    const int TextPatternId = 10014;
+    const int CtDocument = 50030, CtEdit = 50004, CtHyperlink = 50005, CtImage = 50006, CtText = 50020;
+    const UIA.TreeScope Descendants = UIA.TreeScope.TreeScope_Descendants;
+    const UIA.TextPatternRangeEndpoint Start = UIA.TextPatternRangeEndpoint.TextPatternRangeEndpoint_Start, End = UIA.TextPatternRangeEndpoint.TextPatternRangeEndpoint_End;
+    UIA.IUIAutomation _uia = null!;
+    UIA.IUIAutomationCondition _docCond = null!, _extrasCond = null!;
+    UIA.IUIAutomationCacheRequest _extrasCache = null!;
+
+    void InitUia()
+    {
+        _uia = new UIA.CUIAutomation8();
+        UIA.IUIAutomationCondition Ct(int id) => _uia.CreatePropertyCondition(PropControlType, id);
+        _docCond = _uia.CreateAndCondition(_uia.CreatePropertyCondition(PropHasText, true), _uia.CreateOrCondition(Ct(CtDocument), Ct(CtEdit)));
+        _extrasCond = _uia.CreateOrCondition(_uia.CreateOrCondition(Ct(CtHyperlink), Ct(CtImage)), Ct(CtText));
+        _extrasCache = _uia.CreateCacheRequest();
+        foreach (int id in new[] { PropName, PropBounds, PropControlType, PropOffscreen, PropValue }) _extrasCache.AddProperty(id);
+        _extrasCache.AutomationElementMode = UIA.AutomationElementMode.AutomationElementMode_None;
+    }
+
+    static RectangleF Rect(UIA.tagRECT r) => RectangleF.FromLTRB(r.left, r.top, r.right, r.bottom);
+
     void EyesLoop()
     {
+        try { InitUia(); }
+        catch (Exception e) { World.Log($"screen reader unavailable: {e.Message}"); return; }
         while (!_stop)
         {
             // Back off on slow apps so reading never becomes a burden on them.
@@ -272,69 +296,65 @@ sealed class ScreenSense : IDisposable
         return p || PrivateTitles.Any(t => title.Contains(t, StringComparison.OrdinalIgnoreCase));
     }
 
-    static readonly Condition DocCond = new AndCondition(
-        new PropertyCondition(AutomationElement.IsTextPatternAvailableProperty, true),
-        new OrCondition(new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document),
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)));
-
-    static AutomationElement? FindDocument(IntPtr h)
+    UIA.IUIAutomationElement? FindDocument(IntPtr h)
     {
-        var root = AutomationElement.FromHandle(h);
+        var root = _uia.ElementFromHandle(h);
         if (root == null) return null;
         // Prefer the biggest text area that's on screen (a web page, the editor of a text app).
-        var all = root.FindAll(TreeScope.Descendants, DocCond);
-        AutomationElement? best = null;
+        var all = root.FindAll(Descendants, _docCond);
+        UIA.IUIAutomationElement? best = null;
         double bestArea = 0;
-        foreach (AutomationElement e in all)
+        for (int i = 0; i < (all?.Length ?? 0); i++)
         {
-            var r = e.Current.BoundingRectangle;
-            if (r.IsEmpty || e.Current.IsOffscreen) continue;
-            double a = r.Width * r.Height;
-            if (a > bestArea) { bestArea = a; best = e; }
+            var e = all!.GetElement(i);
+            if (e.CurrentIsOffscreen != 0) continue;
+            var r = e.CurrentBoundingRectangle;
+            double area = (double)(r.right - r.left) * (r.bottom - r.top);
+            if (area > bestArea) { bestArea = area; best = e; }
         }
         return bestArea >= 120 * 80 ? best : null;
     }
 
-    void ReadLines(WinState st, ScreenSnap snap, AutomationElement doc, RECT win, List<Seen> into)
+    void ReadLines(WinState st, ScreenSnap snap, UIA.IUIAutomationElement doc, RECT win, List<Seen> into)
     {
         long t0 = Stopwatch.GetTimestamp();
-        if (!doc.TryGetCurrentPattern(TextPattern.Pattern, out object p)) return;
-        var tp = (TextPattern)p;
+        if (doc.GetCurrentPattern(TextPatternId) is not UIA.IUIAutomationTextPattern tp) return;
         // Chromium-based apps take a long time to work out their "visible ranges"; asking what's under the top-left and
         // bottom-right corners of the text area and taking everything between is much quicker.
-        TextPatternRange[] ranges;
+        UIA.IUIAutomationTextRange[] ranges;
         try
         {
-            var b = doc.Current.BoundingRectangle;
-            double L = Math.Max(b.Left, win.Left) + 6, T = Math.Max(b.Top, win.Top) + 6, R = Math.Min(b.Right, win.Right) - 6, B = Math.Min(b.Bottom, win.Bottom) - 6;
+            var b = doc.CurrentBoundingRectangle;
+            double L = Math.Max(b.left, win.Left) + 6, T = Math.Max(b.top, win.Top) + 6, R = Math.Min(b.right, win.Right) - 6, B = Math.Min(b.bottom, win.Bottom) - 6;
             // Probe along the top and bottom edges (the corners may be margins or scroll bars) and take the
             // earliest start and the latest end.
-            TextPatternRange? a = null, z = null;
+            UIA.IUIAutomationTextRange? a = null, z = null;
             for (int i = 0; i < 4; i++)
             {
                 double x = L + (R - L) * (i / 3.0);
                 try
                 {
-                    var top = tp.RangeFromPoint(new System.Windows.Point(x, T));
-                    if (a == null || top.CompareEndpoints(TextPatternRangeEndpoint.Start, a, TextPatternRangeEndpoint.Start) < 0) a = top;
+                    var top = tp.RangeFromPoint(new UIA.tagPOINT { x = (int)x, y = (int)T });
+                    if (top != null && (a == null || top.CompareEndpoints(Start, a, Start) < 0)) a = top;
                 }
                 catch (Exception) { }
                 try
                 {
-                    var bot = tp.RangeFromPoint(new System.Windows.Point(x, B));
-                    if (z == null || bot.CompareEndpoints(TextPatternRangeEndpoint.End, z, TextPatternRangeEndpoint.End) > 0) z = bot;
+                    var bot = tp.RangeFromPoint(new UIA.tagPOINT { x = (int)x, y = (int)B });
+                    if (bot != null && (z == null || bot.CompareEndpoints(End, z, End) > 0)) z = bot;
                 }
                 catch (Exception) { }
             }
             if (a == null || z == null) throw new InvalidOperationException();
             a = a.Clone();
-            a.MoveEndpointByRange(TextPatternRangeEndpoint.End, z, TextPatternRangeEndpoint.End);
+            a.MoveEndpointByRange(End, z, End);
             ranges = new[] { a };
             _rangeCount = 0;
         }
         catch (Exception)
         {
-            ranges = tp.GetVisibleRanges();
+            var vis = tp.GetVisibleRanges();
+            ranges = Enumerable.Range(0, vis?.Length ?? 0).Select(i => vis!.GetElement(i)).ToArray();
             _rangeCount = ranges.Length;
         }
         _tVis = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
@@ -342,7 +362,7 @@ sealed class ScreenSense : IDisposable
         int lines = 0;
         foreach (var range in ranges)
         {
-            foreach (var r in range.GetBoundingRectangles())
+            foreach (var r in Rects(range))
             {
                 if (lines >= 160) break;
                 if (r.Width < 24 || r.Height < 7 || r.Height > 90) continue;
@@ -397,78 +417,74 @@ sealed class ScreenSense : IDisposable
         }
     }
 
+    /// <summary>A range's line rectangles (UI Automation hands them over as a flat list of left, top, width, height).</summary>
+    static IEnumerable<RectangleF> Rects(UIA.IUIAutomationTextRange range)
+    {
+        var d = range.GetBoundingRectangles();
+        if (d == null) yield break;
+        for (int i = 0; i + 3 < d.Length; i += 4) yield return new RectangleF((float)d[i], (float)d[i + 1], (float)d[i + 2], (float)d[i + 3]);
+    }
+
     /// <summary>Where a whole word appears in a range (skips matches inside longer words).</summary>
-    static RectangleF? Locate(TextPatternRange range, string word)
+    static RectangleF? Locate(UIA.IUIAutomationTextRange range, string word)
     {
         var search = range.Clone();
         for (int tries = 0; tries < 6; tries++)
         {
-            var hit = search.FindText(word, false, true);
+            var hit = search.FindText(word, 0, 1);
             if (hit == null) return null;
             // Whole words only. (Chromium's "expand to word" is unreliable, so look at the letters on either side instead.)
             bool whole = hit.GetText(word.Length + 1).Trim().Equals(word, StringComparison.OrdinalIgnoreCase);
             var before = hit.Clone();
-            if (whole && before.MoveEndpointByUnit(TextPatternRangeEndpoint.Start, TextUnit.Character, -1) == -1)
+            if (whole && before.MoveEndpointByUnit(Start, UIA.TextUnit.TextUnit_Character, -1) == -1)
             {
                 string bt = before.GetText(word.Length + 2);
                 if (bt.Length > 0 && char.IsLetter(bt[0])) whole = false;
             }
             var after = hit.Clone();
-            if (whole && after.MoveEndpointByUnit(TextPatternRangeEndpoint.End, TextUnit.Character, 1) == 1)
+            if (whole && after.MoveEndpointByUnit(End, UIA.TextUnit.TextUnit_Character, 1) == 1)
             {
                 string at = after.GetText(word.Length + 2);
                 if (at.Length > word.Length && char.IsLetter(at[^1])) whole = false;
             }
             if (whole)
             {
-                var rs = hit.GetBoundingRectangles();
-                if (rs.Length > 0 && rs[0].Width > 2) return new RectangleF((float)rs[0].Left, (float)rs[0].Top, (float)rs[0].Width, (float)rs[0].Height);
+                var first = Rects(hit).FirstOrDefault();
+                if (first.Width > 2) return first;
             }
-            search.MoveEndpointByRange(TextPatternRangeEndpoint.Start, hit, TextPatternRangeEndpoint.End);
+            search.MoveEndpointByRange(Start, hit, End);
         }
         return null;
     }
 
-    static readonly Condition LinkOrImage = new OrCondition(
-        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Hyperlink),
-        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Image),
-        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text));
-
-    static List<Seen> FindExtras(AutomationElement doc, RECT win, out bool textElems)
+    List<Seen> FindExtras(UIA.IUIAutomationElement doc, RECT win, out bool textElems)
     {
         textElems = false;
         var wordsSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         int words = 0;
         var list = new List<Seen>();
-        var cr = new CacheRequest();
-        cr.Add(AutomationElement.NameProperty);
-        cr.Add(AutomationElement.BoundingRectangleProperty);
-        cr.Add(AutomationElement.ControlTypeProperty);
-        cr.Add(AutomationElement.IsOffscreenProperty);
-        cr.Add(ValuePattern.ValueProperty);
-        cr.AutomationElementMode = AutomationElementMode.None;
-        AutomationElementCollection found;
-        using (cr.Activate()) found = doc.FindAll(TreeScope.Descendants, LinkOrImage);
+        var found = doc.FindAllBuildCache(Descendants, _extrasCond, _extrasCache);
         int links = 0, images = 0;
-        foreach (AutomationElement e in found)
+        for (int i = 0; i < (found?.Length ?? 0); i++)
         {
-            var c = e.Cached;
-            if (c.IsOffscreen) continue;
-            var r = c.BoundingRectangle;
-            if (r.IsEmpty || r.Top < win.Top + 20 || r.Bottom > win.Bottom || r.Left < win.Left || r.Right > win.Right) continue;
-            var rect = new RectangleF((float)r.Left, (float)r.Top, (float)r.Width, (float)r.Height);
-            string name = (c.Name ?? "").Trim();
-            if (c.ControlType == ControlType.Text)
+            var e = found!.GetElement(i);
+            if (e.CachedIsOffscreen != 0) continue;
+            var rect = Rect(e.CachedBoundingRectangle);
+            if (rect.Width <= 0 || rect.Height <= 0 || rect.Top < win.Top + 20 || rect.Bottom > win.Bottom || rect.Left < win.Left || rect.Right > win.Right) continue;
+            var r = rect;
+            string name = (e.CachedName ?? "").Trim();
+            int ct = e.CachedControlType;
+            if (ct == CtText)
             {
                 textElems = true;
                 if (words < 8 && name.Length > 1) AddWords(list, name, rect, wordsSeen, ref words);
                 continue;
             }
             if (words < 8 && name.Length > 1) AddWords(list, name, rect, wordsSeen, ref words);
-            if (c.ControlType == ControlType.Hyperlink)
+            if (ct == CtHyperlink)
             {
                 if (links >= 40 || name.Length < 2 || r.Width < 16) continue;
-                string url = e.GetCachedPropertyValue(ValuePattern.ValueProperty) as string ?? "";
+                string url = e.GetCachedPropertyValue(PropValue) as string ?? "";
                 // Only plain web links: no javascript:, file:, mailto: or anything else that could run something.
                 if (!Uri.TryCreate(url, UriKind.Absolute, out var u) || u.Scheme != Uri.UriSchemeHttps) continue;
                 list.Add(new Seen { Kind = SeenKind.Link, Rect = rect, Text = Shorten(CleanName(name), 28), Url = u.AbsoluteUri });

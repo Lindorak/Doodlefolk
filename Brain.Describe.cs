@@ -24,6 +24,7 @@ sealed partial class Brain
                     WalkPurpose.Explore => "Exploring",
                     WalkPurpose.Look => "Going to look at something on your screen",
                     WalkPurpose.Watch => "Finding a spot to watch from",
+                    WalkPurpose.Heart => _confessTo != null ? $"Going to talk to {_confessTo.Name} ♥" : "Going to talk to someone",
                     WalkPurpose.Social => with != null ? $"Going to see {with}" : "Going to say hi",
                     WalkPurpose.Ball => "Going for the ball",
                     _ => _run ? "Running somewhere" : "Wandering",

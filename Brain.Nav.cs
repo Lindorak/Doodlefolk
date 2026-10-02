@@ -25,7 +25,7 @@ readonly struct Anchor
 sealed partial class Brain
 {
     enum Nav { Direct, ToTakeoff, InAir, ToWall, ToThrow, Climbing, Off }
-    enum WalkPurpose { Wander, Explore, Social, Ball, Other, Look, Watch }
+    enum WalkPurpose { Wander, Explore, Social, Ball, Other, Look, Watch, Heart }
 
     Func<Vector2?> _navTarget = () => null;
     Action _onArrive = () => { };

@@ -258,6 +258,7 @@ sealed partial class Brain
                     if (it.BitesLeft <= 0)
                     {
                         DiaryAte(it);
+                        RememberPlace(w, 0.25f, "a good meal");
                         f.CarryingItem = null;
                         it.Holder = null;
                         w.RemoveItem(it);

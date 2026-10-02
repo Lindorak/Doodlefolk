@@ -161,6 +161,7 @@ sealed partial class Brain
     {
         Match = null;
         DiaryMatch(m, won, tie);
+        if (won) RememberPlace(w, 0.5f, "winning a game");
         if (f.Weapon?.Def.Key is "racket" or "badmintonracket") f.DropWeapon(Vector2.Zero);
         if (f.Carrying == m.Ball) f.DropCarried(Vector2.Zero);
         foreach (var o in m.Players)
@@ -307,7 +308,9 @@ sealed partial class Brain
 
     Vector2 ShotVelocity(Match m, Prop b, Item goal, float h)
     {
-        Vector2 aim = goal.Local(-6, h) + new Vector2(rng.Range(-6, 6) * S, rng.Range(-6, 6) * S);
+        float miss = 1.4f - Sk(SkillKind.Ball);
+        Vector2 aim = goal.Local(-6, h) + new Vector2(rng.Range(-6, 6) * miss * S, rng.Range(-6, 6) * miss * S);
+        Practice(SkillKind.Ball, 0.006f);
         return SolveLob(b.Pos, aim, b.Grav, 10 * S, 500 * S, 1600 * S, out var v) ? v : new Vector2(MathF.Sign(aim.X - b.Pos.X) * 900 * S, -350 * S);
     }
 
@@ -350,7 +353,8 @@ sealed partial class Brain
             if (f.ActionT < Figure.ThrowTime * Figure.ThrowRelease) return;
             // Shoot: a lob at the rim; worse aim from far away.
             float dist = MathF.Abs(rim.X - f.Base.X);
-            float skill = 0.4f + P.Playfulness * 0.25f + f.Tastes.Of(Thing.Basketballs) * 0.2f;
+            float skill = 0.3f + Sk(SkillKind.Ball) * 0.45f + f.Tastes.Of(Thing.Basketballs) * 0.2f;
+            Practice(SkillKind.Ball, 0.008f);
             Vector2 aim = rim + new Vector2(rng.Range(-1, 1) * (1 - skill) * (6 + dist / (25 * S)) * S, -3 * S);
             if (!SolveLob(f.HoldPoint, aim, b.Grav, 30 * S + dist * 0.25f, 900 * S, 1800 * S, out var v)) v = new Vector2(MathF.Sign(rim.X - f.Base.X) * 500 * S, -900 * S);
             f.Carrying = null;

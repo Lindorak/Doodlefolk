@@ -139,6 +139,13 @@ sealed class Renderer : IDisposable
 
     public Rectangle Bounds => _bounds;
 
+    /// <summary>Drop shadows are drawn solid inside one translucent layer, so where parts overlap (joints, a cushion on
+    /// a couch, two figures) the shadow stays one even shade instead of doubling up.</summary>
+    public void BeginShadowLayer(float opacity) =>
+        _ctx.PushLayer(new LayerParameters1 { ContentBounds = new Rect(-100000, -100000, 200000, 200000), MaskTransform = Matrix3x2.Identity, Opacity = opacity, MaskAntialiasMode = AntialiasMode.PerPrimitive }, null);
+
+    public void EndShadowLayer() => _ctx.PopLayer();
+
     public void Line(Vector2 a, Vector2 b, Color4 c, float width)
     {
         _brush.Color = c;
@@ -162,7 +169,27 @@ sealed class Renderer : IDisposable
     // Shapes that never change (an object's parts in its own units) are built once and drawn with a transform.
     readonly Dictionary<(object, int), (ID2D1PathGeometry geo, Vector2 min, Vector2 max)> _shapes = new();
     ID2D1LinearGradientBrush? _shadeLin;
-    ID2D1RadialGradientBrush? _shadeRad;
+    ID2D1RadialGradientBrush? _shadeRad, _soft;
+
+    /// <summary>A soft shadow: one smooth radial falloff (no rings), darkest in the middle.</summary>
+    public void SoftShadow(Vector2 c, float rx, float ry, float alpha)
+    {
+        if (_soft == null)
+        {
+            using var stops = _ctx.CreateGradientStopCollection(new[]
+            {
+                new GradientStop(0, new Color4(0, 0, 0, 1)), new GradientStop(0.3f, new Color4(0, 0, 0, 0.82f)),
+                new GradientStop(0.6f, new Color4(0, 0, 0, 0.4f)), new GradientStop(0.82f, new Color4(0, 0, 0, 0.12f)), new GradientStop(1, new Color4(0, 0, 0, 0)),
+            });
+            _soft = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(Vector2.Zero, Vector2.Zero, 1, 1), stops);
+        }
+        _soft.Center = c;
+        _soft.RadiusX = rx;
+        _soft.RadiusY = ry;
+        _soft.GradientOriginOffset = Vector2.Zero;
+        _soft.Opacity = alpha;
+        _ctx.FillEllipse(new Ellipse(c, rx, ry), _soft);
+    }
 
     /// <summary>Light-and-shade overlays (white towards the light, dark away from it), made once and moved per draw.</summary>
     void EnsureShading()
@@ -329,7 +356,7 @@ sealed class Renderer : IDisposable
         foreach (var f in _fonts.Values) f.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
         foreach (var g in _shapes.Values) g.geo.Dispose();
-        _shadeLin?.Dispose(); _shadeRad?.Dispose();
+        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _soft?.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

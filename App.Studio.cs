@@ -160,7 +160,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
-            weather = _settings.WeatherMode, dayNight = _settings.DayNight, sky = _w.Weather.Kind.ToString(),
+            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -184,6 +184,8 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
+            skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
+            birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
             diary = b.Diary.AsEnumerable().Reverse().Take(80).Select(d => new { at = d.At.ToString("yyyy-MM-ddTHH:mm:ss"), text = d.Text, mood = d.Mood }),
             decision = b.LastDecision, decidedAgo = R(b.DecidedAgo), route = b.RoutePlan,
@@ -417,6 +419,7 @@ sealed partial class App
             case "love":
                 if (_w.Figures.FirstOrDefault(x => x.Id == m.GetProperty("other").GetInt32()) is { } lo) f.Brain.Love[lo.Id] = Math.Clamp(Num(m, "v"), 0, 1);
                 break;
+            case "party": f.Brain.ThrowParty(_w); break;
             case "breakup":
                 if (f.Brain.Sweetheart(_w) is { } exs) { f.Brain.Love[exs.Id] = 0.1f; }
                 break;
@@ -550,6 +553,7 @@ sealed partial class App
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;
+            case "celebrations": _settings.Celebrations = v.GetBoolean(); break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

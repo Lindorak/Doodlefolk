@@ -171,6 +171,8 @@ sealed partial class Figure
     float _crouchT;
     Vector2 _carryVel;
     float _time, _restT, _ragT, _getUpT;
+    /// <summary>Seconds this figure has been simulated (this session).</summary>
+    public float Age => _time;
     readonly Vector2[] _ragSnap = new Vector2[J.Count];
 
     /// <summary>Girl, boy or nonbinary, and who they can fall for (both editable in the Studio).</summary>
@@ -180,6 +182,8 @@ sealed partial class Figure
     public float Blush;
     /// <summary>Holding hands this frame: where the near / far hand should reach (set by the brain, cleared after posing).</summary>
     public Vector2? HoldN, HoldF;
+    /// <summary>A hat worn for the day (party hat, Halloween costume) instead of its usual one.</summary>
+    public string? HatOverride, HatColourOverride;
 
     public Figure(Color4 color, string name, float scale, Personality traits, Random rng, int? id = null)
     {

@@ -284,7 +284,7 @@ sealed class Item
         if (Gfx.Q.DetailedArt && !sh.Detail && !sh.NoOutline) Texture(r, sh, pts.AsSpan(0, n), k);
     }
 
-    static readonly Color4 DropInk = new(0, 0, 0, 0.12f);
+    static Color4 DropInk => Gfx.DropInk;
 
     /// <summary>Detailed art: a texture for a part, from what it's made of (wood grain, stitching, a shine...).</summary>
     void Texture(Renderer r, Shape sh, ReadOnlySpan<Vector2> pts, float k)

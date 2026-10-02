@@ -724,13 +724,23 @@ const SUBPANELS = {
     add(panel, h("div", { class: "split" },
       h("div", null, h("h2", { style: { marginTop: 0 } }, "Right now"), status, rows.map(r => r.el),
         h("h3", null, "Health"), h("div", { class: "meter" }, h("label", null, "HP"), h("div", { class: "bar" }, hpI), hpN),
-        h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up")),
+        h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"),
+        h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice: juggling, climbing, fighting, ball games, dancing and drawing all get better the more they do them."),
+        h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "party" }) }, "🎉 Throw them a party"), bday)),
       h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), decided, thoughts, route,
         h("p", { class: "hint" }, "Each time they decide, every option gets a score from their needs, mood, likes and personality. Bars show how likely each one was. Things they've done a lot lately score lower, and places they couldn't reach are skipped for a while."))));
-    let thoughtSig = "";
+    const skillBox = h("div", { class: "thoughts" });
+    const bday = h("span", { class: "hint" });
+    let thoughtSig = "", skillSig = "";
     return f => {
       decided.textContent = f.decision ? `Last decided to: ${f.decision.toLowerCase()} (${ago(f.decidedAgo)})` : "Hasn't had to decide anything yet.";
       route.textContent = f.route ? `Route: ${f.route}` : "";
+      bday.textContent = f.birthday ? `Birthday: ${f.birthday}` : "";
+      const ss = (f.skills || []).map(x => x.name + x.v).join("|");
+      if (ss !== skillSig) {
+        skillSig = ss;
+        skillBox.replaceChildren(...(f.skills || []).map(x => h("div", { class: "meter" }, h("label", null, x.name), h("div", { class: "bar" }, h("i", { style: { width: (x.v * 100) + "%", "--fill": "var(--good)" } })), h("span", { class: "n" }, x.v >= 0.8 ? "great" : x.v >= 0.5 ? "good" : x.v >= 0.3 ? "okay" : "learning"))));
+      }
       const sig = (f.thoughts || []).map(t => t.label + t.share).join("|");
       if (sig !== thoughtSig) {
         thoughtSig = sig;
@@ -1113,6 +1123,7 @@ PAGES.settings = {
       c.key = k;
       return c;
     });
+    const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
     const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
     const screen = [
       check("Stand on text", "Lines of text and pictures in the window you're using become ledges they can walk, sit and land on.", () => st().screenTerrain, v => setS("screenTerrain", v)),
@@ -1140,7 +1151,7 @@ PAGES.settings = {
       h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Not your real weather: nothing is looked up online."),
       h("div", { class: "row" }, weatherChips),
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
-      dayNight,
+      dayNight, celebrations,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1162,7 +1173,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update();
+      dayNight.update(); celebrations.update();
     };
   },
 };

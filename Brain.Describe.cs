@@ -60,6 +60,7 @@ sealed partial class Brain
                 G.Groove => _rainDance ? "Dancing in the rain" : "Dancing to your music",
                 G.Snowball => _snowTarget != null ? $"Throwing snowballs at {_snowTarget.Name}" : "Throwing snowballs",
                 G.Snowman => "Building a snowman",
+                G.Party => _partyFor == f ? "Having a birthday party" : _partyFor != null ? $"At {_partyFor.Name}'s party" : "Partying",
                 G.PetAnimal => _petting != null ? $"Petting {_petting.Name}" : "Petting an animal",
                 G.Create => _drawing != null ? $"Drawing {_drawing.Article} {_drawing.Name.ToLowerInvariant()}" : "Drawing something",
                 G.WatchScreen => "Watching your video",

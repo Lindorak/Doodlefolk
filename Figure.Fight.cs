@@ -212,7 +212,7 @@ sealed partial class Figure
         else
         {
             World.Play(a.Foot ? Sfx.Kick : Sfx.Punch, at, M.Clamp01(0.4f + a.Damage * dmgMul * 0.04f), a.Foot ? 0.9f : 1);
-            HP -= a.Damage * str * mult;
+            HP -= a.Damage * str * mult * (0.85f + from.Brain.Sk(SkillKind.Fighting) * 0.3f);
             Poise -= a.Poise * (0.7f + 0.3f * w.Fight.Strength) * mult * poiseMul / Style.Toughness;
             w.Fx.Spark(at, S, w.Rng, 0.9f + a.Damage * dmgMul * 0.04f, sparkColor);
             w.HitStop = MathF.Max(w.HitStop, 0.035f + a.Damage * dmgMul * 0.0025f);

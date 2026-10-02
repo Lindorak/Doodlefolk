@@ -80,7 +80,7 @@ sealed partial class Figure
         if (Look.Find(Look.Hairs, look.Hair) is { Back: { } hb } && !(FrontView && Action == Act.SitFront && look.Hair == "long"))
             DrawShapes(r, hb, Map, hr, Hex(look.HairColour, Color), alpha);
         if (look.Top == "hoodie") DrawShapes(r, new[] { new Shape('e', new[] { -0.7f, -0.2f, 0.75f, 0.9f }, 1) }, Map, hr, Hex(look.TopColour, Color), alpha);
-        if (Look.Find(Look.Hats, look.Hat) is { Back: { } tb }) DrawShapes(r, tb, Map, hr, Hex(look.HatColour, Color), alpha);
+        if (Look.Find(Look.Hats, HatOverride ?? look.Hat) is { Back: { } tb }) DrawShapes(r, tb, Map, hr, Hex(HatColourOverride ?? look.HatColour, Color), alpha);
         if (look.Hair == "ponytail" && _clothInit)
         {
             var hc = Hex(look.HairColour, Color);
@@ -186,7 +186,7 @@ sealed partial class Figure
             }
             else DrawShapes(r, gl.Front, Map, hr, Color, alpha);
         }
-        if (Look.Find(Look.Hats, look.Hat) is { } hat) DrawShapes(r, hat.Front, Map, hr, Hex(look.HatColour, Color), alpha);
+        if (Look.Find(Look.Hats, HatOverride ?? look.Hat) is { } hat) DrawShapes(r, hat.Front, Map, hr, Hex(HatColourOverride ?? look.HatColour, Color), alpha);
         if (Look.Find(Look.ShoeParts, look.Shoes) is { } shoe)
         {
             var sc = Hex(look.ShoeColour, Color);

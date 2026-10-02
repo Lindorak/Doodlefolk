@@ -387,7 +387,7 @@ sealed partial class Brain
 
     /// <summary>How fast to climb: energetic and hurried figures scramble, tired ones plod; a little random.</summary>
     float ClimbPace(bool urgent) =>
-        (0.8f + 0.6f * P.Energy + (urgent ? 0.35f : 0) + rng.Range(-0.12f, 0.12f)) * (0.65f + 0.35f * Stamina);
+        (0.8f + 0.6f * P.Energy + (urgent ? 0.35f : 0) + rng.Range(-0.12f, 0.12f)) * (0.65f + 0.35f * Stamina) * (0.8f + Sk(SkillKind.Climbing) * 0.45f);
 
     bool SolveJump(Vector2 from, Vector2 to, out Vector2 v) => NavGraph.Lob(from, to, f.Gravity, S, out v);
 

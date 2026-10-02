@@ -51,8 +51,28 @@ sealed partial class App
             }
     }
 
+    double _awaySince = -1;
+
+    /// <summary>Notice you being away (no input for 5+ minutes) and coming back.</summary>
+    void AwayFrame(double now)
+    {
+        var li = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() };
+        if (!GetLastInputInfo(ref li)) return;
+        double idle = unchecked((uint)Environment.TickCount - li.dwTime) / 1000.0;
+        if (idle > 300 && _awaySince < 0) _awaySince = now - idle;
+        else if (idle < 2 && _awaySince >= 0)
+        {
+            double away = now - _awaySince;
+            _awaySince = -1;
+            if (away > 300) _w.OnUserBack(away);
+        }
+    }
+
     void EventsFrame(double now)
     {
+        AwayFrame(now);
+        _w.Celebrations = _settings.Celebrations;
+        _w.UpdateHoliday(now);
         if (_testWin != null && !_testWin.IsDisposed && now < _shakeUntil)
         {
             // Swing it side to side, faster and faster, then stop dead.

@@ -507,16 +507,20 @@ sealed partial class App : ApplicationContext
             if (ia > 0) Gfx.GroundShadow(_r, ic, irx, iry, ia);
         }
         _w.Weather.DrawCover(_r, _w.Env, _w.Scale);
+        var figVisible = new bool[_w.Figures.Count];
+        for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
         if (Gfx.Q.DropShadows)
         {
-            var drop = new Color4(0, 0, 0, 0.12f);
+            // Everything's shadow on the window behind, as one layer (so overlaps don't darken).
+            var drop = Gfx.DropInk;
+            _r.BeginShadowLayer(Gfx.DropOpacity);
             foreach (var it in _w.Items) if (Dirty(it.Bounds())) it.DrawDropShadow(_r);
             foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop);
             foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop);
+            for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].DrawDropShadow(_r);
+            _r.EndShadowLayer();
         }
         DrawItems(false);
-        var figVisible = new bool[_w.Figures.Count];
-        for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
         for (int i = 0; i < _w.Figures.Count; i++)
             if (figVisible[i] && Shadow(_w.Figures[i], out var c, out float rx, out float ry, out float a))
                 Gfx.GroundShadow(_r, c, rx, ry, a);
@@ -747,6 +751,8 @@ sealed partial class App : ApplicationContext
         if (s.Gender is Gender g) f.Gender = g;
         f.Brain.Diary.Clear();
         f.Brain.Diary.AddRange(s.Diary);
+        foreach (var (k, v) in s.Skills) if (Enum.TryParse<SkillKind>(k, out var sk)) f.Brain.Skills[sk] = Math.Clamp(v, 0, 1);
+        if (s.Born is DateTime born) f.Brain.Born = born;
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -790,6 +796,8 @@ sealed partial class App : ApplicationContext
             Love = _w.Figures.Where(o => o != f && f.Brain.LoveFor(o) > 0.01f).ToDictionary(o => o.Name, o => MathF.Round(f.Brain.LoveFor(o), 3)),
             Sweetheart = f.Brain.Sweetheart(_w)?.Name,
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
+            Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
+            Born = f.Brain.Born,
         }).ToList();
         _settings.Items = SaveItems();
         _settings.Pets = _w.Pets.Select(p => new SavedPet { Kind = p.Kind, Name = p.Name, Color = Settings.Hex(p.Color), Size = p.SizeMul, Owner = p.Owner?.Name }).ToList();
@@ -1065,6 +1073,9 @@ sealed partial class App : ApplicationContext
                         World.Log("love: " + la.Brain.ForceLove(lb, p.Length > 3 ? float.Parse(p[3], inv) : 0.8f));
                     break;
                 case "testwin": TestWindow(p); break;
+                case "holiday": _w.HolidayOverride = Enum.TryParse<Holiday>(p[1], true, out var hol) && hol != Holiday.None ? hol : null; break;
+                case "party": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } pf2) pf2.Brain.ThrowParty(_w); break;
+                case "back": _w.OnUserBack(p.Length > 1 ? double.Parse(p[1], inv) : 1800); break;
                 case "pet": World.Log("summon: " + Summon(p.Length > 1 ? p[1] : "cat")); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":

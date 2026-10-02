@@ -38,6 +38,9 @@ static class Gfx
     public static GfxSettings Q = new();
     /// <summary>Where light comes from (top left), and the matching offset for shadows thrown onto windows.</summary>
     public static readonly Vector2 DropOffset = new(4.5f, 6f);
+    /// <summary>Drop shadows are drawn in solid ink inside a layer of this opacity (see Renderer.BeginShadowLayer).</summary>
+    public const float DropOpacity = 0.12f;
+    public static readonly Color4 DropInk = new(0, 0, 0, 1);
 
     /// <summary>A shadow on the ground: a soft, layered blur (or one plain oval on low), nudged away from the light.</summary>
     public static void GroundShadow(Renderer r, Vector2 c, float rx, float ry, float a)
@@ -45,10 +48,8 @@ static class Gfx
         if (a <= 0.003f || Q.Shadows == 0) return;
         if (Q.Shadows == 1) { r.Oval(c, rx, ry, new Color4(0, 0, 0, a)); return; }
         c.X += rx * 0.08f;
-        r.Oval(c, rx * 1.35f, ry * 1.5f, new Color4(0, 0, 0, a * 0.28f));
-        r.Oval(c, rx * 1.08f, ry * 1.15f, new Color4(0, 0, 0, a * 0.45f));
-        r.Oval(c, rx * 0.7f, ry * 0.75f, new Color4(0, 0, 0, a * 0.55f));
-        r.Oval(c - new Vector2(rx * 0.05f, 0), rx * 0.32f, ry * 0.45f, new Color4(0, 0, 0, a * 0.5f));   // contact: darkest right underneath
+        r.SoftShadow(c, rx * 1.4f, ry * 1.55f, MathF.Min(1, a * 1.25f));
+        r.SoftShadow(c - new Vector2(rx * 0.05f, 0), rx * 0.45f, ry * 0.6f, a * 0.45f);   // contact: darkest right underneath
     }
 
     public static Color4 Lighter(Color4 c, float k) => new(c.R + (1 - c.R) * k, c.G + (1 - c.G) * k, c.B + (1 - c.B) * k, c.A);

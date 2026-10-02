@@ -29,7 +29,6 @@ sealed partial class Figure
         Color4 outline = new(0, 0, 0, Outline.A * fade);
         float w = LineW, ow = LineW + 1.6f * S;
 
-        DrawDropShadow(r, fade);
         DrawTrails(r, near);
         DrawLookBack(r, fade);
         foreach (var (a, b) in Bones) r.Line(Jt[a], Jt[b], outline, ow);

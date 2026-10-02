@@ -21,6 +21,8 @@ sealed class SavedFigure
     public Dictionary<string, float> Love { get; set; } = new();
     public string? Sweetheart { get; set; }
     public List<DiaryEntry> Diary { get; set; } = new();
+    public Dictionary<string, float> Skills { get; set; } = new();
+    public DateTime? Born { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -81,6 +83,8 @@ sealed class Settings
     /// <summary>How often weather happens: off, rare, sometimes, often. And whether night makes them sleepy.</summary>
     public string WeatherMode { get; set; } = "sometimes";
     public bool DayNight { get; set; } = true;
+    /// <summary>Birthday parties and holiday dress-up.</summary>
+    public bool Celebrations { get; set; } = true;
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
     /// <summary>Crushes, dating, jealousy and breakups.</summary>

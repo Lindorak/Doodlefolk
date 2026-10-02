@@ -43,11 +43,11 @@ sealed partial class Figure
     }
 
     /// <summary>A faint silhouette on the window behind (drop shadows).</summary>
-    void DrawDropShadow(Renderer r, float fade)
+    public void DrawDropShadow(Renderer r)
     {
         if (!Gfx.Q.DropShadows || Mode == Mode.Spawning) return;
         Vector2 o = Gfx.DropOffset * S;
-        var c = new Color4(0, 0, 0, 0.11f * fade);
+        var c = new Color4(0, 0, 0, Fade);
         float w = LineW + 1.4f * S;
         foreach (var (a, b) in Bones) r.Line(Jt[a] + o, Jt[b] + o, c, w);
         r.Disc(Jt[J.Head] + o, HeadR + 0.8f * S, c);

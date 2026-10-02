@@ -191,6 +191,7 @@ sealed partial class Brain
         World.Play(Sfx.Chime, mid, 0.45f);
         World.Log($"{f.Name} and {c.Name} are dating");
         DiaryConfessed(c, true);
+        RememberPlace(w, 1.2f, $"where {c.Name} said yes");
         c.Brain.DiaryAskedOut(f, true);
         w.CoupleFormed(f, c);
     }

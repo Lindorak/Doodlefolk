@@ -144,6 +144,7 @@ sealed partial class Brain
     {
         DiaryWish(what, true);
         f.Emote(rng.NextDouble() < 0.5 ? "yay! thank you!" : "♥ thanks!", 1.6f);
+        RememberPlace(World.Current, 0.3f, "a present from you");
         Cheered(0.25f);
         Boredom = MathF.Max(0, Boredom - 0.2f);
         FeelUser(0.06f, $"Gave me the {what.Name.ToLowerInvariant()} I asked for");
@@ -181,7 +182,7 @@ sealed partial class Brain
         f.SetAction(_t % 0.6f < 0.3f ? Act.Wave : Act.Swat);
         var ink = _drawing != null ? _drawing.Color : new Color4(1, 0.85f, 0.3f, 1);
         if ((int)(_t / 0.07f) != (int)((_t - World.Dt) / 0.07f)) w.Fx.Spark(f.ToolTip, S * 0.45f, w.Rng, 0.35f, ink);
-        if (_t < 2.2f) return;
+        if (_t < 2.6f - Sk(SkillKind.Drawing) * 1.2f) return;
 
         Vector2 at = spot + new Vector2(f.Facing * 10 * S, 0);
         if (_drawing != null && w.MakeItem?.Invoke(_drawing.Key) is { } it)
@@ -202,6 +203,7 @@ sealed partial class Brain
         World.Play(Sfx.TaDa, at, 0.4f);
         f.Emote(rng.NextDouble() < 0.6 ? "ta-da!" : "✨", 1.4f);
         if (_drawingWant != null) DiaryDrew(_drawingWant);
+        Practice(SkillKind.Drawing, 0.08f);
         Cheered(0.15f);
         Boredom = MathF.Max(0, Boredom - 0.3f);
         _nextCreate = _t0 + rng.Range(45, 120) * (1.6f - P.Playfulness);

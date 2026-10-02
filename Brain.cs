@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party,
     }
 
     readonly Figure f;
@@ -131,6 +131,7 @@ sealed partial class Brain
 
     public void OnClimbed()
     {
+        Practice(SkillKind.Climbing, 0.015f);
         Stamina = MathF.Max(0, Stamina - 0.06f);
         Cheered(0.1f);
         if (_g == G.Walk && _nav == Nav.Climbing) { _nav = Nav.Direct; return; }
@@ -141,7 +142,7 @@ sealed partial class Brain
     public void OnRecovered(float throwSpeed, World w)
     {
         if (throwSpeed < 1 && AfterKnockdown(w)) return;
-        if (throwSpeed > 900 * S) { TellWitnesses(w, M.Clamp01(throwSpeed / (2500 * S))); DiaryThrown(M.Clamp01(throwSpeed / (2500 * S))); }
+        if (throwSpeed > 900 * S) { TellWitnesses(w, M.Clamp01(throwSpeed / (2500 * S))); DiaryThrown(M.Clamp01(throwSpeed / (2500 * S))); RememberPlace(w, -0.4f, "being thrown"); }
         if (FeelAboutBeingThrown(throwSpeed)) return;
         float k = M.Clamp01(throwSpeed / (2500 * S));
         Annoyance = M.Clamp01(Annoyance + 0.2f + 0.4f * k);
@@ -207,6 +208,8 @@ sealed partial class Brain
         UpdateNeeds(dt, w);
         UpdateLove(dt, w);
         UpdateWeather(dt, w);
+        UpdateLife(dt, w);
+        if (_g is G.Groove or G.DanceWith || (_g == G.UseItem && _verb == Verb.Dance)) Practice(SkillKind.Dancing, dt * 0.002f, true);
 
         Vector2 cur = w.Cursor;
         float dist = Vector2.Distance(cur, f.Jt[J.Head]);
@@ -334,6 +337,7 @@ sealed partial class Brain
             case G.Snowball: DoSnowball(w); break;
             case G.Snowman: DoSnowman(w); break;
             case G.PetAnimal: DoPetAnimal(w); break;
+            case G.Party: DoParty(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -585,7 +589,7 @@ sealed partial class Brain
         if (_t > 1.2f && f.CurrentEmote != "z") f.Emote("z", 3);
         if ((Stamina > 0.97f && _t > 8) || _t > _dur)
         {
-            if (_t > 10) DiaryNapped(null);
+            if (_t > 10) { DiaryNapped(null); RememberPlace(World.Current, 0.3f, "a good nap"); }
             f.Emote("♪", 0.8f);
             Cheered(0.2f);
             Go(G.Cheer, 0.7f);   // a big stretch
@@ -666,6 +670,7 @@ sealed partial class Brain
         RomanceOptions(w, opts);
         WeatherOptions(w, opts);
         PetOptions(w, opts);
+        LifeOptions(w, opts);
         Decide(opts);
     }
 

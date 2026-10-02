@@ -5,6 +5,7 @@
 
 const host = window.chrome && window.chrome.webview;
 const QUICK = document.body.dataset.mode === "quick";
+const POP = document.body.dataset.mode === "pop";
 let INIT = null, S = null;
 let route = { page: "cast", id: 0, sub: "personality", rel: null };
 let current = null;          // { key, sig, update }
@@ -33,6 +34,7 @@ function receive(m) {
     case "spawned": if (!QUICK) { go("figure", m.id); toast("Fresh off the pencil!"); } break;
     case "winstate": document.body.classList.toggle("max", !!m.max); break;
     case "toast": toast(m.text); break;
+    case "pop": buildPop(m.kind, m.id); break;
   }
 }
 if (host) host.addEventListener("message", e => receive(e.data));
@@ -274,6 +276,7 @@ function fig(id = route.id) { return S && S.figures.find(f => f.id === id); }
 function onState() {
   if (!INIT || !S) return;
   if (QUICK) { applyTheme(); if (!$("#quick").firstChild) buildQuick(); quickUpdate(); return; }
+  if (POP) { applyTheme(); if (pendingPop) buildPop(...pendingPop); else popUpdate(); return; }
   $("#fps").textContent = S.fpsNow ? `${S.fpsNow} fps` : "";
   applyTheme();
   if (route.page === "figure" && !fig()) route.page = "cast";
@@ -1057,7 +1060,7 @@ dark.addEventListener("change", applyTheme);
 for (const b of document.querySelectorAll(".winbtn")) b.addEventListener("click", () => send({ t: b.dataset.win }));
 for (const e of document.querySelectorAll(".edge")) e.addEventListener("pointerdown", ev => { ev.preventDefault(); send({ t: "resize", edge: e.dataset.edge }); });
 if ($("#titlebar")) $("#titlebar").addEventListener("dblclick", e => { if (!e.target.closest(".winbtn")) send({ t: "max" }); });
-document.addEventListener("keydown", e => { if (QUICK && e.key === "Escape") send({ t: "close" }); });
+document.addEventListener("keydown", e => { if ((QUICK || POP) && e.key === "Escape") send({ t: "close" }); });
 
 // ---------------- tray quick panel ----------------
 
@@ -1088,6 +1091,112 @@ function buildQuick() {
     count.textContent = `${n} figure${n === 1 ? "" : "s"} · ${S.fpsNow || 0} fps`;
   };
 }
+// ---------------- right-click menu ----------------
+/* One small menu for whatever was right-clicked: a ball, an object or a figure. Quick changes apply live; anything
+   bigger is one click away in the Studio. */
+
+let popUpdate = () => {};
+let popKey = "", pendingPop = null;
+
+function buildPop(kind, id) {
+  const root = $("#pop");
+  if (!root) return;
+  if (!INIT || !S) { pendingPop = [kind, id]; return; }   // built as soon as the first state arrives
+  pendingPop = null;
+  popKey = kind + ":" + id;
+  const find = () => kind === "prop" ? S.props.find(p => p.id === id) : kind === "item" ? S.items.find(i => i.id === id) : S.figures.find(f => f.id === id);
+  let x = find();
+  root.replaceChildren();
+  if (!x) { popUpdate = () => {}; fit(); return; }
+  const close = () => send({ t: "close" });
+  const more = page => h("button", { class: "btn small", onclick: () => send({ t: "studio", page, id }) }, "More…");
+  const head = (art, title, sub) => h("div", { class: "pop-head" }, h("span", { class: "pop-art" }, art), h("div", { class: "pop-name" }, h("div", { class: "pop-title" }, title), sub));
+  const field = (label, ...kids) => h("div", { class: "pop-field" }, h("label", null, label), kids);
+  const updates = [];
+
+  if (kind === "prop") {
+    const sub = h("div", { class: "hint" });
+    const art = h("span");
+    const paintArt = () => art.replaceChildren(ballSvg(x.kind, x.hex));
+    paintArt();
+    const col = colourPicker(x.hex, hex => { x.hex = hex; paintArt(); sendSoon("pc", { t: "prop", op: "color", id, hex }); });
+    const sz = range(0.3, 3, 0.05, x.size, v => sendSoon("ps", { t: "prop", op: "size", id, v }));
+    const bo = range(0, 0.95, 0.01, x.bounce, v => sendSoon("pb", { t: "prop", op: "bounce", id, v }));
+    add(root, head(art, x.name, sub),
+      field("Colour", col), field("Size", sz), field("Bounciness", bo),
+      h("div", { class: "row pop-foot" },
+        h("button", { class: "btn small primary", onclick: () => send({ t: "prop", op: "kick", id }) }, "Kick it!"),
+        h("span", { class: "spacer" }), more("toys"),
+        armed("Remove", "Sure?", () => { send({ t: "prop", op: "remove", id }); close(); }, "btn small danger")));
+    updates.push(() => { sub.textContent = x.held ? `${x.held} has it` : "Drag it, throw it, or tweak it here."; col.set(x.hex); setRange(sz, x.size); setRange(bo, x.bounce); });
+  } else if (kind === "item") {
+    const def = catalogDef(x.key);
+    const recolour = def && def.shapes.some(sh => sh.c < 3);
+    const sub = h("div", { class: "hint" });
+    const art = h("span");
+    const paintArt = () => art.replaceChildren(def ? itemSvg(def, x.hex) : h("span"));
+    paintArt();
+    const col = recolour ? colourPicker(x.hex, hex => { x.hex = hex; paintArt(); sendSoon("ic", { t: "item", op: "color", id, hex }); }) : null;
+    const sz = range(0.3, 3.5, 0.05, x.size, v => sendSoon("is", { t: "item", op: "size", id, v }));
+    const tiltVal = h("span", { class: "val" });
+    const tilt = d => { x.tilt = Math.max(-90, Math.min(90, d)); send({ t: "item", op: "tilt", id, v: x.tilt }); tiltVal.textContent = x.tilt ? `${x.tilt}°` : "upright"; };
+    let music = null;
+    if (def && def.verbs.includes("Dance"))
+      music = h("button", { class: "btn small", onclick: () => { x.playing = !x.playing; send({ t: "item", op: "music", id }); music.textContent = x.playing ? "Music off" : "Music on"; } }, x.playing ? "Music off" : "Music on");
+    add(root, head(art, x.name, sub),
+      col && field("Colour", col), field("Size", sz),
+      field("Turn", h("div", { class: "row tight" },
+        h("button", { class: "btn small icon", title: "Lean left", onclick: () => tilt((x.tilt || 0) - 15) }, "⟲"),
+        h("button", { class: "btn small icon", title: "Lean right", onclick: () => tilt((x.tilt || 0) + 15) }, "⟳"),
+        h("button", { class: "btn small", onclick: () => tilt(0) }, "Upright"),
+        h("button", { class: "btn small", onclick: () => send({ t: "item", op: "flip", id }) }, "Flip ⇄"), tiltVal)),
+      h("div", { class: "row pop-foot" }, music, h("span", { class: "spacer" }), more("toys"),
+        armed("Remove", "Sure?", () => { send({ t: "item", op: "remove", id }); close(); }, "btn small danger")));
+    updates.push(() => {
+      sub.textContent = x.users && x.users.length ? `${x.users.join(" & ")} ${x.users.length > 1 ? "are" : "is"} using it`
+        : x.tilt ? "Tipped over: nobody can use it like this" : "Free to use";
+      if (col) col.set(x.hex);
+      setRange(sz, x.size);
+      tiltVal.textContent = x.tilt ? `${x.tilt}°` : "upright";
+    });
+  } else {
+    const sub = h("div", { class: "hint" });
+    const dot = figSvg("fig pop-fig");
+    const col = colourPicker(x.hex, hex => sendSoon("fc", { t: "fig", op: "color", id, hex }));
+    const sz = range(0.4, 3, 0.05, x.size, v => sendSoon("fs", { t: "fig", op: "size", id, v }));
+    const heal = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "heal", id }) }, "Heal");
+    const hunt = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "hunter", id, v: !x.hunter }) });
+    const feels = h("span", { class: "hint" });
+    add(root, head(dot, x.name, sub),
+      field("Colour", col), field("Size", sz),
+      h("div", { class: "row tight pop-acts" },
+        h("button", { class: "btn small primary", onclick: () => { send({ t: "fig", op: "call", id }); close(); } }, "Come here"),
+        h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "dance", id }) }, "Dance!"), heal, hunt),
+      h("div", { class: "row pop-foot" }, feels, h("span", { class: "spacer" }),
+        h("button", { class: "btn small", onclick: () => send({ t: "studio", page: "figure", id }) }, "Open in Studio")));
+    updates.push(() => {
+      dot.update(x.pose, x.hex, x.look, x.facing);
+      sub.textContent = x.dead ? "Gone" : x.activity;
+      feels.textContent = x.feels || "";
+      col.set(x.hex);
+      setRange(sz, x.size);
+      heal.hidden = !(x.hp < 99.5);
+      hunt.textContent = x.hunter ? "Stop hunting" : "Hunt the cursor";
+    });
+  }
+  popUpdate = () => {
+    const n = find();
+    if (!n) { if (popKey) close(); popKey = ""; return; }
+    x = n;
+    updates.forEach(u => u());
+  };
+  popUpdate();
+  fit();
+}
+
+/** Tell the window how tall the menu is so it can size itself to fit. */
+function fit() { requestAnimationFrame(() => send({ t: "fit", h: Math.ceil($("#pop").getBoundingClientRect().height) })); }
+
 for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => go(t.dataset.page));
 document.addEventListener("keydown", e => { if (e.key === "Escape" && route.page === "figure") go("cast"); });
 
@@ -1116,6 +1225,7 @@ const Mock = {
         if (q.get("theme")) st.settings.theme = q.get("theme");
         if (q.get("page")) { route.page = q.get("page"); route.id = +(q.get("id") || (st.figures[0] && st.figures[0].id) || 0); route.sub = q.get("sub") || "personality"; }
         setInterval(() => receive(JSON.parse(JSON.stringify(this.state))), 300);
+        if (q.get("pop")) setTimeout(() => receive({ t: "pop", kind: q.get("pop"), id: +q.get("id") }), 80);
         return;
       }
     } catch (e) { }

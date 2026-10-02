@@ -169,7 +169,7 @@ sealed partial class App : ApplicationContext
             _overlay.Place(_w.Env.Virtual);
             _r.Resize(_w.Env.Virtual);
         }
-        if (now > _nextTopmost) { _nextTopmost = now + 2; _overlay.KeepOnTop(); }
+        if (now > _nextTopmost) { _nextTopmost = now + 2; _overlay.KeepOnTop(); Ui.Update(_settings.Theme); }
         long tr0 = Stopwatch.GetTimestamp();
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
@@ -360,7 +360,7 @@ sealed partial class App : ApplicationContext
                 _pressProp = prop;
                 _prevCursor = _w.Cursor;
             }
-            else if (e.Button == MouseButtons.Right) OpenStudio("toys", prop.Id);
+            else if (e.Button == MouseButtons.Right) ShowPop("prop", prop.Id);
             return;
         }
         var (fig, joint) = HitTest(_w.Cursor);
@@ -369,7 +369,7 @@ sealed partial class App : ApplicationContext
             if (HitItem(_w.Cursor) is { } item)
             {
                 if (e.Button == MouseButtons.Left) GrabItem(item);
-                else if (e.Button == MouseButtons.Right) OpenStudio("toys", item.Id);
+                else if (e.Button == MouseButtons.Right) ShowPop("item", item.Id);
             }
             return;
         }
@@ -381,7 +381,7 @@ sealed partial class App : ApplicationContext
             _pressTime = _clock.Elapsed.TotalSeconds;
             _dragging = false;
         }
-        else if (e.Button == MouseButtons.Right) OpenStudio("figure", fig.Id);
+        else if (e.Button == MouseButtons.Right) ShowPop("figure", fig.Id);
     }
 
     void EndPress()
@@ -925,6 +925,11 @@ sealed partial class App : ApplicationContext
                     _skipItems = p[1] is "items" or "all";
                     break;
                 case "screen": World.Log(ScreenReport()); break;
+                case "pop": ShowPop(p[1], int.Parse(p[2], inv)); break;
+                case "say":
+                    // say <Name> <text...>: an emote bubble (debug)
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sayf) sayf.Emote(string.Join(' ', p.Skip(2)), 5);
+                    break;
                 case "tracejumps": World.TraceJumps = !World.TraceJumps; break;
                 case "fakemedia":
                     // fakemedia music|video <hwnd> [seconds]

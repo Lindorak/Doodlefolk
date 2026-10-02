@@ -340,7 +340,7 @@ body[data-mode="quick"] { background: var(--paper-2); }
 
 .memories { list-style: none; padding: 0; margin: 4px 0 12px; }
 .memories li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0 3px 22px; position: relative; font-size: 13.5px; }
-.memories li::before { content: "•"; position: absolute; left: 6px; color: var(--pencil); }
+.memories li::before { content: "\2022"; position: absolute; left: 6px; color: var(--pencil); }
 .memories li.good::before { content: "+"; color: var(--good); font-weight: 700; }
 .memories li.bad::before { content: "-"; color: var(--bad); font-weight: 700; }
 .memories li.none { color: var(--pencil); font-style: italic; }
@@ -377,3 +377,24 @@ input[type=color]::-webkit-color-swatch { border: 1.8px solid var(--ink); border
 .look-row { grid-template-columns: 120px 220px 1fr; }
 .swatches.mini { gap: 4px; }
 .sw.mini { width: 19px; height: 19px; }
+
+/* ---------- right-click menu ---------- */
+body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
+#pop { padding: 12px 14px 12px; display: flex; flex-direction: column; gap: 6px; border: 1.5px solid var(--faint); border-radius: 10px; }
+#pop:empty { min-height: 20px; }
+.pop-head { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.pop-art { width: 46px; height: 46px; flex: none; display: grid; place-items: center; }
+.pop-art svg { width: 46px; height: 46px; }
+.pop-art .pop-fig { width: 50px; height: 50px; }
+.pop-fig .ground { stroke: var(--pencil); fill: none; stroke-width: 1.5; }
+.pop-name { min-width: 0; }
+.pop-title { font: 20px/1.1 var(--hand); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pop-name .hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.pop-field { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 8px; }
+.pop-field > label { font: 14px var(--scrawl); color: var(--ink-2); }
+.pop-field .swatches { flex-wrap: wrap; gap: 4px; }
+.pop-field .sw { width: 18px; height: 18px; }
+.pop-acts { flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pop-foot { margin-top: 6px; padding-top: 8px; border-top: 1.5px dashed var(--faint); gap: 6px; align-items: center; }
+.row.tight { gap: 4px; align-items: center; flex-wrap: wrap; }
+.btn.icon { min-width: 30px; padding-left: 6px; padding-right: 6px; font-size: 16px; line-height: 1; }

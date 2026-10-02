@@ -223,11 +223,10 @@ sealed class Match
             Sport.Basketball => g.Local(0, 104),
             _ => g.Local(0, Kind == Sport.Soccer ? 46 : 44),
         };
-        var ink = new Color4(0.12f, 0.12f, 0.12f, 0.85f);
-        r.RoundRect(at, (Kind == Sport.Basketball ? 26 + Players.Count * 26 : 50) * s, 13 * s, 4 * s, new Color4(1, 0.98f, 0.9f, 0.92f), ink, 1.2f * s);
-        r.Text(ScoreText, at, 7.5f * s, ink);
+        Ui.Card(r, at, (Kind == Sport.Basketball ? 28 + Players.Count * 28 : 54) * s, 14 * s, 4 * s, s, 0.95f);
+        r.Text(ScoreText, at + new Vector2(0, -0.3f * s), 8 * s, Ui.Ink, true);
         if (ShoutT > 0 && Shout != null)
-            r.Text(Shout, at + new Vector2(0, -15 * s - (1.6f - ShoutT) * 8 * s), 11 * s, new Color4(0.85f, 0.2f, 0.15f, M.Clamp01(ShoutT * 1.5f)));
+            r.Text(Shout, at + new Vector2(0, -16 * s - (1.6f - ShoutT) * 8 * s), 12 * s, Ui.Accent.A(M.Clamp01(ShoutT * 1.5f)), true);
     }
 
     public System.Drawing.RectangleF Bounds()

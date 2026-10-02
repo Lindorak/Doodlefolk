@@ -356,10 +356,11 @@ sealed partial class Figure
         if (!rules.HealthBars || Mode == Mode.Spawning || Dead || !(Brain.InFight || HP < 97 || KO)) return;
         Vector2 c = Jt[J.Head] - new Vector2(0, HeadR + 4.5f * S);
         float w = 18 * S, h = 1.8f * S, k = M.Clamp01(HP / 100);
-        r.Line(c - new Vector2(w / 2, 0), c + new Vector2(w / 2, 0), new Color4(0, 0, 0, 0.55f), h + 1.2f * S);
+        // A little pencil-outlined bar on a card-coloured track, like the Studio's sliders.
+        r.Line(c - new Vector2(w / 2, 0), c + new Vector2(w / 2, 0), Ui.Ink.A(0.75f), h + 1.4f * S);
+        r.Line(c - new Vector2(w / 2, 0), c + new Vector2(w / 2, 0), Ui.Fill, h);
         if (k > 0)
-            r.Line(c - new Vector2(w / 2, 0), c + new Vector2(-w / 2 + w * k, 0),
-                   new Color4(M.Lerp(0.9f, 0.25f, k), M.Lerp(0.2f, 0.85f, k), 0.25f, 1), h);
+            r.Line(c - new Vector2(w / 2, 0), c + new Vector2(-w / 2 + w * k, 0), Color4.Lerp(Ui.Accent, Ui.Good, k), h);
     }
 
     // ---------------- poses ----------------

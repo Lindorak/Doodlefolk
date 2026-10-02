@@ -18,6 +18,8 @@ sealed class Item
 
     public Vector2 Pos, Vel;
     public float Angle, Spin;
+    /// <summary>The angle it settles at when resting (the user can tip things over or lean them). Tilted things can't be used.</summary>
+    public float RestAngle;
     public bool OnGround;
     public IntPtr GroundHwnd;
     public bool Pinned;
@@ -97,7 +99,7 @@ sealed class Item
         }
         if (OnGround)
         {
-            if (env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { } sup && sup.Hwnd != Handle && !(sup.Item != null && (Def.W * SizeMul > 30 || Def.H * SizeMul > 30))) { Pos.Y = sup.Y; GroundHwnd = sup.Hwnd; Vel = default; Angle = M.MoveTowards(Angle, 0, dt * 6); return; }
+            if (env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { } sup && sup.Hwnd != Handle && !(sup.Item != null && (Def.W * SizeMul > 30 || Def.H * SizeMul > 30))) { Pos.Y = sup.Y; GroundHwnd = sup.Hwnd; Vel = default; Angle = M.MoveTowards(Angle, RestAngle, dt * 6); return; }
             OnGround = false;
         }
         float py = Pos.Y;
@@ -117,7 +119,7 @@ sealed class Item
             OnGround = true;
             Vel = default;
             Spin = 0;
-            Angle = 0;
+            Angle = RestAngle;
             if (impact > 500 * _s) w.Fx.Dust(Pos, _s, (int)Math.Clamp(impact / (250 * _s), 2, 12), impact / (1500 * _s), w.Rng);
             if (impact > 300 * _s) World.Play(Sfx.Thud, Pos, M.Clamp01(impact / (2000 * _s)) * (Def.Carry ? 0.3f : 0.8f), Def.Carry ? 1.6f : 0.8f);
         }
@@ -293,7 +295,7 @@ sealed class Item
         {
             float ph = (float)((time * 0.6 + i / 3.0) % 1.0);
             Vector2 at = Local(-6 + i * 6 + MathF.Sin(ph * 9 + i) * 3, 16 + ph * 22);
-            r.Text(i % 2 == 0 ? "♪" : "♫", at, 9 * sc, new Color4(0.15f, 0.15f, 0.15f, (1 - ph) * 0.85f));
+            r.Text(i % 2 == 0 ? "♪" : "♫", at, 9 * sc, Ui.Ink.A((1 - ph) * 0.85f));
         }
     }
 

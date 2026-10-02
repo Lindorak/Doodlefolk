@@ -82,7 +82,8 @@ struct Emote
 {
     public string Text;
     public float T, Dur;
-    public Color4 Ink;
+    /// <summary>A special colour for the text; null: the theme's ink.</summary>
+    public Color4? Ink;
 }
 
 /// <summary>A stick figure. Normally driven procedurally (Control); switches to a verlet ragdoll

@@ -18,18 +18,22 @@ sealed class StudioWindow : Form
     bool _ready;
     readonly Queue<string> _pending = new();
     readonly string _page;
-    readonly bool _quick;
+    readonly bool _quick, _pop;
+    Point _anchor;
+    bool _wantShow;
 
     bool _pageReady;
     public bool PageReady => _pageReady;
 
     /// <param name="quick">The small tray panel: no taskbar button, sits above the tray, closes when you click away.</param>
-    public StudioWindow(Action<JsonElement> onMessage, bool debug, bool quick = false)
+    /// <param name="pop">The right-click menu: stays loaded, appears at the cursor sized to its content, hides when you click away.</param>
+    public StudioWindow(Action<JsonElement> onMessage, bool debug, bool quick = false, bool pop = false)
     {
         _onMessage = onMessage;
         _debug = debug;
         _quick = quick;
-        _page = quick ? "quick.html" : "index.html";
+        _pop = pop;
+        _page = pop ? "pop.html" : quick ? "quick.html" : "index.html";
         Text = "StickFight Studio";
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
@@ -54,6 +58,16 @@ sealed class StudioWindow : Form
             var wa = Screen.FromPoint(c).WorkingArea;
             Location = new Point(Math.Clamp(c.X - Width / 2, wa.Left + 8, wa.Right - Width - 8), Math.Clamp(c.Y - Height - 12, wa.Top + 8, wa.Bottom - Height - 8));
             Deactivate += (_, _) => { if (_pageReady) BeginInvoke(Close); };
+        }
+        if (pop)
+        {
+            ShowInTaskbar = false;
+            TopMost = true;
+            StartPosition = FormStartPosition.Manual;
+            MinimumSize = Size.Empty;
+            Size = new Size((int)(336 * dpi), (int)(260 * dpi));
+            Location = new Point(-32000, -32000);   // loads off-screen the first time; moved into place once it knows its size
+            Deactivate += (_, _) => { if (_pageReady && Visible) BeginInvoke(Hide); };
         }
         _web = new WebView2 { Dock = DockStyle.Fill, DefaultBackgroundColor = BackColor };
         Controls.Add(_web);
@@ -126,7 +140,8 @@ sealed class StudioWindow : Form
                 return;
             case "min": WindowState = FormWindowState.Minimized; return;
             case "max": WindowState = WindowState == FormWindowState.Maximized ? FormWindowState.Normal : FormWindowState.Maximized; return;
-            case "close": Close(); return;
+            case "close": if (_pop) Hide(); else Close(); return;
+            case "fit": if (_pop) Fit(msg.GetProperty("h").GetSingle()); return;
             case "resize":
                 if (WindowState != FormWindowState.Normal) return;
                 int ht = msg.GetProperty("edge").GetString() switch
@@ -139,6 +154,32 @@ sealed class StudioWindow : Form
                 return;
         }
         _onMessage(msg);
+    }
+
+    /// <summary>Right-click menu: show next to this screen point once the page has laid out its content.</summary>
+    public void PopAt(Point p)
+    {
+        _anchor = p;
+        _wantShow = true;
+    }
+
+    void Fit(float cssHeight)
+    {
+        float dpi = DeviceDpi / 96f;
+        var wa = Screen.FromPoint(_anchor).WorkingArea;
+        int h = Math.Min((int)Math.Ceiling(cssHeight * dpi) + 2, wa.Height - 16);
+        int x = _anchor.X + (int)(14 * dpi), y = _anchor.Y - (int)(18 * dpi);
+        if (x + Width > wa.Right - 8) x = _anchor.X - Width - (int)(14 * dpi);   // flip to the left near the right edge
+        x = Math.Clamp(x, wa.Left + 8, wa.Right - Width - 8);
+        y = Math.Clamp(y, wa.Top + 8, wa.Bottom - h - 8);
+        if (!_wantShow && !Visible) return;
+        SetBounds(x, y, Width, h);
+        if (_wantShow)
+        {
+            _wantShow = false;
+            if (!Visible) Show();
+            Activate();
+        }
     }
 
     /// <summary>Send a JSON message to the page (queued until it has loaded).</summary>
@@ -187,7 +228,7 @@ sealed class StudioWindow : Form
         get
         {
             var cp = base.CreateParams;
-            if (!_quick) cp.Style |= WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+            if (!_quick && !_pop) cp.Style |= WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
             return cp;
         }
     }

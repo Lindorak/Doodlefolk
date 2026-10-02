@@ -24,7 +24,7 @@ sealed partial class Figure
     public void Emote(string text, float dur = 1.4f, Color4? ink = null)
     {
         bool fresh = _emote?.Text != text;
-        _emote = new Emote { Text = text, Dur = dur, Ink = ink ?? new Color4(0.12f, 0.12f, 0.14f, 1) };
+        _emote = new Emote { Text = text, Dur = dur, Ink = ink };
         if (!fresh || Mode == Mode.Spawning) return;
         // A little voice for each kind of reaction (pitched by size: big figures sound deeper).
         float pitch = 1.1f / MathF.Sqrt(SizeMul) * (0.9f + (Id % 5) * 0.05f);
@@ -146,19 +146,17 @@ sealed partial class Figure
                 float t = (e.T * 0.6f + i / 3f) % 1;
                 Vector2 p = head + new Vector2(Facing * (4 + t * 10) * S, -(HeadR + 4 * S + t * 18 * S));
                 float size = (5 + t * 5) * S, a = (1 - t) * fade;
-                r.Text("z", p + new Vector2(0.5f, 0.6f) * S, size, new Color4(0, 0, 0, a * 0.6f));
-                r.Text("z", p, size, new Color4(0.92f, 0.92f, 1, a));
+                r.Text("z", p + new Vector2(0.5f, 0.6f) * S, size, Ui.Fill.A(a * 0.7f), true);
+                r.Text("z", p, size, Ui.Ink.A(a), true);
             }
             return;
         }
         float pop = M.Smooth(e.T / 0.15f);
         float s = S * (0.6f + 0.4f * pop);
         Vector2 c = head + new Vector2(Facing * 5 * S, -(HeadR + 10 * S));
-        float w = MathF.Max(12, 5 + e.Text.Length * 5.6f) * s, h = 11 * s;
-        var ink = new Color4(e.Ink.R, e.Ink.G, e.Ink.B, e.Ink.A * fade);
-        r.RoundRect(c, w, h, 4 * s, new Color4(1, 1, 1, 0.95f * fade), new Color4(0.1f, 0.1f, 0.1f, 0.8f * fade), 1.1f * s);
-        r.FillPolygon(stackalloc Vector2[] { c + new Vector2(-2 * s * Facing, h / 2 - 0.5f), c + new Vector2(2 * s * Facing, h / 2 - 0.5f), c + new Vector2(-3.5f * s * Facing, h / 2 + 4 * s) },
-                      new Color4(1, 1, 1, 0.95f * fade));
-        r.Text(e.Text, c + new Vector2(0, -0.4f * s), 8.5f * s, ink);
+        float w = MathF.Max(13, 7 + e.Text.Length * 5.4f) * s, h = 12 * s;
+        var ink = (e.Ink ?? Ui.Ink).A(fade);
+        Ui.Bubble(r, c, w, h, c + new Vector2(-4 * s * Facing, h / 2 + 5 * s), s, fade, line: 1.1f);
+        r.Text(e.Text, c + new Vector2(0, -0.3f * s), 9 * s, ink, true);
     }
 }

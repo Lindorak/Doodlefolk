@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -7,7 +8,7 @@ namespace StickFight;
 /// and applies the user's edits as they make them.</summary>
 sealed partial class App
 {
-    StudioWindow? _studio, _quick;
+    StudioWindow? _studio, _quick, _pop;
     double _nextStudioPush;
     static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
 
@@ -38,15 +39,38 @@ sealed partial class App
         _quick.Activate();
     }
 
+    /// <summary>Right-click on something: a small menu of quick changes for just that thing, right where you clicked.</summary>
+    void ShowPop(string kind, int id)
+    {
+        if (_pop == null || _pop.IsDisposed)
+        {
+            _pop = new StudioWindow(OnStudioMessage, _debug, pop: true);
+            _pop.FormClosed += (_, _) => _pop = null;
+            _pop.Show();
+        }
+        _pop.PopAt(Cursor.Position);
+        _pop.Post(JsonSerializer.Serialize(StudioState(), Json));
+        _pop.Post(JsonSerializer.Serialize(new { t = "pop", kind, id }, Json));
+    }
+
+    /// <summary>A message for every open Studio window.</summary>
+    void PostAll(object msg)
+    {
+        string json = JsonSerializer.Serialize(msg, Json);
+        foreach (var win in new[] { _studio, _quick, _pop }) if (win != null && !win.IsDisposed && win.PageReady) win.Post(json);
+    }
+
     void PushStudio(double now)
     {
         bool studio = _studio != null && _studio.PageReady && _studio.WindowState != FormWindowState.Minimized;
         bool quick = _quick != null && _quick.PageReady;
-        if ((!studio && !quick) || now < _nextStudioPush) return;
+        bool pop = _pop != null && _pop.PageReady && _pop.Visible;
+        if ((!studio && !quick && !pop) || now < _nextStudioPush) return;
         _nextStudioPush = now + 0.16;
         string json = JsonSerializer.Serialize(StudioState(), Json);
         if (studio) _studio!.Post(json);
         if (quick) _quick!.Post(json);
+        if (pop) _pop!.Post(json);
     }
 
     static string Words(string s) => Regex.Replace(s, "(?<=[a-z])(?=[A-Z])", " ");
@@ -121,6 +145,7 @@ sealed partial class App
         items = _w.Items.Select(i => new
         {
             id = i.Id, key = i.Def.Key, name = i.Def.Name, hex = Settings.Hex(i.Color), size = i.SizeMul, flip = i.Flip,
+            tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing,
             users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
         }),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -224,7 +249,7 @@ sealed partial class App
             switch (t)
             {
                 case "ready":
-                    foreach (var win in new[] { _studio, _quick })
+                    foreach (var win in new[] { _studio, _quick, _pop })
                     {
                         if (win == null || !win.PageReady) continue;
                         win.Post(JsonSerializer.Serialize(StudioInit(), Json));
@@ -233,7 +258,9 @@ sealed partial class App
                     break;
                 case "studio":
                     _quick?.Close();
-                    OpenStudio();
+                    _pop?.Hide();
+                    if (m.TryGetProperty("page", out var sp)) OpenStudio(sp.GetString(), m.TryGetProperty("id", out var sid) ? sid.GetInt32() : 0);
+                    else OpenStudio();
                     break;
                 case "fig": FigureEdit(m); break;
                 case "spawn":
@@ -369,7 +396,8 @@ sealed partial class App
             case "rollLook": f.Look = Look.Generate(f.Traits, _w.Rng.Next()); break;
             case "plainLook": f.Look = new Look(); break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
-            case "call": _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = f.Brain.CalledByUser(_w) }, Json)); break;
+            case "call": PostAll(new { t = "toast", text = f.Brain.CalledByUser(_w) }); break;
+            case "dance": if (f.Mode == Mode.Control && f.Grounded) f.StartFidget(Fidget.Groove); break;
         }
     }
 
@@ -389,6 +417,11 @@ sealed partial class App
             case "size": it.SizeMul = Math.Clamp(Num(m, "v"), 0.3f, 3.5f); break;
             case "color": it.Color = Settings.ParseHex(Str(m, "hex")); break;
             case "flip": it.Flip = !it.Flip; break;
+            case "tilt":
+                it.RestAngle = Math.Clamp(Num(m, "v"), -90, 90) * MathF.PI / 180;
+                if (MathF.Abs(it.RestAngle) > 0.05f) foreach (var f in _w.Figures) f.Brain.OnItemGone(it);   // tipped over: nobody can stay on it
+                break;
+            case "music": it.Playing = !it.Playing; break;
         }
     }
 
@@ -408,6 +441,13 @@ sealed partial class App
             case "size": p.SizeMul = Math.Clamp(Num(m, "v"), 0.3f, 5f); break;
             case "bounce": p.Bounce = Math.Clamp(Num(m, "v"), 0, 0.95f); break;
             case "color": p.Color = Settings.ParseHex(Str(m, "hex")); break;
+            case "kick":
+                // Give it a boot: up and off to a random side.
+                if (p.Holder != null) { p.Holder.Carrying = null; p.Holder = null; }
+                p.Vel = new Vector2(_w.Rng.Range(-500, 500), -_w.Rng.Range(900, 1300)) * _w.Scale;
+                p.OnGround = false;
+                World.Play(Sfx.Kick, p.Pos, 0.6f);
+                break;
         }
     }
 
@@ -447,7 +487,7 @@ sealed partial class App
             case "remember": _settings.RememberCast = v.GetBoolean(); break;
             case "platforms": _showPlatforms = v.GetBoolean(); break;
             case "hidden": _paused = v.GetBoolean(); break;
-            case "theme": _settings.Theme = v.GetString() ?? "auto"; break;
+            case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "screenTerrain": _settings.ScreenTerrain = v.GetBoolean(); ApplyScreenSettings(); break;
             case "screenReact": _settings.ScreenReact = v.GetBoolean(); ApplyScreenSettings(); break;

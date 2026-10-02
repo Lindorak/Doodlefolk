@@ -178,19 +178,19 @@ sealed class Renderer : IDisposable
     readonly Dictionary<int, IDWriteTextFormat> _fonts = new();
     IDWriteFactory? _dwrite;
 
-    /// <summary>Centered bold text.</summary>
-    public void Text(string text, Vector2 center, float size, Color4 c)
+    /// <summary>Centered bold text; <paramref name="hand"/>: the Studio's handwriting font (Ink Free).</summary>
+    public void Text(string text, Vector2 center, float size, Color4 c, bool hand = false)
     {
         int key = (int)MathF.Round(size);
         if (key < 4) return;
         _dwrite ??= DWrite.DWriteCreateFactory<IDWriteFactory>(Vortice.DirectWrite.FactoryType.Shared);
-        if (!_fonts.TryGetValue(key, out var fmt))
+        if (!_fonts.TryGetValue(key * 2 + (hand ? 1 : 0), out var fmt))
         {
-            fmt = _dwrite.CreateTextFormat("Segoe UI", null, FontWeight.Black, Vortice.DirectWrite.FontStyle.Normal, FontStretch.Normal, key, "en-us");
+            fmt = _dwrite.CreateTextFormat(hand ? "Ink Free" : "Segoe UI", null, hand ? FontWeight.Bold : FontWeight.Black, Vortice.DirectWrite.FontStyle.Normal, FontStretch.Normal, key, "en-us");
             fmt.TextAlignment = TextAlignment.Center;
             fmt.ParagraphAlignment = ParagraphAlignment.Center;
             fmt.WordWrapping = WordWrapping.NoWrap;   // centred; longer phrases simply spill wider than the layout box
-            _fonts[key] = fmt;
+            _fonts[key * 2 + (hand ? 1 : 0)] = fmt;
         }
         _brush.Color = c;
         _ctx.DrawText(text, fmt, new Rect(center.X - key * 4, center.Y - key, key * 8, key * 2), _brush);

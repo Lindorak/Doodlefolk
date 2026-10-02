@@ -68,16 +68,12 @@ sealed partial class App
         var b = o.Bubble;
         Vector2 c = new(b.Left + b.Width / 2, b.Top + b.Height / 2);
         float fade = M.Clamp01((float)(o.Until - World.Now) / 0.4f);
-        var ink = new Color4(0.1f, 0.1f, 0.12f, fade);
-        var accent = o.Hot ? new Color4(0.15f, 0.45f, 0.95f, fade) : new Color4(0.1f, 0.1f, 0.12f, 0.85f * fade);
-        // A little tail pointing down at whoever's suggesting it.
+        var ink = Ui.Ink.A(fade);
         Vector2 head = f.Jt[J.Head];
-        float tx = M.ClampIn(head.X, b.Left + 8 * s, b.Right - 8 * s);
-        _r.FillPolygon(stackalloc Vector2[] { new(tx - 4 * s, b.Bottom - 1), new(tx + 4 * s, b.Bottom - 1), new(tx + (head.X - tx) * 0.3f, b.Bottom + 7 * s) },
-                       new Color4(1, 1, 1, 0.97f * fade));
-        _r.RoundRect(c, b.Width, b.Height, 6 * s, o.Hot ? new Color4(0.93f, 0.96f, 1, fade) : new Color4(1, 1, 1, 0.97f * fade), accent, (o.Hot ? 2 : 1.3f) * s);
-        _r.Text("↗ " + o.Text, c + new Vector2(0, -5.5f * s), OfferText * s, o.Hot ? accent : ink);
-        _r.Text(o.Host + (o.Hot ? "  · click to open" : ""), c + new Vector2(0, 7.5f * s), OfferHost * s, new Color4(0.35f, 0.35f, 0.4f, fade));
+        // Pointing down at whoever's suggesting it; outlined in the accent colour while you hover it.
+        Ui.Bubble(_r, c, b.Width, b.Height, head + new Vector2(0, -f.HeadR - 4 * f.S), s, fade, o.Hot ? Ui.Accent : null, o.Hot ? 2 : 1.3f);
+        _r.Text("↗ " + o.Text, c + new Vector2(0, -5.5f * s), OfferText * s, o.Hot ? Ui.Accent.A(fade) : ink, true);
+        _r.Text(o.Host + (o.Hot ? "  · click to open" : ""), c + new Vector2(0, 7.5f * s), OfferHost * s, Ui.Pencil.A(fade), true);
     }
 
     void TakeOffer()

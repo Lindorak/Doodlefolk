@@ -26,6 +26,8 @@ sealed class SavedItem
     public float Size { get; set; } = 1;
     public string Color { get; set; } = "";
     public bool Flip { get; set; }
+    /// <summary>Resting tilt in degrees.</summary>
+    public float Tilt { get; set; }
 }
 
 sealed class SavedProp

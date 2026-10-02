@@ -67,6 +67,7 @@ sealed partial class Brain
                     _ => "Playing catch with you",
                 } : "Playing",
                 G.Pose => "Posing for a photo",
+                G.Tourney => World.Current?.Tourney is { } tn ? tn.InBout(f) ? $"In the tournament: vs {tn.Opponent(f)?.Name}" : tn.Phase == "done" && tn.Champion == f ? "Tournament champion!" : tn.Next.Contains(f) || tn.Round.Contains(f) ? "In the tournament, waiting" : "Watching the tournament" : "Tournament",
                 G.Party => _partyFor == f ? "Having a birthday party" : _partyFor != null ? $"At {_partyFor.Name}'s party" : "Partying",
                 G.PetAnimal => _petting != null ? $"Petting {_petting.Name}" : "Petting an animal",
                 G.Create => _drawing != null ? $"Drawing {_drawing.Article} {_drawing.Name.ToLowerInvariant()}" : "Drawing something",

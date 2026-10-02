@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney,
     }
 
     readonly Figure f;
@@ -90,9 +90,18 @@ sealed partial class Brain
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
         foreach (var (k, v) in o.Love) Love[k] = v;
         SweetheartId = o.SweetheartId;
+        Diary.AddRange(o.Diary);
+        foreach (var (k, v) in o.Skills) Skills[k] = v;
+        Born = o.Born;
+        _places.AddRange(o._places);
+        Memories.AddRange(o.Memories);
+        ParentIds.AddRange(o.ParentIds);
+        Grown = o.Grown; AdultSize = o.AdultSize; LastBaby = o.LastBaby;
+        Trophies = o.Trophies; ChampionOn = o.ChampionOn;
+        _datingSince = o._datingSince - o._t0 + _t0;
     }
 
-    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o);
+    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o) + FamilyBond(o);
     public float AffinityWith(Figure o) => Math.Clamp(Baseline(o) + (Affinity.TryGetValue(o.Id, out var a) ? a : 0), -1, 1);
     public float AffinityDelta(Figure o) => Affinity.TryGetValue(o.Id, out var a) ? a : 0;
     public void AddAffinity(Figure o, float d)
@@ -209,6 +218,7 @@ sealed partial class Brain
         UpdateLove(dt, w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
+        UpdateFamily(dt, w);
         if (_g is G.Groove or G.DanceWith || (_g == G.UseItem && _verb == Verb.Dance)) Practice(SkillKind.Dancing, dt * 0.002f, true);
 
         Vector2 cur = w.Cursor;
@@ -340,6 +350,7 @@ sealed partial class Brain
             case G.Party: DoParty(w); break;
             case G.Game: DoGame(w); break;
             case G.Pose: DoPose(w); break;
+            case G.Tourney: DoTourney(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -643,6 +654,8 @@ sealed partial class Brain
         Match = null;
         if (w.Game is { Over: false } ug && ug.Players.Contains(f)) { Go(G.Game, 600); return; }
         EndGameForMe();
+        if (w.Tourney is { Over: false } tn && tn.Entrants.Contains(f)) { Go(G.Tourney, 600); return; }
+        if (BabyChoose(w)) return;
         var env = w.Env;
         var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (seg == null || !f.Grounded) { Go(G.Idle, 0.5f); return; }
@@ -675,6 +688,8 @@ sealed partial class Brain
         WeatherOptions(w, opts);
         PetOptions(w, opts);
         LifeOptions(w, opts);
+        HomeOptions(w, opts);
+        ParentOptions(w, opts);
         Decide(opts);
     }
 

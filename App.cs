@@ -79,6 +79,7 @@ sealed partial class App : ApplicationContext
         Gfx.Q = _settings.Gfx;
         InitScreen();
         _w.MakeProp = kind => SpawnProp(kind);
+        _w.MakeBaby = MakeBaby;
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
@@ -208,6 +209,9 @@ sealed partial class App : ApplicationContext
         WishFrame();
         EventsFrame(now);
         GameFrame(now);
+        TourneyFrame(now);
+        FamilyFrame(now);
+        _w.Babies = _settings.Babies;
         PhotoFrame(now);
         WeatherFrame(dt, now);
         SmartFps(dt);
@@ -474,6 +478,7 @@ sealed partial class App : ApplicationContext
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
         if (OfferRect() is RectangleF ofr) _regNow.Add(ToRect(ofr));
         if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
+        if (TourneyRect() is RectangleF tr) _regNow.Add(ToRect(tr));
         if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -527,6 +532,7 @@ sealed partial class App : ApplicationContext
         // Hide-and-seek: hiders crouch behind things, so they're drawn before them.
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && _w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(false);
+        DrawHomeFlags();
         for (int i = 0; i < _w.Figures.Count; i++)
             if (figVisible[i] && Shadow(_w.Figures[i], out var c, out float rx, out float ry, out float a))
                 Gfx.GroundShadow(_r, c, rx, ry, a);
@@ -548,6 +554,7 @@ sealed partial class App : ApplicationContext
         foreach (var p in _w.Props) if (Dirty(p.Bounds(_w.Env))) p.Draw(_r);
         DrawOffer();
         DrawWish();
+        DrawTourney();
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
         DrawGameCurtain();
         DrawFlash();
@@ -761,6 +768,11 @@ sealed partial class App : ApplicationContext
         f.Brain.Diary.AddRange(s.Diary);
         foreach (var (k, v) in s.Skills) if (Enum.TryParse<SkillKind>(k, out var sk)) f.Brain.Skills[sk] = Math.Clamp(v, 0, 1);
         if (s.Born is DateTime born) f.Brain.Born = born;
+        f.Brain.Grown = Math.Clamp(s.Grown, 0, 1);
+        f.Brain.AdultSize = s.AdultSize > 0 ? s.AdultSize : f.SizeMul;
+        f.Brain.LastBaby = s.LastBaby;
+        f.Brain.Trophies = s.Trophies;
+        f.Brain.ChampionOn = s.ChampionOn;
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -806,6 +818,9 @@ sealed partial class App : ApplicationContext
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
             Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
             Born = f.Brain.Born,
+            Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList(),
+            Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
+            Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn,
         }).ToList();
         _settings.Items = SaveItems();
         _settings.Pets = _w.Pets.Select(p => new SavedPet { Kind = p.Kind, Name = p.Name, Color = Settings.Hex(p.Color), Size = p.SizeMul, Owner = p.Owner?.Name }).ToList();
@@ -831,6 +846,8 @@ sealed partial class App : ApplicationContext
             foreach (var (name, l) in s.Love)
                 if (made.FirstOrDefault(m => m.f.Name == name).f is { } o) f.Brain.Love[o.Id] = l;
             if (s.Sweetheart != null && made.FirstOrDefault(m => m.f.Name == s.Sweetheart).f is { } sh) f.Brain.SweetheartId = sh.Id;
+            foreach (var pn in s.Parents)
+                if (made.FirstOrDefault(m => m.f.Name == pn).f is { } par) f.Brain.ParentIds.Add(par.Id);
         }
         RestoreItems(_settings.Items);
         foreach (var sp in _settings.Pets)
@@ -1085,6 +1102,14 @@ sealed partial class App : ApplicationContext
                 case "party": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } pf2) pf2.Brain.ThrowParty(_w); break;
                 case "game": if (p[1] == "stop") StopGame(); else { World.Log(StartGame(Enum.Parse<GameKind>(p[1], true), p.Length > 2 ? _w.Figures.FirstOrDefault(f => f.Name == p[2]) : null)); if (_w.Game != null && p.Contains("quick")) _w.Game.Count = MathF.Min(_w.Game.Count, 0.3f); } break;
                 case "photo": TakePhoto(); break;
+                case "tourney": World.Log(StartTourney()); break;
+                case "remove": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } remF) _w.RemoveFigure(remF); break;
+                case "baby": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ba && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } bb) MakeBaby(ba, bb); break;
+                case "grow": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } growF) growF.Brain.Grown = Math.Clamp(float.Parse(p[2], inv), 0, 1); _growAt = 0; break;
+                case "home":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } homeF)
+                        homeF.Brain.ClaimHome(_w.Items.Where(Brain.HomeKind).Where(i => i.OwnerId == 0).OrderBy(i => Vector2.Distance(i.Pos, homeF.Base)).FirstOrDefault(), _w);
+                    break;
                 case "talk": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } talkF) World.Log($"talk {talkF.Name}: {talkF.Brain.Talk(string.Join(' ', p.Skip(2)), _w)}"); break;
                 case "back": _w.OnUserBack(p.Length > 1 ? double.Parse(p[1], inv) : 1800); break;
                 case "pet": World.Log("summon: " + Summon(p.Length > 1 ? p[1] : "cat")); break;

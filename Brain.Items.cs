@@ -82,7 +82,7 @@ sealed partial class Brain
                     Verb.Create => it.Holder == null && !HasPencil ? (0.25f + P.Curiosity * 0.6f + P.Playfulness * 0.6f) * (0.5f + Boredom) * (_t0 > _pencilBreak ? 1 : 0) : 0,
                     _ => 0,
                 };
-                float score = wgt * like * near;
+                float score = wgt * like * near * HomeFactor(it, v, w);
                 if (score > 0.01f && (best == null || score > best.Value.score)) best = (score, it, v);
             }
         }
@@ -307,6 +307,7 @@ sealed partial class Brain
         _item = null;
         if (it == null) return;
         if (_g == G.UseItem && _verb is Verb.Lie or Verb.Hammock && _t > 12) DiaryNapped(it);
+        if (_g == G.UseItem && _verb is Verb.Lie or Verb.Hide && _t > 8) NappedOn(it, World.Current);
         for (int i = 0; i < it.Seated.Length; i++) if (it.Seated[i] == f) it.Seated[i] = null;
         if (it.User == f) it.User = null;
         if (f.CarryingItem == it)

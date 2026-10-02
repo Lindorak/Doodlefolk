@@ -23,6 +23,12 @@ sealed class SavedFigure
     public List<DiaryEntry> Diary { get; set; } = new();
     public Dictionary<string, float> Skills { get; set; } = new();
     public DateTime? Born { get; set; }
+    public List<string> Parents { get; set; } = new();
+    public float Grown { get; set; } = 1;
+    public float AdultSize { get; set; }
+    public DateTime? LastBaby { get; set; }
+    public int Trophies { get; set; }
+    public DateTime? ChampionOn { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -36,6 +42,8 @@ sealed class SavedItem
     public bool Flip { get; set; }
     /// <summary>Resting tilt in degrees.</summary>
     public float Tilt { get; set; }
+    /// <summary>Whose home it is (a figure's name), if anyone's.</summary>
+    public string? Owner { get; set; }
 }
 
 sealed class SavedPet
@@ -87,6 +95,8 @@ sealed class Settings
     public bool DayNight { get; set; } = true;
     /// <summary>Birthday parties and holiday dress-up.</summary>
     public bool Celebrations { get; set; } = true;
+    /// <summary>Couples who've been together a long while can have a baby.</summary>
+    public bool Babies { get; set; } = true;
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
     /// <summary>Crushes, dating, jealousy and breakups.</summary>

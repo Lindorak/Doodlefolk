@@ -127,13 +127,17 @@ sealed partial class App
 
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
     List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites)
-        .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI) }).ToList();
+        .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI),
+                                     Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name }).ToList();
 
     void RestoreItems(List<SavedItem> items)
     {
         foreach (var s in items)
             if (ItemCatalog.Find(s.Key) is { } def)
                 if (SpawnItem(def, Math.Clamp(s.Size, 0.3f, 3.5f), s.Color.Length == 7 ? Settings.ParseHex(s.Color) : null, s.Flip) is { } it)
+                {
                     it.RestAngle = it.Angle = Math.Clamp(s.Tilt, -90, 90) * MathF.PI / 180;
+                    if (s.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == s.Owner) is { } owner) { it.OwnerId = owner.Id; it.OwnerName = owner.Name; it.OwnerColour = owner.Color; }
+                }
     }
 }

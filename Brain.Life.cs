@@ -109,6 +109,7 @@ sealed partial class Brain
             Holiday.NewYear => "party",
             _ => BirthdayToday || _partyDay == DateTime.Now.DayOfYear ? "party" : null,
         } : null;
+        if (ChampionOn is DateTime won && won.Date == DateTime.Today && f.HatOverride is null or "party") { f.HatOverride = "crown"; f.HatColourOverride = "#FFC83D"; return; }
         f.HatColourOverride = w.Holiday switch { Holiday.Christmas => "#E53935", Holiday.Halloween when f.HatOverride == "wizard" => "#2E2E2E", _ => null };
         if (w.Celebrations && BirthdayToday && _partyDay != DateTime.Now.DayOfYear && f.Mode == Mode.Control && f.Grounded && _g is G.Idle or G.SitFloor or G.Walk)
             ThrowParty(w);

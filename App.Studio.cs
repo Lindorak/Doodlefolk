@@ -146,7 +146,7 @@ sealed partial class App
         items = _w.Items.Select(i => new
         {
             id = i.Id, key = i.Def.Key, name = i.Def.Name, hex = Settings.Hex(i.Color), size = i.SizeMul, flip = i.Flip,
-            tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing,
+            tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing, owner = i.OwnerId, homeable = Brain.HomeKind(i),
             users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
         }),
         pets = _w.Pets.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = p.Name, hex = Settings.Hex(p.Color), size = p.SizeMul, owner = p.Owner?.Name, activity = p.Activity }),
@@ -161,7 +161,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
-            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, sky = _w.Weather.Kind.ToString(),
+            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -185,6 +185,7 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
+            family = FamilyLine(f),
             skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
@@ -255,6 +256,21 @@ sealed partial class App
 
     // ---------------- edits from the page ----------------
 
+    /// <summary>Home, trophies and family in a line, for the Studio.</summary>
+    string FamilyLine(Figure f)
+    {
+        var b = f.Brain;
+        var bits = new List<string>();
+        if (b.Home(_w) is { } home) bits.Add($"Lives in the {home.Def.Name.ToLowerInvariant()}");
+        if (b.Trophies > 0) bits.Add(b.Trophies == 1 ? "1 trophy" : $"{b.Trophies} trophies");
+        var parents = _w.Figures.Where(o => b.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList();
+        if (parents.Count > 0) bits.Add($"Child of {string.Join(" & ", parents)}");
+        var kids = _w.Figures.Where(o => o.Brain.ParentIds.Contains(f.Id)).Select(o => o.Name).ToList();
+        if (kids.Count > 0) bits.Add($"Parent of {string.Join(" & ", kids)}");
+        if (b.Baby) bits.Add($"{b.Grown * 100:0}% grown up");
+        return string.Join(" · ", bits);
+    }
+
     void OnStudioMessage(JsonElement m)
     {
         string t = m.GetProperty("t").GetString() ?? "";
@@ -321,6 +337,7 @@ sealed partial class App
                         PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
+                case "tourney": PostAll(new { t = "toast", text = StartTourney() }); break;
                 case "quit": ExitThread(); break;
             }
         }
@@ -459,6 +476,13 @@ sealed partial class App
                 if (MathF.Abs(it.RestAngle) > 0.05f) foreach (var f in _w.Figures) f.Brain.OnItemGone(it);   // tipped over: nobody can stay on it
                 break;
             case "music": it.Playing = !it.Playing; break;
+            case "owner":
+            {
+                int fid = m.GetProperty("v").GetInt32();
+                if (_w.Figures.FirstOrDefault(x => x.Id == fid) is { } ow) ow.Brain.ClaimHome(it, _w);
+                else it.OwnerId = 0;
+                break;
+            }
         }
     }
 
@@ -563,6 +587,7 @@ sealed partial class App
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;
             case "celebrations": _settings.Celebrations = v.GetBoolean(); break;
+            case "babies": _settings.Babies = v.GetBoolean(); break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

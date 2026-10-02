@@ -34,6 +34,11 @@ sealed partial class World
     public Vector2 Cursor, CursorVel;
     /// <summary>A game with you in progress (hide-and-seek, tag, catch).</summary>
     public UserGame? Game;
+    public Tournament? Tourney;
+    /// <summary>Couples can have little ones (setting), up to a cap on how many figures there are in all.</summary>
+    public bool Babies = true;
+    public static int MaxFigures = 14;
+    public Action<Figure, Figure>? MakeBaby;
     public Figure? Hover;
     public float Scale = 1;
     /// <summary>Freeze-frame on big impacts: the simulation pauses while this counts down.</summary>

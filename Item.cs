@@ -452,7 +452,7 @@ sealed class Item
         bool animated = Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
         int key = HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
-                                   User?.Id ?? 0, Seated.Count(s => s != null));
+                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId);
         bool changed = key != _lastKey;
         _lastKey = key;
         return animated || changed;
@@ -460,7 +460,26 @@ sealed class Item
 
     // ---------------- bounds + hit testing ----------------
 
+    /// <summary>Someone's home: who lives here (0: nobody), shown as a little flag in their colour.</summary>
+    public int OwnerId;
+    public string OwnerName = "";
+    public Color4 OwnerColour;
+    public float Scale => _s;
+
+    public System.Drawing.RectangleF? FlagRect()
+    {
+        if (OwnerId == 0) return null;
+        float sc = Sc, x = Pos.X + Def.W * sc * 0.28f, top = Pos.Y - Def.H * sc - 24 * _s;
+        return System.Drawing.RectangleF.FromLTRB(x - 3 * _s, top, x + 26 * _s + (OwnerName.Length + 2) * 5.4f * _s, Pos.Y - Def.H * sc * 0.5f);
+    }
+
     public System.Drawing.RectangleF Bounds()
+    {
+        var b = BoundsBody();
+        return FlagRect() is { } fr ? System.Drawing.RectangleF.Union(b, fr) : b;
+    }
+
+    System.Drawing.RectangleF BoundsBody()
     {
         float sc = Sc, w = Def.W * sc, h = Def.H * sc, pad = 6 * sc;
         if (Def.Verbs.Contains(Verb.Warm)) h += 14 * sc;

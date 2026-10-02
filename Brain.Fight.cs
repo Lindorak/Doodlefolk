@@ -23,20 +23,20 @@ sealed partial class Brain
     bool ValidFoe(Figure? o) => o != null && World.Current.Figures.Contains(o) && o.Mode != Mode.Spawning;
 
     /// <summary>Who our strikes connect with: the current foe, anyone fighting us, and enemies already brawling.</summary>
-    bool CanStrike(Figure o) =>
-        o == _foe || o.Brain.Foe == f || (RelationTo(o) == Relation.Enemies && o.Brain.InFight && Rules.Enabled);
+    bool CanStrike(Figure o) => !o.Brain.Baby && (
+        o == _foe || o.Brain.Foe == f || (RelationTo(o) == Relation.Enemies && o.Brain.InFight && Rules.Enabled));
 
     // ---------------- starting fights ----------------
 
     (float, Action)? FightOption(World w)
     {
-        if (!Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50) return null;
+        if (!Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50 || Baby) return null;
         Figure? best = null;
         float bestScore = 0;
         bool bestSpar = false;
         foreach (var o in w.Figures)
         {
-            if (o == f || o.Mode != Mode.Control || o.Brain.Asleep || o.Climbing || !o.Grounded || o.Brain.InFight) continue;
+            if (o == f || o.Mode != Mode.Control || o.Brain.Asleep || o.Climbing || !o.Grounded || o.Brain.InFight || o.Brain.Baby) continue;
             float d = Vector2.Distance(o.Base, f.Base);
             if (d > 1400 * S) continue;
             float a = AffinityWith(o);
@@ -122,6 +122,7 @@ sealed partial class Brain
     void Challenged(Figure from, World w)
     {
         if (_g is G.Busy or G.Fight || f.Mode != Mode.Control) return;
+        if (Baby) { Flee(from, w); return; }
         float fightBack = P.Bravery * 0.6f + P.Aggression * 0.5f + f.HP / 100 * 0.2f;
         if (rng.NextDouble() < fightBack) { BeginFight(from, false); f.Emote(P.Aggression > 0.5f ? "#@!" : "!", 1); }
         else Flee(from, w);
@@ -405,6 +406,7 @@ sealed partial class Brain
         _spar = spar;
         f.Emote(spar ? "♪" : P.Aggression > 0.5f ? "ha" : "♪", 1.3f);
         Cheered(0.4f);
+        World.Current?.Tourney?.Report(f, o, World.Current);
         DiaryFightWon(o, spar);
         Practice(SkillKind.Fighting, spar ? 0.03f : 0.05f);
         AddAffinity(o, spar ? 0.05f : -0.05f);

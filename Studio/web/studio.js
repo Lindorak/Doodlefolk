@@ -736,7 +736,7 @@ const SUBPANELS = {
     return f => {
       decided.textContent = f.decision ? `Last decided to: ${f.decision.toLowerCase()} (${ago(f.decidedAgo)})` : "Hasn't had to decide anything yet.";
       route.textContent = f.route ? `Route: ${f.route}` : "";
-      bday.textContent = f.birthday ? `Birthday: ${f.birthday}` : "";
+      bday.textContent = [f.birthday ? `Birthday: ${f.birthday}` : "", f.family || ""].filter(Boolean).join(" · ");
       const ss = (f.skills || []).map(x => x.name + x.v).join("|");
       if (ss !== skillSig) {
         skillSig = ss;
@@ -1125,6 +1125,7 @@ PAGES.settings = {
       c.key = k;
       return c;
     });
+    const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
     const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
     const screen = [
@@ -1153,7 +1154,7 @@ PAGES.settings = {
       h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Not your real weather: nothing is looked up online."),
       h("div", { class: "row" }, weatherChips),
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
-      dayNight, celebrations,
+      dayNight, celebrations, babies,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1175,7 +1176,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update();
+      dayNight.update(); celebrations.update(); babies.update();
     };
   },
 };
@@ -1220,6 +1221,7 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "HideSeek" }) }, "🙈 Hide & seek"),
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Tag" }) }, "🏃 Tag"),
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Catch" }) }, "⚾ Catch"),
+      h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       stopG),
     gameNote,
@@ -1306,8 +1308,11 @@ function buildPop(kind, id) {
     let music = null;
     if (def && def.verbs.includes("Dance"))
       music = h("button", { class: "btn small", onclick: () => { x.playing = !x.playing; send({ t: "item", op: "music", id }); music.textContent = x.playing ? "Music off" : "Music on"; } }, x.playing ? "Music off" : "Music on");
+    const home = x.homeable ? h("select", { class: "text", onchange: () => send({ t: "item", op: "owner", id, v: +home.value }) },
+      h("option", { value: 0 }, "Nobody"), S.figures.filter(f => !f.dead).map(f => h("option", { value: f.id }, f.name))) : null;
+    if (home) home.value = String(x.owner || 0);
     add(root, head(art, x.name, sub),
-      col && field("Colour", col), field("Size", sz),
+      col && field("Colour", col), field("Size", sz), home && field("Home of", home),
       field("Turn", h("div", { class: "row tight" },
         h("button", { class: "btn small icon", title: "Lean left", onclick: () => tilt((x.tilt || 0) - 15) }, "⟲"),
         h("button", { class: "btn small icon", title: "Lean right", onclick: () => tilt((x.tilt || 0) + 15) }, "⟳"),

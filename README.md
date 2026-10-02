@@ -12,17 +12,14 @@ about **you**, built from how you treat it.
 
 ## Why this exists
 
-I grew up on stick-figure animations, especially *Animator vs. Animation*, where a little stick figure
-breaks loose on someone's desktop and starts fighting back. I always wanted one of those guys living on
+I grew up on stick-figure animations, especially the ones where a little stick figure breaks loose on
+someone's desktop and starts fighting back. I always wanted one of those guys living on
 my own screen. So I set out to see whether Claude could help turn that childhood memory into real,
 working software: I described what I remembered and what I wanted it to feel like, and Claude
 designed and built it with me, from the physics and animation to the personalities and fights, while I
 played with every build and kept pushing for more life in it. Doodlefolk is the result: a little world of
 stick figures that treats your real desktop as their playground, climbing your windows, playing with
 your cursor, and settling their differences in fights.
-
-*Inspired by Alan Becker's* Animator vs. Animation. *This is a fan-made project and isn't affiliated with
-or endorsed by him.*
 
 ## Download and run
 

@@ -237,9 +237,11 @@ sealed partial class Figure
                 if (_ragT > 0.05f) RagdollBowling(w);
                 if (!Held && Rag.Contact && Rag.MaxSpeed(dt) < 35 * S) _restT += dt; else _restT = 0;
                 TickKO(dt, w);
+                if (_gp != GrapplePhase.None) GrappleControl(dt, w);
                 if (!Held && !KO && Rag.Contact && (_restT > 0.4f || _ragT > 6)) BeginGetUp(w);
                 break;
         }
+        StepRope(dt);
         float inv = 1 / dt;
         for (int i = 0; i < J.Count; i++) JVel[i] = (Jt[i] - _jtPrev[i]) * inv;
     }
@@ -247,6 +249,7 @@ sealed partial class Figure
     void Control(float dt, World w)
     {
         var env = w.Env;
+        if (_gp != GrapplePhase.None) GrappleControl(dt, w);
         if (Climbing) { ClimbControl(dt, w); return; }
         if (Grounded)
         {
@@ -470,6 +473,7 @@ sealed partial class Figure
     {
         Mode = Mode.Ragdoll;
         StopClimb();
+        CancelGrapple();
         Grounded = false;
         _jumpVel = null;
         _restT = 0;

@@ -7,6 +7,8 @@ enum ClimbStyle { Auto, Methodical, Scrambler, Leaper }
 enum JumpStyle { Auto, Tuck, Starfish, Superhero, Flipper }
 enum FightStyle { Auto, Boxer, Kicker, Brawler, Acrobat, Turtle }
 enum CelebrateStyle { Auto, Cheer, Flex, Dance, Taunt, Bow }
+enum RopeStyle { Auto, Never, Rappel, Haul, Zip }
+enum GrappleSpin { Overhead, SideWhirl, QuickToss }
 enum Fidget { Stretch, ScratchHead, CheckWatch, FootTap, Yawn, Shrug, Groove }
 
 /// <summary>The user's body-language choices for a figure (Auto = derive from personality) plus the
@@ -21,10 +23,12 @@ sealed class StyleChoice
     public JumpStyle Jump { get; set; }
     public FightStyle Fight { get; set; }
     public CelebrateStyle Celebrate { get; set; }
+    /// <summary>Grappling hook: how it climbs the rope (Never = doesn't carry one).</summary>
+    public RopeStyle Rope { get; set; }
 
     public StyleChoice Clone() => (StyleChoice)MemberwiseClone();
 
-    public int Key => HashCode.Combine(Seed, Walk, Run, Idle, Climb, Jump, Fight, Celebrate);
+    public int Key => HashCode.Combine(HashCode.Combine(Seed, Walk, Run, Idle, Climb, Jump, Fight, Celebrate), Rope);
 }
 
 /// <summary>Live mood signals the brain feeds the body (0..1 each); they bend the base style.</summary>
@@ -44,6 +48,10 @@ sealed class BodyStyle
     public JumpStyle Jump;
     public FightStyle Fight;
     public CelebrateStyle Celebrate;
+    public RopeStyle Rope;
+    public GrappleSpin Spin;
+    /// <summary>How often it reaches for the grappling hook instead of climbing a tall wall.</summary>
+    public float GrappleChance;
 
     // Walking quirks (1 = average).
     public float Bounce = 1, Stride = 1, Cadence = 1, Posture, ArmSwing = 1, ElbowBend, Swagger, Sneak, Stomp, FootLift = 1, HeadBob, SpeedMul = 1;
@@ -130,6 +138,12 @@ sealed class BodyStyle
             _ => (0.7f, 0.95f, 0.75f, 1.35f, 1.1f),   // Turtle
         };
         s.AttackRate *= 1 + 0.1f * jit[12];
+
+        s.Rope = c.Rope != RopeStyle.Auto ? c.Rope : Pick(rolls[7],
+            ((1 - C) * (1 - E) * 1.2f + 0.25f, RopeStyle.Never), (B * 0.9f + 0.15f, RopeStyle.Rappel),
+            ((1 - E) * 0.5f + A * 0.5f, RopeStyle.Haul), (E * Pl * 1.3f, RopeStyle.Zip));
+        s.Spin = jit[13] < -0.55f + (1 - Pl) * 0.3f ? GrappleSpin.QuickToss : jit[14] < Pl - 0.5f ? GrappleSpin.Overhead : GrappleSpin.SideWhirl;
+        s.GrappleChance = s.Rope == RopeStyle.Never ? 0 : Math.Clamp(0.35f + 0.35f * C + 0.15f * jit[15], 0.1f, 0.9f);
         return s;
     }
 
@@ -174,7 +188,12 @@ sealed class BodyStyle
             CelebrateStyle.Flex => "flexes", CelebrateStyle.Dance => "dances", CelebrateStyle.Taunt => "taunts",
             CelebrateStyle.Bow => "bows", _ => "cheers",
         };
-        return $"{Cap(walk)}, {run}, {idle}, {fight}, and {win} when it wins.";
+        string rope = Rope switch
+        {
+            RopeStyle.Rappel => " Walks up walls on a grappling hook.", RopeStyle.Haul => " Hauls itself up a grappling hook hand over hand.",
+            RopeStyle.Zip => " Zips up a grappling hook.", _ => "",
+        };
+        return $"{Cap(walk)}, {run}, {idle}, {fight}, and {win} when it wins.{rope}";
     }
 
     static string Cap(string s) => char.ToUpperInvariant(s[0]) + s[1..];

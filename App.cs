@@ -366,7 +366,11 @@ sealed class App : ApplicationContext
     {
         _regNow.Clear();
         if (_showPlatforms) _regNow.Add(_r.Bounds);
-        foreach (var f in _w.Figures) _regNow.Add(FigureRect(f));
+        foreach (var f in _w.Figures)
+        {
+            _regNow.Add(FigureRect(f));
+            if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
+        }
         foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
 
@@ -841,6 +845,7 @@ sealed class App : ApplicationContext
                             "jump" => Enum.TryParse<JumpStyle>(p[3], true, out var a5) && Set(() => c.Jump = a5),
                             "fight" => Enum.TryParse<FightStyle>(p[3], true, out var a6) && Set(() => c.Fight = a6),
                             "celebrate" => Enum.TryParse<CelebrateStyle>(p[3], true, out var a7) && Set(() => c.Celebrate = a7),
+                            "rope" => Enum.TryParse<RopeStyle>(p[3], true, out var a8) && Set(() => c.Rope = a8),
                             _ => false,
                         };
                         if (!ok) result = "failed";

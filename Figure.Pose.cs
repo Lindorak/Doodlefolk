@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace StickFight;
 
@@ -187,6 +187,7 @@ sealed partial class Figure
         }
 
         CarryArms(ref hN, ref hF, ref eN, ref eF, ref handW);
+        GrapplePose(ref hN, ref hF, ref eN, ref eF, ref handW, ref leanT);
 
         if (LookAt is Vector2 la && Action != Act.Lie)
         {

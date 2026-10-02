@@ -47,6 +47,7 @@ sealed partial class Brain
 
     void Go(G g, float dur)
     {
+        if (f.GrappleBusy && !f.Climbing) f.CancelGrapple();
         if (_g is G.Chat or G.HighFive or G.SitWith or G.Follow or G.DanceWith && g != _g) EndSocial();
         if (_g is G.Carry or G.Throw && g is not (G.Carry or G.Throw) && f.Carrying != null) f.DropCarried(Vector2.Zero);
         if (_ball != null && _ball.Juggler == f && g != G.Juggle) _ball.Juggler = null;
@@ -85,6 +86,25 @@ sealed partial class Brain
     public void OnGrabbed() { EndSocial(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - (f.Tastes.Likes(Thing.BeingPickedUp) ? 0 : 0.08f)); FeelAboutBeingPickedUp(); }
     public void OnLanded(float impact) { if (impact > 1200 * S) Stamina = MathF.Max(0, Stamina - 0.02f); }
     public void OnUnexpectedFall() { if (_g != G.Busy) Go(G.Idle, 1.2f); }
+
+    /// <summary>The grappling hook bit: a little fist pump from the proud ones.</summary>
+    public void OnHookCaught()
+    {
+        if (rng.NextDouble() < 0.35 + P.Playfulness * 0.3) f.Emote(rng.NextDouble() < 0.5 ? "!" : "★", 0.9f);
+    }
+
+    /// <summary>The throw missed. Returns whether to have another go.</summary>
+    public bool OnHookMissed(int tries)
+    {
+        Annoyance = M.Clamp01(Annoyance + 0.05f * tries);
+        int patience = 2 + (int)MathF.Round(P.Bravery * 1.5f + (1 - Annoyance));
+        bool again = tries < patience && Stamina > 0.15f;
+        f.Emote(!again ? (P.Aggression > 0.5f ? "#@!" : "…") : tries == 1 ? "…" : P.Aggression > 0.5f ? "#@!" : "!", 1);
+        if (!again) _noGrappleUntil = _t0 + rng.Range(25, 60);
+        return again;
+    }
+
+    float _noGrappleUntil;
 
     public void OnClimbed()
     {

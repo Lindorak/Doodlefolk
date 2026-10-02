@@ -207,6 +207,7 @@ sealed class FigureEditor
         StyleBox("Fighting", c => c.Fight, (c, v) => c.Fight = v, Words,
             "Boxer: high guard, jabs, ducks. Kicker: kicks and spinning kicks. Brawler: haymakers, shrugs off hits. Acrobat: flips and flying kicks. Turtle: blocks and counters.");
         StyleBox("Celebrating", c => c.Celebrate, (c, v) => c.Celebrate = v, Words, "What it does when it wins or something great happens.");
+        StyleBox("Grappling hook", c => c.Rope, (c, v) => c.Rope = v, Words, "Whether it carries a grappling hook for tall walls, and how it goes up the rope: walking up the wall, hand over hand, or zipping up.");
         var reroll = new Button { Text = "Re-roll quirks", AutoSize = true };
         tips.SetToolTip(reroll, "New individual quirks (bounce, stride, arm swing, posture…) and new Auto picks.");
         reroll.Click += (_, _) => { _f.StyleChoice.Seed = world.Rng.Next(); RefreshStyle(); };

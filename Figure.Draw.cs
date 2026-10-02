@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Vortice.Mathematics;
 
 namespace StickFight;
@@ -19,6 +19,7 @@ sealed partial class Figure
     public void Draw(Renderer r)
     {
         if (Mode == Mode.Spawning) { DrawSketch(r); return; }
+        DrawGrapple(r);
 
         // Dead figures fade out (and go grey) before disappearing.
         float fade = Fade;

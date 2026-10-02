@@ -24,7 +24,7 @@ readonly struct Anchor
 /// climbing when the target is somewhere else.</summary>
 sealed partial class Brain
 {
-    enum Nav { Direct, ToTakeoff, InAir, ToWall, Climbing }
+    enum Nav { Direct, ToTakeoff, InAir, ToWall, ToThrow, Climbing }
     enum WalkPurpose { Wander, Explore, Social, Ball, Other }
 
     Func<Vector2?> _navTarget = () => null;
@@ -73,7 +73,7 @@ sealed partial class Brain
         if (_nav == Nav.Climbing)
         {
             f.DesiredVX = 0;
-            if (!f.Climbing && f.Grounded) { _nav = Nav.Direct; _hops++; }
+            if (!f.Climbing && !f.GrappleBusy && f.Grounded) { _nav = Nav.Direct; _hops++; }
             return;
         }
         if (!f.Grounded) { f.DesiredVX = 0; return; }
@@ -125,6 +125,15 @@ sealed partial class Brain
                 if (wall != null && f.StartClimb(wall)) _nav = Nav.Climbing;
                 else { _nav = Nav.Direct; _hops++; }
                 break;
+            case Nav.ToThrow:
+            {
+                if (!MoveToward(_takeoffX, 4 * S)) break;
+                var gw = env.Walls.FirstOrDefault(x => x.Hwnd == _wallHwnd && x.Side == _wallSide && x.ReachesTop);
+                f.ClimbPace = ClimbPace(_purpose is not (WalkPurpose.Wander or WalkPurpose.Explore) || _run);
+                if (gw != null && f.StartGrapple(gw)) _nav = Nav.Climbing;
+                else { _nav = Nav.Direct; _hops++; }
+                break;
+            }
         }
     }
 
@@ -177,9 +186,20 @@ sealed partial class Brain
             _wallHwnd = best.Hwnd;
             _wallSide = best.Side;
             _nav = Nav.ToWall;
+            // Tall wall: grapple-carriers may throw a hook up instead, from a few steps back.
+            float rise = seg.Y - best.Y1;
+            if (_forceGrapple || (rise > f.Height * 1.6f && _t0 >= _noGrappleUntil && rng.NextDouble() < f.Style.GrappleChance * Taste(Thing.Climbing) * 0.8f))
+            {
+                float back = Math.Clamp(rise * 0.3f, 40 * S, 110 * S);
+                float tx = Math.Clamp(best.X + best.Side * back, seg.X1 + 6 * S, seg.X2 - 6 * S);
+                if (MathF.Abs(tx - best.X) > 30 * S && f.Style.Rope != RopeStyle.Never) { _takeoffX = tx; _nav = Nav.ToThrow; }
+            }
+            _forceGrapple = false;
         }
         return true;
     }
+
+    bool _forceGrapple;
 
     bool CanReach(Env env, Platform seg, Platform tp, float x) => PlanHop(env, seg, tp, x, false);
 
@@ -254,6 +274,18 @@ sealed partial class Brain
                 if (target == null) return false;
                 var a = Anchor.On(env, target, Math.Clamp(f.Base.X, target.X1 + 20 * S, target.X2 - 20 * S));
                 Navigate(() => a.Resolve(env), 4 * S, false, () => Go(G.Idle, 1), WalkPurpose.Explore);
+                return true;
+            }
+            case "grapple":
+            {
+                if (seg == null) return false;
+                if (f.Style.Rope == RopeStyle.Never) f.StyleChoice.Rope = RopeStyle.Rappel;
+                var target = env.Platforms.Where(p => p.Y < seg.Y - f.Height * 2 && !p.Solid)
+                    .FirstOrDefault(p => !SolveJump(f.Base, new((p.X1 + p.X2) / 2, p.Y), out _) && PlanHop(env, seg, p, (p.X1 + p.X2) / 2, false));
+                if (target == null) return false;
+                var a = Anchor.On(env, target, Math.Clamp(f.Base.X, target.X1 + 30 * S, target.X2 - 30 * S));
+                Navigate(() => a.Resolve(env), 4 * S, false, () => Go(G.Idle, 1), WalkPurpose.Explore);
+                _forceGrapple = true;
                 return true;
             }
             case "chat": return Other() is { } o1 && StartSocialWith(o1, SocialKind.Chat, w);

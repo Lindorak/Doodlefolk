@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace StickFight;
 
@@ -72,6 +72,7 @@ sealed partial class Figure
     {
         Climbing = false;
         _mantling = false;
+        if (_onRope) { _onRope = false; StartRetract(); }
     }
 
     void ShiftClimb(Vector2 d)
@@ -86,6 +87,7 @@ sealed partial class Figure
     {
         var env = w.Env;
         if (_mantling) { MantleControl(dt, env); return; }
+        if (_onRope) { RopeClimbControl(dt, w); return; }
 
         var wall = env.WallAt(_climbHwnd, _climbSide, Base.Y - Height * 0.5f);
         if (wall == null) { StopClimb(); Fall(true); return; }
@@ -170,6 +172,11 @@ sealed partial class Figure
         footW = 30;
         eN = eF = new(-0.4f, 1);
         float side = _climbSide;
+        if (_onRope && !_mantling)
+        {
+            RopeClimbPose(ref hipT, ref leanT, ref handW, ref footW, ref hN, ref hF, ref fN, ref fF, ref eN, ref eF, ref kPref);
+            return;
+        }
 
         if (_mantling)
         {

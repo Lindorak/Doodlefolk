@@ -274,6 +274,7 @@ sealed partial class App : ApplicationContext
         catch (Exception e) { World.Log("happening failed: " + e.Message); if (_w.Happening is { } hx) { _w.Happening = null; foreach (var f in hx.Who.Concat(hx.Crowd)) f.Brain.LeaveHappening(); } }
         DesktopFrame(now);
         WelcomeFrame(now);
+        BreakFrame(now);
         RecordFrame(now);
         PowerFrame(now);
         UpdateFrame(now);

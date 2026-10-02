@@ -37,6 +37,8 @@ sealed partial class World
     public double NextOfferAt = 20;
 
     public MediaNow Media => ScreenMedia && Screen != null ? Screen.Media : MediaNow.Quiet;
+    /// <summary>Dance timing: where we are in the music's beat (see ScreenSense.BeatPhase), refreshed each frame.</summary>
+    public static float BeatPhase = -1, BarPhase = -1;
 
     /// <summary>Things on screen of a kind, at their current position, that aren't hidden behind other windows.</summary>
     public IEnumerable<SeenNow> OnScreen(SeenKind kind)

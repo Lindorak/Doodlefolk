@@ -25,6 +25,11 @@ sealed partial class Figure
 
     public void Emote(string text, float dur = 1.4f, Color4? ink = null)
     {
+        if (World.Gestures)
+        {
+            var (symbol, g) = ToGesture(text);
+            if (symbol != text) { text = symbol; StartGesture(g, dur); }
+        }
         bool fresh = _emote?.Text != text;
         _emote = new Emote { Text = text, Dur = dur, Ink = ink };
         if (!fresh || Mode == Mode.Spawning) return;

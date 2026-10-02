@@ -34,7 +34,7 @@ sealed class ScreenSnap
 }
 
 /// <summary>What's playing: music (something to dance to) or a video in a window (something to watch).</summary>
-sealed record MediaNow(bool Music, bool Video, IntPtr VideoHwnd, float Level, double BeatAt)
+sealed record MediaNow(bool Music, bool Video, IntPtr VideoHwnd, float Level, double BeatAt, double Period = 0)
 {
     public static readonly MediaNow Quiet = new(false, false, IntPtr.Zero, 0, 0);
 }
@@ -547,12 +547,14 @@ sealed class ScreenSense : IDisposable
     {
         MMDeviceEnumerator? devices = null;
         List<Session> sessions = new();
-        double listedAt = -10, beatAt = 0;
+        double listedAt = -10, beatAt = 0, period = 0;
         float avg = 0;
+        var beats = new List<double>();
         var exeOf = new Dictionary<uint, string>();
         while (!_stop)
         {
-            Thread.Sleep(80);
+            // Listen closely while music plays (beats are a few hundred milliseconds apart), lazily otherwise.
+            Thread.Sleep(_media.Music ? 25 : 80);
             if (!Listen) { _media = MediaNow.Quiet; continue; }
             double now = _clock.Elapsed.TotalSeconds;
             try
@@ -591,10 +593,17 @@ sealed class ScreenSense : IDisposable
                 }
                 EarsInfo = $"{sessions.Count} sessions: " + string.Join(", ", sessions.Select(x => $"{x.Exe}({x.Ctl.State.ToString().Replace("AudioSessionState", "")}:{x.Ctl.AudioMeterInformation?.MasterPeakValue ?? -1:0.00})"));
                 if (loud == null || peak < 0.015f) { _media = _media with { Music = false, Video = false, Level = 0 }; continue; }
-                avg += (peak - avg) * 0.08f;
-                if (peak > avg * 1.35f && peak > 0.06f && now - beatAt > 0.28) beatAt = now;
+                avg += (peak - avg) * 0.05f;
+                if (peak > avg * 1.3f && peak > 0.06f && now - beatAt > 0.25)
+                {
+                    beatAt = now;
+                    beats.Add(now);
+                    if (beats.Count > 24) beats.RemoveAt(0);
+                    period = Tempo(beats, period);
+                }
+                if (now - beatAt > 3) { beats.Clear(); period = 0; }
                 IntPtr video = FindVideoWindow(loud, exeOf);
-                _media = new MediaNow(video == IntPtr.Zero, video != IntPtr.Zero, video, peak, beatAt);
+                _media = new MediaNow(video == IntPtr.Zero, video != IntPtr.Zero, video, peak, beatAt, period);
             }
             catch (Exception)
             {
@@ -603,6 +612,42 @@ sealed class ScreenSense : IDisposable
                 _media = MediaNow.Quiet;
             }
         }
+    }
+
+    /// <summary>The song's tempo from recent beats: the gaps between them, folded into one beat's length (a skipped
+    /// beat counts as two), and the most common one wins. Kept steady once found (0: not sure yet).</summary>
+    internal static double Tempo(List<double> beats, double previous)
+    {
+        if (beats.Count < 6) return previous;
+        var gaps = new List<double>();
+        for (int i = 1; i < beats.Count; i++)
+        {
+            double g = beats[i] - beats[i - 1];
+            while (g > 0.9) g /= 2;
+            while (g < 0.3) g *= 2;
+            gaps.Add(g);
+        }
+        // The densest cluster of gaps (within 40 ms of each other).
+        double best = 0; int bestN = 0;
+        foreach (var g in gaps)
+        {
+            var near = gaps.Where(x => Math.Abs(x - g) < 0.04).ToList();
+            if (near.Count > bestN) { bestN = near.Count; best = near.Average(); }
+        }
+        if (bestN < gaps.Count * 0.4) return previous;
+        return previous > 0 ? previous + (best - previous) * 0.3 : best;
+    }
+
+    /// <summary>Where we are in the current beat (0..1) and the one before it (0..2), for dancing in time; -1 when
+    /// there's no steady beat.</summary>
+    public (float beat, float bar) BeatPhase()
+    {
+        var m = Media;
+        if (!m.Music || m.Period <= 0) return (-1, -1);
+        double since = _clock.Elapsed.TotalSeconds - m.BeatAt;
+        if (since > m.Period * 4) return (-1, -1);
+        double p = since / m.Period;
+        return ((float)(p % 1), (float)(p % 2));
     }
 
     readonly List<IntPtr> _tops = new();

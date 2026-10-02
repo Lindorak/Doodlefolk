@@ -9,6 +9,8 @@ namespace Doodlefolk;
 sealed partial class Figure
 {
     public Item? Riding;
+    /// <summary>Giving a leg-up: 1 crouched with cupped hands, 2 heaving upward.</summary>
+    public int Boosting;
     public bool Swimming;
     /// <summary>The water it's fishing in, where the float is, and whether something's biting.</summary>
     public Item? FishingIn;
@@ -95,6 +97,16 @@ sealed partial class Figure
                 hN = new(Arm * 0.55f + k * Arm * 0.18f, Torso * 0.78f); hF = new(-Arm * 0.35f - k * Arm * 0.18f, Torso * 0.8f);
                 eN = eF = new(-1, 0.3f); handW = 16;
             }
+            return true;
+        }
+        if (Boosting > 0 && Grounded)
+        {
+            // Knees bent, hands cupped low in front (then a heave up).
+            bool heave = Boosting == 2;
+            hipT = heave ? StandHip * 0.95f : StandHip * 0.62f; leanT = heave ? -0.05f : 0.28f;
+            hN = heave ? new(Arm * 0.35f, -Arm * 0.7f) : new(Arm * 0.45f, Arm * 0.82f);
+            hF = heave ? new(Arm * 0.3f, -Arm * 0.72f) : new(Arm * 0.4f, Arm * 0.86f);
+            eN = eF = new(0, 1); handW = heave ? 40 : 20;
             return true;
         }
         if (FishingIn != null && Action == Act.SitFloor)

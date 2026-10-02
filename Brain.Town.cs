@@ -315,6 +315,22 @@ sealed partial class Brain
             case "swim": if (w.Items.FirstOrDefault(i => i.IsWater && (arg == "" || i.Def.Key == arg)) is { } pool) GoSwim(pool, w); break;
             case "fish": if (w.Items.FirstOrDefault(i => i.Def.Verbs.Contains(Verb.Fish)) is { } pond) GoFish(pond, w); break;
             case "bite": _biteAt = 0; break;
+            case "befriend": if (w.Figures.FirstOrDefault(o => o.Name == arg) is { } bf) { AddAffinity(bf, 0.5f); bf.Brain.AddAffinity(f, 0.5f); } break;
+            case "boost":
+            {
+                var o2 = new OptionList(); _boostCd = 0;
+                BoostOptions(w, o2);
+                if (o2.Items.Count == 0)
+                {
+                    var here = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+                    var ledges = w.Env.Platforms.Where(p => here != null && here.Y - p.Y is > 200 and < 1100 && p.X2 > f.Base.X - 600 && p.X1 < f.Base.X + 600)
+                                    .Select(p => $"[{p.X1:0}-{p.X2:0}@{p.Y:0} item={p.Item?.Def.Key}]");
+                    var mates = w.Figures.Where(o => o != f).Select(o => $"{o.Name}:{o.Brain._g}/{AffinityWith(o):0.00}/{(w.Env.SupportAt(o.Base.X, o.Base.Y, o.GroundHwnd) is { } t ? $"{t.X1:0}-{t.X2:0}@{t.Y:0}" : "air")}");
+                    return $"no leg-up: grounded={f.Grounded} here={(here == null ? "air" : $"{here.X1:0}-{here.X2:0}@{here.Y:0}")} S={S:0.00} ledges {string.Join(" ", ledges)} | {string.Join(" ", mates)}";
+                }
+                o2.Items[0].act();
+                break;
+            }
         }
         return $"{f.Name}: {JobName(Job)} coins={Coins} age={AgeYears:0} stage={LifeStage} goal={_g} dream={f.Dream}";
     }

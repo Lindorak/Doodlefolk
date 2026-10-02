@@ -186,6 +186,12 @@ sealed class Settings
     public bool NoticeDownloads { get; set; } = true;
     /// <summary>Talk to them out loud (Windows speech recognition, on this PC).</summary>
     public bool VoiceInput { get; set; }
+    /// <summary>Ideas from StickBuddies: dance in time to the beat; gestures instead of words; a nudge to take a break
+    /// after a long stretch of games or videos.</summary>
+    public bool BeatDance { get; set; } = true;
+    public bool GesturesOnly { get; set; }
+    public bool BreakNudges { get; set; }
+    public int BreakMinutes { get; set; } = 60;
     /// <summary>Start with Windows; check GitHub for new versions; battery saver: off, battery (when unplugged), always.</summary>
     public bool StartWithWindows { get; set; }
     public bool CheckUpdates { get; set; } = true;

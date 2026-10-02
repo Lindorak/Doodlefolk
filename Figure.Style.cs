@@ -218,14 +218,17 @@ sealed partial class Figure
                 break;
             case Fidget.Groove:
             {
-                float s = MathF.Sin(t * 10);
-                hipT = StandHip * 0.94f + s * 1.6f * S;
-                pdxT = MathF.Sin(t * 5) * 2.5f * S;
+                // In time with the music when there's a steady beat: down on the beat, a sway across two.
+                bool onBeat = World.BeatPhase >= 0;
+                float s = onBeat ? MathF.Cos(World.BeatPhase * MathF.Tau) : MathF.Sin(t * 10);
+                float sway = onBeat ? MathF.Sin(World.BarPhase * MathF.PI) : MathF.Sin(t * 5);
+                hipT = StandHip * 0.94f + s * 1.6f * S - (onBeat ? MathF.Max(0, s) * 1.4f * S : 0);
+                pdxT = sway * 2.5f * S;
                 hN = new(Arm * 0.4f, -Arm * 0.25f + s * Arm * 0.3f);
                 hF = new(-Arm * 0.2f, -Arm * 0.1f - s * Arm * 0.3f);
                 eN = eF = new(0, 1);
-                tiltT += MathF.Sin(t * 5) * 0.12f;
-                handW = 24;
+                tiltT += sway * 0.12f;
+                handW = onBeat ? 32 : 24;
                 break;
             }
         }

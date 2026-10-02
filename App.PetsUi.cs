@@ -16,6 +16,8 @@ sealed partial class App
         Pet.Breeding = _settings.PetBreeding;
         World.Jobs = _settings.Jobs;
         World.Calm = _settings.Calm;
+        World.Gestures = _settings.GesturesOnly;
+        (World.BeatPhase, World.BarPhase) = _settings.BeatDance && _w.ScreenMedia && _w.Screen != null ? _w.Screen.BeatPhase() : (-1, -1);
         World.ColourBlind = _settings.ColourBlind;
         World.LifePace = _settings.LifePace switch { "slow" => 1, "fast" => 24, _ => 0 };
         if (_sprayTool && now > _sprayIdleUntil) PickUpSpray(false);

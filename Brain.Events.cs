@@ -87,6 +87,21 @@ sealed partial class Brain
         }
     }
 
+    /// <summary>You've been watching or playing for a long while: wander down by the clock and point at it.</summary>
+    public void NudgeBreak(World w, Vector2 clock, int minutes)
+    {
+        if (f.Mode != Mode.Control || !f.Grounded) return;
+        f.Emote(V("break time?", "BREAK TIME!!", "…stretch?", "um, maybe a little break?", "the clock says rest"), 2);
+        Navigate(() => clock, 40 * S, false, () =>
+        {
+            FaceTo(clock.X + 200);
+            f.LookAt = clock;
+            f.Emote(minutes >= 90 ? $"⏰ {minutes / 60}h+! stretch?" : "⏰ break?", 4);
+            f.StartGestureFor(GestureKind.Point, 3);
+            Go(G.Wave, 2.5f);
+        }, WalkPurpose.Other);
+    }
+
     /// <summary>The window it was standing on disappeared (closed or minimised).</summary>
     public void OnFloorVanished()
     {

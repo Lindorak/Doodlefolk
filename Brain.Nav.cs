@@ -165,7 +165,7 @@ sealed partial class Brain
         if (_nav == Nav.InAir)
         {
             f.DesiredVX = 0;
-            if (f.Grounded && !f.JumpPending && _navT > 0.25f) _nav = Nav.Direct;
+            if (f.Grounded && !f.JumpPending && _navT > 0.25f) { _nav = Nav.Direct; BigJumpLanded(); }
             return;
         }
         if (_nav == Nav.Off)

@@ -1333,6 +1333,10 @@ PAGES.settings = {
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "talent" }) }, "🎤 Talent show"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "race" }) }, "🏁 Race day"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "stop" }) }, "Stop"));
+    const beatC = check("Dance to the beat", "When music's playing, dancers move in time with it. They listen to how loud your PC's sound is from moment to moment, on this PC only; nothing is recorded or kept.", () => st().beatDance !== false, v => setS("beatDance", v));
+    const gestC = check("Gestures only", "No words in their bubbles: they wave, shrug, shake their heads, nod, point and cheer instead, with a little symbol. (Their diaries still use words.)", () => !!st().gesturesOnly, v => setS("gesturesOnly", v));
+    const breakC = check("Break nudges", "After a long unbroken stretch of videos, music or a full-screen game, someone walks down by the clock and points at it.", () => !!st().breakNudges, v => setS("breakNudges", v));
+    const breakMin = h("select", { onchange: () => setS("breakMinutes", +breakMin.value) }, [30, 45, 60, 90, 120].map(n => h("option", { value: n }, `after ${n} minutes`)));
     const calmC = check("Calm mode", "No fights, tournaments, cursor hunting or lassoing your cursor, no lightning flashes or thunderstorms, no freeze-frames on hits, and pets don't scrap.", () => !!st().calm, v => setS("calm", v));
     const cbC = check("Colour-blind badges", "Each colour team wears its own shape on its chest (▲ red, ● blue, ■ green, ◆ orange, ★ purple, ✚ yellow, ⬟ cyan, ♥ pink, ✖ black, ○ white), and the colour swatches show them too.", () => !!st().colourBlind, v => setS("colourBlind", v));
     const quietC = check("Quiet hours", "Hide everyone at set times (say, while you work) and bring them back afterwards.", () => !!st().pauseSchedule, v => setS("pauseSchedule", v));
@@ -1415,7 +1419,7 @@ PAGES.settings = {
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
       remList, dlC, frC, voiceC, aiC, aiBox,
       h("h2", null, "Accessibility & quiet hours"),
-      calmC, cbC, quietC, quietBox,
+      calmC, cbC, gestC, quietC, quietBox, breakC, h("div", { class: "field" }, h("label", null, "Nudge me"), breakMin), beatC,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1479,7 +1483,8 @@ PAGES.settings = {
         const list = st().reminders || [];
         remList.replaceChildren(...(list.length ? list.map(r => h("div", { class: "row tight" }, h("span", null, `⏰ ${r.when} · ${r.text}${r.repeat !== "none" ? ` (${r.repeat})` : ""}`),
           h("button", { class: "btn small", onclick: () => send({ t: "reminder", op: "delete", id: r.id }) }, "Remove"))) : [h("p", { class: "hint" }, "No reminders yet.")]));
-      } calmC.update(); cbC.update(); quietC.update();
+      } calmC.update(); cbC.update(); quietC.update(); beatC.update(); gestC.update(); breakC.update();
+      if (idle(breakMin)) breakMin.value = String(st().breakMinutes || 60);
       quietBox.style.display = st().pauseSchedule ? "" : "none";
       if (idle(qFrom)) qFrom.value = st().pauseFrom || "09:00";
       if (idle(qTo)) qTo.value = st().pauseTo || "17:00";

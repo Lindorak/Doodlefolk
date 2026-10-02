@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Body condition and feelings about comfort. Weight goes up with overeating (a bowl that's always full,
 /// lots of treats) and comes down with exercise; heavier animals are slower, tire sooner and jump lower. Stamina

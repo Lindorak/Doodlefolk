@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 public static class Dpi { [DllImport("user32.dll")] public static extern bool SetProcessDPIAware(); }
 "@
 [Dpi]::SetProcessDPIAware() | Out-Null
-$s = Get-Content "$env:TEMP\stickfight_state.json" | ConvertFrom-Json
+$s = Get-Content "$env:TEMP\doodlefolk_state.json" | ConvertFrom-Json
 $i = 0
 foreach ($f in $s.figures) {
   $b = $f.bbox

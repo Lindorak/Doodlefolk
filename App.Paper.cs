@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The weekly paper ("The Stick Times") and the sticker book, for the Studio.</summary>
 sealed partial class App

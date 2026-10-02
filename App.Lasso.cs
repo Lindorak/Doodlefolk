@@ -1,8 +1,8 @@
 using System.Numerics;
 using Vortice.Mathematics;
-using static StickFight.Native;
+using static Doodlefolk.Native;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Lassos: drawing the ropes, and the cursor ride: a figure that ropes your cursor spins it round a couple of
 /// times and flings it across the screen. Only when you've left the mouse alone for a few seconds; the moment you

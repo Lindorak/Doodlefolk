@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Campfire evenings: at night friends light a fire, gather round, one of them tells a (very desktop) story,
 /// and afterwards they sleep over by the embers.</summary>

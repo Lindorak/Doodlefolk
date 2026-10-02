@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Animals and each other (and the figures): cats and dogs start out wary, cats see parrots as prey,
 /// time spent together peacefully makes friends (who then play-chase and curl up together), and squabbles over food,

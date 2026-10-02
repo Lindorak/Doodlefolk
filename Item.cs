@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>An object on the desktop (chair, bed, pizza, box...). It falls, lands on windows and rides along with
 /// them, can be dragged and thrown, and offers surfaces (seats, mattresses, tops) that become platforms the figures

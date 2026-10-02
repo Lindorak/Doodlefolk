@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A small animated-GIF encoder: each frame gets its own 256-colour palette (the most used colours, which
 /// suits flat doodles well), then LZW compression. Frames are added from any one thread at a time.</summary>

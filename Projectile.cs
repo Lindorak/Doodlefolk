@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Something fired from a toy gun: a foam dart (stings a bit, knocks a little) or a squirt of water
 /// (harmless, but nobody likes getting wet). Hits figures, your cursor (if aimed at it), and stops at windows.</summary>

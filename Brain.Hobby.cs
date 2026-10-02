@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>What a figure loves to do in its spare time.</summary>
 enum Hobby { None, Gardening, Collecting, Storytelling }

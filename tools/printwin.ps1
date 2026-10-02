@@ -1,5 +1,5 @@
-param([string]$Title = "StickFight Studio", [string]$Out)
-# Capture one of StickFight's windows with PrintWindow (works even when it's covered by other windows).
+param([string]$Title = "Doodlefolk Studio", [string]$Out)
+# Capture one of Doodlefolk's windows with PrintWindow (works even when it's covered by other windows).
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
 using System; using System.Runtime.InteropServices;

@@ -5,7 +5,7 @@ using System.Drawing.Imaging;
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Games with you (hide-and-seek, tag, catch) and photo mode.</summary>
 sealed partial class App
@@ -235,7 +235,7 @@ sealed partial class App
         World.Play(Sfx.Pip, _w.Cursor, 0.3f, 0.6f);
         foreach (var f in _w.Figures) if (f.Mode == Mode.Control && !f.Dead) f.Brain.PhotoTaken();
         _w.Sticker("photo");
-        if (path != null) PostAll(new { t = "toast", text = $"Saved to Pictures\\StickFight\\{Path.GetFileName(path)}" });
+        if (path != null) PostAll(new { t = "toast", text = $"Saved to Pictures\\Doodlefolk\\{Path.GetFileName(path)}" });
     }
 
     void DrawFlash()
@@ -247,7 +247,7 @@ sealed partial class App
     }
 
     /// <summary>A snapshot of the figures (and whatever's behind them), framed like an instant photo, saved to
-    /// Pictures\StickFight. Stays on this PC.</summary>
+    /// Pictures\Doodlefolk. Stays on this PC.</summary>
     string? SnapPhoto()
     {
         var v = _w.Env.Virtual;
@@ -272,7 +272,7 @@ sealed partial class App
         using (var g = Graphics.FromImage(snap)) g.CopyFromScreen(shot.Left, shot.Top, 0, 0, shot.Size, CopyPixelOperation.SourceCopy);
         string who = names.Count switch { 0 => "the desktop", 1 => names[0], _ => string.Join(", ", names.Take(names.Count - 1)) + " & " + names[^1] };
         string dir = AppPaths.PicturesDir;
-        string file = Path.Combine(dir, $"StickFight {DateTime.Now:yyyy-MM-dd HH.mm.ss}.png");
+        string file = Path.Combine(dir, $"Doodlefolk {DateTime.Now:yyyy-MM-dd HH.mm.ss}.png");
         // Framing and saving (PNG encoding is slow for big shots) happen off the main thread.
         _ = Task.Run(() =>
         {

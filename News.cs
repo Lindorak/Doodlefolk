@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Something newsworthy that happened (for the weekly paper in the Studio).</summary>
 sealed class NewsItem

@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The very first run: the first figure says hello and points you at the tray icon, then the Studio opens
 /// with its tour.</summary>
@@ -7,7 +7,7 @@ sealed partial class App
     double _welcomeStep = -1;
     int _welcomeIndex;
 
-    /// <summary>With ageing on, time passes while StickFight is closed too: everyone grown up is older by the time
+    /// <summary>With ageing on, time passes while Doodlefolk is closed too: everyone grown up is older by the time
     /// away (up to a month's worth, so a long break doesn't turn the whole town grey at once).</summary>
     void CatchUpAgeing()
     {

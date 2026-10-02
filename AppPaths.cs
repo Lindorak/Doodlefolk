@@ -1,13 +1,13 @@
 using System.Diagnostics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
-/// <summary>Where things live: settings, mods and casts in %APPDATA%\StickFight; photos and clips in
-/// Pictures\StickFight. The self-test points both at a throwaway folder (--data) so it never touches yours.</summary>
+/// <summary>Where things live: settings, mods and casts in %APPDATA%\Doodlefolk; photos and clips in
+/// Pictures\Doodlefolk. The self-test points both at a throwaway folder (--data) so it never touches yours.</summary>
 static class AppPaths
 {
-    public static string DataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StickFight");
-    public static string PicturesDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "StickFight");
+    public static string DataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Doodlefolk");
+    public static string PicturesDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Doodlefolk");
 
     /// <summary>"--data dir": keep everything in that folder instead.</summary>
     public static void Configure(string[] args)

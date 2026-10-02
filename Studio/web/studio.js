@@ -1,5 +1,5 @@
 "use strict";
-/* StickFight Studio. The host pushes {t:"init"} once and {t:"state"} a few times a second; edits go back
+/* Doodlefolk Studio. The host pushes {t:"init"} once and {t:"state"} a few times a second; edits go back
    as small messages. Pages are built once per route and then patched live, never rebuilt under the user's
    fingers (controls the user touched recently aren't overwritten). */
 
@@ -1358,12 +1358,12 @@ PAGES.settings = {
     const remList = h("div", { class: "thoughts" });
     const icsIn = h("input", { type: "file", accept: ".ics,text/calendar", style: { display: "none" }, onchange: () => importIcs(icsIn) });
     let remSig = "";
-    const startC = check("Start with Windows", "Open StickFight when you sign in.", () => !!st().startWithWindows, v => setS("startWithWindows", v));
+    const startC = check("Start with Windows", "Open Doodlefolk when you sign in.", () => !!st().startWithWindows, v => setS("startWithWindows", v));
     const updC = check("Check for updates", "Once a day, ask GitHub whether there's a newer version. Nothing is downloaded until you click Update.", () => st().checkUpdates !== false, v => setS("checkUpdates", v));
     const batChips = [["off", "Off"], ["battery", "On battery"], ["always", "Always"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("batterySaver", k); } }, l); c.key = k; return c; });
     const updLine = h("p", { class: "hint" });
     const updBtn = h("button", { class: "btn small primary", onclick: () => send({ t: "applyUpdate" }) }, "Update now");
-    const installBtn = h("button", { class: "btn small", title: "Copies StickFight to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install StickFight");
+    const installBtn = h("button", { class: "btn small", title: "Copies Doodlefolk to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install Doodlefolk");
     const modsLine = h("p", { class: "hint" });
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
@@ -1423,12 +1423,12 @@ PAGES.settings = {
       h("p", { class: "sub" }, "A lighter frame rate (30 at most) and simpler graphics, to go easy on a laptop battery."),
       h("div", { class: "row" }, batChips),
       h("h2", null, "Mods"),
-      h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names and jokes with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart StickFight after changing them."),
+      h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names and jokes with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart Doodlefolk after changing them."),
       modsLine,
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "openMods" }) }, "Open the mods folder"),
-        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight/blob/main/docs/MODDING.md") }, "Modding guide")),
+        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/Doodlefolk/blob/main/docs/MODDING.md") }, "Modding guide")),
       h("h2", null, "Problems"),
-      h("p", { class: "sub" }, "If something goes wrong behind the scenes, StickFight carries on and notes it here. Copy the details into a GitHub issue to help fix it (they contain no personal information: just what went wrong and where in the code)."),
+      h("p", { class: "sub" }, "If something goes wrong behind the scenes, Doodlefolk carries on and notes it here. Copy the details into a GitHub issue to help fix it (they contain no personal information: just what went wrong and where in the code)."),
       probList,
       h("div", { class: "row" },
         h("button", { class: "btn small", onclick: () => send({ t: "problems", op: "copy" }) }, "Copy details"),
@@ -1439,11 +1439,11 @@ PAGES.settings = {
       h("div", { class: "row" }, updBtn, h("button", { class: "btn small", onclick: () => send({ t: "checkUpdate" }) }, "Check now"), installBtn),
       updC, startC,
       h("h2", null, "About"),
-      h("p", null, `StickFight ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
+      h("p", null, `Doodlefolk ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
       h("div", { class: "row" },
         h("button", { class: "btn small", onclick: () => startTour() }, "Take the tour"),
-        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight") }, "GitHub page"),
-        armed("Quit StickFight", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
+        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/Doodlefolk") }, "GitHub page"),
+        armed("Quit Doodlefolk", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
     return () => {
       chips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.fps === st().fps); });
       setRange(custom, st().fps > 0 ? st().fps : 60);
@@ -1524,7 +1524,7 @@ function buildQuick() {
   add(root,
     h("div", { class: "q-head" },
       s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
-      h("span", { class: "brand-name" }, "StickFight"), h("span", { class: "spacer" }), count),
+      h("span", { class: "brand-name" }, "Doodlefolk"), h("span", { class: "spacer" }), count),
     h("h3", null, "Draw someone"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex, color: "#111", "font-size": "11px", "text-shadow": "0 0 2px #fff" }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }, S.settings.colourBlind ? TEAM_SYM[p.name] || "" : ""))),
     h("h3", null, "Draw something"), summonBox(true),
@@ -1536,8 +1536,8 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Tag" }) }, "🏃 Tag"),
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Catch" }) }, "⚾ Catch"),
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
-      h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
-      h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\StickFight", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
+      h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\Doodlefolk", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
+      h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\Doodlefolk", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Figures and pets: petting them (animal lovers go over on their own), being adopted as a pet's favourite,
 /// and throwing the ball again when the dog brings it back.</summary>

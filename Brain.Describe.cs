@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Plain-English descriptions of what a figure is up to, for the Studio.</summary>
 sealed partial class Brain

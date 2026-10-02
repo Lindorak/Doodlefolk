@@ -7,7 +7,7 @@ using Vortice.DirectWrite;
 using Vortice.DXGI;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>GPU renderer: a premultiplied-alpha DXGI swap chain shown through DirectComposition,
 /// so everything not drawn is fully see-through.</summary>

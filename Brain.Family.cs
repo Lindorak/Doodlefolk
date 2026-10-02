@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Homes (a bed, tent or sleeping bag a figure has made its own) and families (couples who've been together a
 /// long while can have a little one, who grows up over a few hours of play).</summary>

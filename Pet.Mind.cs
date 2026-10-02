@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Decisions and behaviour. Every few seconds a pet weighs what it could do (eat, drink, find the litter
 /// box or ask for a walk, sleep, ask you for attention, play, groom, sniff, perch, follow its favourite figure, stalk a

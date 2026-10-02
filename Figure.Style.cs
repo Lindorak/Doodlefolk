@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Body language: how this particular figure walks, runs, idles, fidgets, jumps and
 /// celebrates (its BodyStyle), bent in the moment by its mood (tired, angry, happy, scared, sad, hurt).</summary>

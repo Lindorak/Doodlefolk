@@ -1,9 +1,9 @@
 using System.Numerics;
 using System.Text;
 
-namespace StickFight;
+namespace Doodlefolk;
 
-/// <summary>The self-test (StickFight.exe --selftest [--data dir]): the real app, sped up, hidden, with its own
+/// <summary>The self-test (Doodlefolk.exe --selftest [--data dir]): the real app, sped up, hidden, with its own
 /// throwaway data. It plays through a script that touches every feature (jobs, building, rides, swimming, fishing,
 /// each town event, people leaving mid-event, resizing, casts, clips, reminders, voice commands, mods, calm mode,
 /// night lights) while checking that nothing breaks: no errors, nothing at an impossible position, riders and swimmers
@@ -207,7 +207,7 @@ sealed partial class App
         using (var me = System.Diagnostics.Process.GetCurrentProcess())
             Check("memory stays reasonable", me.PrivateMemorySize64 < 900L << 20, $"{me.PrivateMemorySize64 >> 20} MB private");
         var sb = new StringBuilder();
-        sb.AppendLine($"StickFight self-test, {DateTime.Now:yyyy-MM-dd HH:mm}, version {VersionText}");
+        sb.AppendLine($"Doodlefolk self-test, {DateTime.Now:yyyy-MM-dd HH:mm}, version {VersionText}");
         foreach (var (name, pass, detail) in _checks) sb.AppendLine($"{(pass ? "PASS" : "FAIL")}  {name}{(detail.Length > 0 ? "  (" + detail + ")" : "")}");
         int failed = _checks.Count(c => !c.pass);
         sb.AppendLine(failed == 0 ? $"ALL {_checks.Count} CHECKS PASSED" : $"{failed} OF {_checks.Count} CHECKS FAILED");

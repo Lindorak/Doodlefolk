@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Something a figure would like that isn't around: an object from the catalogue or a kind of ball.</summary>
 sealed record Want(string Name, ItemDef? Item, PropKind? Ball, float Strength, string Say);

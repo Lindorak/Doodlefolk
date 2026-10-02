@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Out and about: riding bikes, skateboards and go-karts up and down; swimming in the pond or the pool
 /// (especially on a hot day, when the real weather's on); and sitting patiently at the pond's edge with a rod. Cold

@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 static class Native
 {

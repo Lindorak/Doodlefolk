@@ -2,7 +2,7 @@ using System.Numerics;
 using System.Text.RegularExpressions;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Things a figure knows how to do with an object. Objects are described by their verbs, so any object
 /// (built in, or one day made up from a typed word) is usable as long as its verbs are ones the brain knows.</summary>

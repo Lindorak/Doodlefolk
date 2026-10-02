@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum Illness { None, Cold, Tummy, Fleas, Sprain }
 

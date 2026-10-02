@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Playing sports: getting a game together, and how each player plays. Soccer: strikers dribble and
 /// shoot, keepers guard the mouth and jump for high balls. Basketball: take the ball, find a spot, shoot (or dunk),

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Elders lean on a cane; sleepers dream in little clouds.</summary>
 sealed partial class Figure

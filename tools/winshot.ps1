@@ -1,5 +1,5 @@
 param([string]$Title, [string]$Out)
-# Screenshot one of StickFight's own windows (e.g. an editor) by its title.
+# Screenshot one of Doodlefolk's own windows (e.g. an editor) by its title.
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
 using System; using System.Runtime.InteropServices; using System.Text;
@@ -15,7 +15,7 @@ public static class Win {
 }
 "@
 [Win]::SetProcessDPIAware() | Out-Null
-$sfPid = (Get-Process StickFight).Id
+$sfPid = (Get-Process Doodlefolk).Id
 $script:found = [IntPtr]::Zero
 [Win]::EnumWindows({ param($h, $l)
   [uint32]$p = 0; [Win]::GetWindowThreadProcessId($h, [ref]$p) | Out-Null

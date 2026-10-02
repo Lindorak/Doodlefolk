@@ -4,9 +4,9 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
-/// <summary>Mods: JSON files in %APPDATA%\StickFight\mods that add objects (drawn with shapes or a simple SVG),
+/// <summary>Mods: JSON files in %APPDATA%\Doodlefolk\mods that add objects (drawn with shapes or a simple SVG),
 /// hats, names for new figures and pets, and jokes. See docs/MODDING.md. A broken file is skipped and its problem
 /// is shown in the Studio; nothing in a mod can run code.</summary>
 static class Mods
@@ -291,8 +291,8 @@ static class Mods
 
     const string ExampleMod = """
         {
-          // An example mod. Rename this file to end in .json (and restart StickFight) to try it.
-          // Full guide: https://github.com/Lindorak/StickFight/blob/main/docs/MODDING.md
+          // An example mod. Rename this file to end in .json (and restart Doodlefolk) to try it.
+          // Full guide: https://github.com/Lindorak/Doodlefolk/blob/main/docs/MODDING.md
           "items": [
             {
               "key": "lavalamp", "name": "Lava lamp", "words": ["lava lamp"], "colour": "#E040FB",

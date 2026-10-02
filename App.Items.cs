@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Objects on the desktop: spawning (including from typed words), dragging, drawing and saving.</summary>
 sealed partial class App

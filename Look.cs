@@ -1,6 +1,6 @@
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>One piece of clothing / hair / headwear. Head pieces are drawn in head-local units (x forward,
 /// y up, 1 = head radius); shoes in foot-local units (S). Back shapes go behind the head (long hair, afros).

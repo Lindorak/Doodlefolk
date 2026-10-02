@@ -2,10 +2,10 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Record a clip: a few seconds of everyone, drawn on paper (only the figures, pets and their things; never
-/// what's on your screen), saved as an animated GIF in Pictures\StickFight. Frames are captured offscreen and
+/// what's on your screen), saved as an animated GIF in Pictures\Doodlefolk. Frames are captured offscreen and
 /// compressed on a background thread.</summary>
 sealed partial class App
 {
@@ -50,7 +50,7 @@ sealed partial class App
         var rec = new Recording
         {
             Area = area, Zoom = zoom, W = w, H = h, Fps = 15, Start = now, Next = now, Until = now + Math.Clamp(seconds, 2, 30),
-            Path = System.IO.Path.Combine(dir, $"StickFight clip {DateTime.Now:yyyy-MM-dd HH.mm.ss}.gif"),
+            Path = System.IO.Path.Combine(dir, $"Doodlefolk clip {DateTime.Now:yyyy-MM-dd HH.mm.ss}.gif"),
         };
         rec.Encoder = Task.Run(() =>
         {
@@ -98,7 +98,7 @@ sealed partial class App
         rec.Encoder?.ContinueWith(_ =>
         {
             World.Log($"recording saved: {frames} frames, {new FileInfo(path).Length / 1024} KB");
-            _overlay.BeginInvoke(() => PostAll(new { t = "toast", text = $"Clip saved to Pictures\\StickFight ({frames} frames)" }));
+            _overlay.BeginInvoke(() => PostAll(new { t = "toast", text = $"Clip saved to Pictures\\Doodlefolk ({frames} frames)" }));
         });
     }
 }

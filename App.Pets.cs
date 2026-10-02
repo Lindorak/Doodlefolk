@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The app's side of pets: pet-only mode, adopting (with a starter kit of supplies), care by clicking (fill a
 /// bowl, scoop the litter box, clean up a mess), the spray bottle, leashes, and saving everything.</summary>

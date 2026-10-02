@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Drawing what a figure wears. Head pieces follow the head (tilting with it); clothes follow the bones;
 /// capes, scarf tails and ponytails are little verlet chains that swing with movement.</summary>

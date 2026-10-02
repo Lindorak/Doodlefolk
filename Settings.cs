@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 sealed class SavedFigure
 {
@@ -117,7 +117,7 @@ sealed class SavedProp
     public string Color { get; set; } = "#E53935";
 }
 
-/// <summary>User preferences and the remembered cast, persisted as JSON in %APPDATA%\StickFight\settings.json.</summary>
+/// <summary>User preferences and the remembered cast, persisted as JSON in %APPDATA%\Doodlefolk\settings.json.</summary>
 sealed class Settings
 {
     public const int MatchMonitor = -1, Unlimited = 0;

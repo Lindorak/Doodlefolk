@@ -4,9 +4,9 @@ using System.Numerics;
 using System.Text.Json;
 using Microsoft.Win32;
 using Vortice.Mathematics;
-using static StickFight.Native;
+using static Doodlefolk.Native;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Owns the overlay, renderer, tray icon and the frame loop (runs whenever the UI thread is idle,
 /// paced by vsync through Present).</summary>
@@ -22,7 +22,7 @@ sealed partial class App : ApplicationContext
     int _refresh = 60;
     double _frameInterval, _nextFrameAt;
     bool _fineTimer;
-    readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "stickfight.log");
+    readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "doodlefolk.log");
     double _last, _acc, _nextTopmost, _nextDump, _fpsT;
     int _frames, _fps, _hitches, _hitchAcc;
     double _nextAutosave = 120, _msDraw, _nextAuditSample;
@@ -55,6 +55,7 @@ sealed partial class App : ApplicationContext
         Mods.Load();
         Mark("mods");
         CleanUpOldVersion();
+        if (Migration.NeedsStartupEntry) { _settings.StartWithWindows = true; SetStartWithWindows(true); }
         _showPlatforms = args.Contains("--platforms");
         _w.Scale = ComputeScale(args);
         _w.Fight = _settings.Fight;
@@ -992,7 +993,7 @@ sealed partial class App : ApplicationContext
     NotifyIcon BuildTray()
     {
         // No stock Windows menu: left-click opens the Studio, right-click the hand-drawn quick panel.
-        var tray = new NotifyIcon { Icon = AppIcon, Text = "StickFight", Visible = true };
+        var tray = new NotifyIcon { Icon = AppIcon, Text = "Doodlefolk", Visible = true };
         tray.MouseUp += (_, e) =>
         {
             if (e.Button == MouseButtons.Left) OpenStudio();
@@ -1021,11 +1022,11 @@ sealed partial class App : ApplicationContext
 
     // ---------------- debug ----------------
 
-    /// <summary>Debug channel: one command per line in %TEMP%\stickfight_cmd.txt, e.g.
+    /// <summary>Debug channel: one command per line in %TEMP%\doodlefolk_cmd.txt, e.g.
     /// "spawn blue", "ball soccer", "Red jump", "Red walk 1200", "fling Red 2000 -1500", "clear".</summary>
     void RunCommands()
     {
-        string path = Path.Combine(Path.GetTempPath(), "stickfight_cmd.txt");
+        string path = Path.Combine(Path.GetTempPath(), "doodlefolk_cmd.txt");
         if (!File.Exists(path)) return;
         string[] lines;
         try { lines = File.ReadAllLines(path); File.Delete(path); }
@@ -1282,7 +1283,7 @@ sealed partial class App : ApplicationContext
                 case "shortcuttest": try { MakeShortcut(Path.Combine(Path.GetTempPath(), "sf-test.lnk"), ExePath); World.Log("shortcut: ok " + File.Exists(Path.Combine(Path.GetTempPath(), "sf-test.lnk"))); } catch (Exception e) { World.Log("shortcut: " + e.Message); } break;
                 case "update":
                     if (p.Length > 1 && p[1] == "check") _ = CheckForUpdate().ContinueWith(t => World.Log("update: " + t.Result));
-                    else if (p.Length > 1 && p[1] == "fake") { _update = (new Version(9, 9, 9), "v0.9.0", $"https://github.com/{Repo}/releases/download/v0.9.0/StickFight-v0.9.0-win-x64.zip", long.Parse(p[2]), "test"); World.Log("update: faked"); }
+                    else if (p.Length > 1 && p[1] == "fake") { _update = (new Version(9, 9, 9), "v0.9.0", $"https://github.com/{Repo}/releases/download/v0.9.0/Doodlefolk-v0.9.0-win-x64.zip", long.Parse(p[2]), "test"); World.Log("update: faked"); }
                     else if (p.Length > 1 && p[1] == "dry") _ = ApplyUpdate(true).ContinueWith(t => World.Log("update: " + t.Result));
                     else if (p.Length > 1 && p[1] == "apply") _ = ApplyUpdate().ContinueWith(t => World.Log("update: " + t.Result));
                     break;
@@ -1295,14 +1296,14 @@ sealed partial class App : ApplicationContext
                     if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is not { } sf2) break;
                     float sw = float.Parse(p[2], inv), sh = float.Parse(p[3], inv);
                     var ar2 = new RectangleF(sf2.Base.X - sw / 2, sf2.Base.Y - sh + 12, sw, sh);
-                    _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
+                    _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
                     break;
                 }
                 case "snaparea":
                 {
-                    // snaparea x y w h [zoom]: the live scene in that area, offscreen, to %TEMP%\stickfight_snap.png.
+                    // snaparea x y w h [zoom]: the live scene in that area, offscreen, to %TEMP%\doodlefolk_snap.png.
                     var ar = new RectangleF(float.Parse(p[1], inv), float.Parse(p[2], inv), float.Parse(p[3], inv), float.Parse(p[4], inv));
-                    _r.Snapshot(ar, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 5 ? float.Parse(p[5], inv) : 1);
+                    _r.Snapshot(ar, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 5 ? float.Parse(p[5], inv) : 1);
                     break;
                 }
                 case "snap" when p.Length > 1 && p[1] == "pets":
@@ -1320,12 +1321,12 @@ sealed partial class App : ApplicationContext
                             pt.Draw(_r);
                             pt.Pos = saved;
                         }
-                    }, Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
+                    }, Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
                     break;
                 }
                 case "snap":
                 {
-                    // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\stickfight_snap.png.
+                    // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\doodlefolk_snap.png.
                     var who = p.Length > 1 ? _w.Figures.Where(x => x.Name == p[1]).ToList() : _w.Figures.ToList();
                     float snapS = _w.Scale;
                     var snapArea = new RectangleF(0, 0, Math.Max(1, who.Count) * 120 * snapS, 190 * snapS);
@@ -1341,7 +1342,7 @@ sealed partial class App : ApplicationContext
                             fx.Draw(_r);
                             Array.Copy(saved, fx.Jt, saved.Length);
                         }
-                    }, Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
+                    }, Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
                     break;
                 }
                 case "weight": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } wtF) wtF.Weight = Math.Clamp(float.Parse(p[2], inv), 0, 1); break;
@@ -1416,7 +1417,7 @@ sealed partial class App : ApplicationContext
                     result = fig != null && p.Length > 1 && fig.Brain.Force(p[1].ToLowerInvariant(), p[2..], _w) ? "ok" : "failed";
                     break;
             }
-            File.AppendAllText(Path.Combine(Path.GetTempPath(), "stickfight_cmd.log"), $"{line} -> {result}\n");
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "doodlefolk_cmd.log"), $"{line} -> {result}\n");
         }
     }
 
@@ -1461,7 +1462,7 @@ sealed partial class App : ApplicationContext
             matches = _w.Matches.Select(m => new { kind = m.Kind.ToString(), score = m.ScoreText, t = m.T, players = m.Players.Select(p => p.Name), pause = m.Pause, ball = new[] { m.Ball.Pos.X, m.Ball.Pos.Y }, ballHeld = m.Ball.Holder?.Name, rim = new[] { m.Kind == Sport.Basketball ? m.RimCentre.X : m.NetX, m.Kind == Sport.Basketball ? m.RimCentre.Y : 0 } }),
             items = _w.Items.Select(i => new { key = i.Def.Key, x = i.Pos.X, y = i.Pos.Y, ground = i.OnGround, w = i.Def.W * i.Sc, h = i.Def.H * i.Sc, user = i.User?.Name, seated = i.Seated.Where(s => s != null).Select(s => s!.Name), holder = i.Holder?.Name }),
         };
-        try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "stickfight_state.json"), JsonSerializer.Serialize(state)); }
+        try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "doodlefolk_state.json"), JsonSerializer.Serialize(state)); }
         catch (IOException) { }
     }
 

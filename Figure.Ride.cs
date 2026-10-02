@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Poses for riding (pedalling a bike, balancing on a skateboard and kicking it along, sitting low in a
 /// go-kart), swimming (front crawl when going somewhere, treading water otherwise) and fishing (a rod, a line and a

@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A reminder you set (or imported from a calendar file): someone brings it to you at the time.</summary>
 sealed class Reminder
@@ -144,7 +144,7 @@ sealed partial class App
             // Long overdue (the PC was off): mention it, but don't make a fuss.
             bool stale = r.When < _bootTime && (DateTime.Now - r.When).TotalHours > 2;
             // Everyone's hidden (quiet hours, a full-screen app): a Windows notification instead.
-            if (hidden && !stale) { try { _tray.ShowBalloonTip(15000, "StickFight reminder", r.Text, ToolTipIcon.Info); } catch { } stale = true; }
+            if (hidden && !stale) { try { _tray.ShowBalloonTip(15000, "Doodlefolk reminder", r.Text, ToolTipIcon.Info); } catch { } stale = true; }
             var bringer = _w.Figures.Where(f => f.Mode == Mode.Control && !f.Brain.InFight).OrderByDescending(f => f.Brain.UserFondness + (f.Brain.Asleep ? -1 : 0)).FirstOrDefault();
             if (!stale) bringer?.Brain.BringReminder(r.Text, _w);
             World.Log($"reminder: {r.Text}{(stale ? " (missed)" : "")}");

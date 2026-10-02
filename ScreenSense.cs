@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Text;
 using UIA = Interop.UIAutomationClient;
 using NAudio.CoreAudioApi;
-using static StickFight.Native;
+using static Doodlefolk.Native;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum SeenKind { Line, Word, Link, Image }
 
@@ -70,7 +70,7 @@ static class Lexicon
 
     public static readonly Dictionary<string, Feeling> Feelings = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["stickfight"] = new("that's us!", 0.6f, 0), ["animator"] = new("!!", 0.4f, 0), ["stickman"] = new("hey, us!", 0.5f, 0),
+        ["doodlefolk"] = new("that's us!", 0.6f, 0), ["animator"] = new("!!", 0.4f, 0), ["stickman"] = new("hey, us!", 0.5f, 0),
         ["cat"] = new("aww", 0.3f, 0), ["cats"] = new("aww", 0.3f, 0), ["kitten"] = new("aww ♥", 0.4f, 0),
         ["puppy"] = new("aww ♥", 0.4f, 0), ["dog"] = new("aww", 0.3f, 0), ["dogs"] = new("aww", 0.3f, 0),
         ["spider"] = new("eek!", -0.1f, 0.5f), ["spiders"] = new("eek!", -0.1f, 0.5f), ["snake"] = new("eek!", -0.1f, 0.45f),
@@ -121,8 +121,8 @@ sealed class ScreenSense : IDisposable
 
     public ScreenSense()
     {
-        _eyes = new Thread(EyesLoop) { IsBackground = true, Name = "StickFight eyes", Priority = ThreadPriority.BelowNormal };
-        _ears = new Thread(EarsLoop) { IsBackground = true, Name = "StickFight ears", Priority = ThreadPriority.BelowNormal };
+        _eyes = new Thread(EyesLoop) { IsBackground = true, Name = "Doodlefolk eyes", Priority = ThreadPriority.BelowNormal };
+        _ears = new Thread(EarsLoop) { IsBackground = true, Name = "Doodlefolk ears", Priority = ThreadPriority.BelowNormal };
         _eyes.SetApartmentState(ApartmentState.MTA);
         _ears.SetApartmentState(ApartmentState.MTA);
         _eyes.Start();

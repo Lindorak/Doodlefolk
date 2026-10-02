@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Combat on the body: attacks (poses + hit detection), blocking, hit-stun, health and
 /// poise (break it and you go flying), and ragdolls that bowl other figures over.</summary>

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Taking part in a town event: dancing and chatting at the festival; performing (or watching) at the talent
 /// show; racing (or cheering at the finish line) on race day.</summary>

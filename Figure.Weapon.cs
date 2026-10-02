@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Holding a weapon: drawn in the near hand along the forearm, swung in fights (the tip becomes the
 /// striking point), or aimed and fired.</summary>

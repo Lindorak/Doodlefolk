@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>One saved cast: everyone, their things, their pets and their balls.</summary>
 sealed class SavedCast
@@ -16,7 +16,7 @@ sealed class SavedCast
 
 /// <summary>Several casts side by side (save slots): keep the current cast under a name, start a fresh one, and
 /// switch between them. The current cast lives in settings.json as before; the others are files in
-/// %APPDATA%\StickFight\casts.</summary>
+/// %APPDATA%\Doodlefolk\casts.</summary>
 sealed partial class App
 {
     static string CastDir => Path.Combine(Path.GetDirectoryName(Settings.FilePath)!, "casts");

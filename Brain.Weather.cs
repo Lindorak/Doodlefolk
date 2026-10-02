@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Weather and time of day. Out in the rain they get wet: most look for shelter (a box or tent, an umbrella,
 /// or under a ledge), the playful dance in it. Snow means snowball fights and snowmen. Thunder scares the timid. Late

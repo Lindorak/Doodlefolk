@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Xunit;
 
-namespace StickFight.Tests;
+namespace Doodlefolk.Tests;
 
 /// <summary>Tests that use the data folder (run one at a time: they point it at a scratch folder).</summary>
 [CollectionDefinition("data", DisableParallelization = true)]

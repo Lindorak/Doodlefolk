@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Faces (eyes that look and blink, brows and a mouth that follow the mood), the turnaround swing, squash and
 /// stretch, drop shadows onto the window behind and motion smears.</summary>

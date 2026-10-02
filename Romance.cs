@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 enum Gender { Girl, Boy, Nonbinary }
 

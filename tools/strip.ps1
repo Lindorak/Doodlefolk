@@ -8,7 +8,7 @@ public static class Dpi { [DllImport("user32.dll")] public static extern bool Se
 [Dpi]::SetProcessDPIAware() | Out-Null
 $sheet = New-Object System.Drawing.Bitmap $W, ($H * $Frames)
 $gs = [System.Drawing.Graphics]::FromImage($sheet)
-if ($Cmd) { Set-Content "$env:TEMP\stickfight_cmd.txt" ($Cmd -replace '\|', "`n"); Start-Sleep -Milliseconds (80 + $DelayMs) }
+if ($Cmd) { Set-Content "$env:TEMP\doodlefolk_cmd.txt" ($Cmd -replace '\|', "`n"); Start-Sleep -Milliseconds (80 + $DelayMs) }
 for ($i = 0; $i -lt $Frames; $i++) {
   $bmp = New-Object System.Drawing.Bitmap $W, $H
   $g = [System.Drawing.Graphics]::FromImage($bmp)

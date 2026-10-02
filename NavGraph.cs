@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum MoveKind { Walk, Drop, Jump, Climb }
 

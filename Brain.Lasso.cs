@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A lasso: whoever's holding one twirls it over their head and ropes a friend (yanking them over, to much
 /// protest or laughter), a ball, or your cursor (which then gets spun round and flung; see App.Lasso).</summary>

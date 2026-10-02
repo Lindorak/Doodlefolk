@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Extra moves: kicks, juggling taps, carrying and throwing props, backflips,
 /// getting hit, and emote bubbles.</summary>

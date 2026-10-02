@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Things a figure can like or dislike.</summary>
 enum Thing

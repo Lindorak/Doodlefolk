@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  StickFight's checks, on your own PC: build, unit tests, Studio page tests, and the self-test (the real app,
+  Doodlefolk's checks, on your own PC: build, unit tests, Studio page tests, and the self-test (the real app,
   sped up and hidden, playing through every feature with its own throwaway data; your cast is never touched).
 
 .EXAMPLE
@@ -11,7 +11,7 @@ param([switch]$Quick)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$out = Join-Path $env:TEMP "StickFight-ci"
+$out = Join-Path $env:TEMP "Doodlefolk-ci"
 $results = [System.Collections.Generic.List[object]]::new()
 $sw = [Diagnostics.Stopwatch]::StartNew()
 
@@ -27,13 +27,13 @@ function Step($name, [scriptblock]$body) {
 Push-Location $root
 try {
     Step "Build" {
-        dotnet build StickFight.csproj -c Release -nologo -v q -o $out 2>&1 | Tee-Object -Variable log | Out-Null
+        dotnet build Doodlefolk.csproj -c Release -nologo -v q -o $out 2>&1 | Tee-Object -Variable log | Out-Null
         if ($LASTEXITCODE -ne 0) { $log | Select-String " error " | Select-Object -First 10 | ForEach-Object { Write-Host $_ }; throw "build failed" }
         $warn = @($log | Select-String "warning CS" | ForEach-Object { $_.ToString() } | Sort-Object -Unique)
         Write-Host "$($warn.Count) compiler warnings"
     }
     Step "Unit tests" {
-        dotnet test tests\StickFight.Tests -nologo -v q 2>&1 | Tee-Object -Variable log | Out-Null
+        dotnet test tests\Doodlefolk.Tests -nologo -v q 2>&1 | Tee-Object -Variable log | Out-Null
         $log | Select-String "Passed!|Failed!|\[FAIL\]" | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) { throw "unit tests failed" }
     }
@@ -45,8 +45,8 @@ try {
     }
     if (-not $Quick) {
         Step "Self-test" {
-            $data = Join-Path $env:TEMP "StickFight-selftest-ci"
-            $p = Start-Process (Join-Path $out "StickFight.exe") -ArgumentList "--selftest", "--data", "`"$data`"" -PassThru
+            $data = Join-Path $env:TEMP "Doodlefolk-selftest-ci"
+            $p = Start-Process (Join-Path $out "Doodlefolk.exe") -ArgumentList "--selftest", "--data", "`"$data`"" -PassThru
             if (-not $p.WaitForExit(600000)) { $p.Kill(); throw "the self-test didn't finish in 10 minutes" }
             $report = Join-Path $data "selftest-report.txt"
             # Keep the report and log beside the code (ci-output\, not committed) for a look afterwards.

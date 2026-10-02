@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Weapons in the brain: who picks them up, shooting from range in a fight, hunters shooting your
 /// cursor, and getting soaked by a water gun.</summary>

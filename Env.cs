@@ -1,8 +1,8 @@
 using System.Numerics;
 using System.Text;
-using static StickFight.Native;
+using static Doodlefolk.Native;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A horizontal surface a figure can stand on: the visible part of a window's top edge,
 /// or a monitor's floor (the top of the taskbar). Window edges are one-way; floors are solid.</summary>

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A present you gave a figure (something it asked for), remembered and brought up again later.</summary>
 sealed class Gift

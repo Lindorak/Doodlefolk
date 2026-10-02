@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum SkillKind { Juggling, Climbing, Fighting, Ball, Dancing, Drawing }
 enum Holiday { None, Halloween, Christmas, NewYear, Valentine }

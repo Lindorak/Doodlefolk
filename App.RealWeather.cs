@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Net.Http;
 using System.Text.Json;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Your real weather (opt-in): with the weather set to "real" and a place chosen, the sky follows the actual
 /// weather there (rain, storms, snow, clear) and figures feel the temperature. It uses Open-Meteo (free, no key): the

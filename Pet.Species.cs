@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Each animal's temperament: it colours everything from how quickly it bonds to how hard it is to train.</summary>
 enum Temperament { Easygoing, Shy, Bold, Lazy, Mischievous, Affectionate, Playful }

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A club: three or more friends who all like each other start one, named after what they love doing
 /// together. Members wear the club's colour as a bandana, meet up, and cheer each other on. Friends of the club can

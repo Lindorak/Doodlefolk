@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Graphics quality: soft shadows, drop shadows onto the windows behind, shading and highlights, faces and
 /// motion trails. Presets set everything at once; each part can also be changed on its own (the preset then reads

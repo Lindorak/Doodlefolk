@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Builders put up forts and treehouses: a building site goes down, the frame rises, the roof goes on, and
 /// the finished thing becomes somebody's home (the builder's, or a friend's who hasn't got one). Friends lend a hand.</summary>

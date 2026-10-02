@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The cursor hunter: a figure with a permanent grudge against you. It chases your cursor across
 /// windows, boxes it when it can reach, and throws whatever it can grab (balls, for now) at it when it can't.</summary>

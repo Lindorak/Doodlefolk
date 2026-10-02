@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Optional AI conversations (off by default). With an OpenAI API key (pasted into the Studio, where it's
 /// stored encrypted for your Windows account only, or from the OPENAI_API_KEY environment variable), figures answer

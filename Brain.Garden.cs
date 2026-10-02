@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Hobbies in action: collectors pick up trinkets they find (and show them off), gardeners plant seeds and
 /// keep them watered until they bloom.</summary>

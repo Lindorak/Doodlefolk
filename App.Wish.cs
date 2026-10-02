@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A figure's wish as a thought bubble over its head: a cloud with a little picture of the thing and a word or
 /// two. Click it and the thing drops in beside them; leave it and the thought fades.</summary>

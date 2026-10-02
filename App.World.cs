@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The world's slow rhythms: trinkets turning up for collectors, plants growing (and drying out), and the
 /// seasons (falling leaves, blossom, fireflies, pumpkins at Halloween, a tree at Christmas).</summary>

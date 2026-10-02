@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A figure pointing out a link. It only opens if you click the bubble.</summary>
 sealed class LinkOffer

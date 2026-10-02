@@ -1,5 +1,5 @@
 using System.Numerics;
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Bad habits a pet can learn to resist.</summary>
 enum Habit { ChaseBirds, ChasePets, FightPets, Scratching, KnockingThings, Noise, Soiling, Chewing }

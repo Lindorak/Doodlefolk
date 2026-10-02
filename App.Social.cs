@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Clubs and the news log saved between runs, figure-lit campfires put out in the morning, and stickers.</summary>
 sealed partial class App

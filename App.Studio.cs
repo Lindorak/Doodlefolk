@@ -2,7 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Bridge between the live world and the Studio page: pushes state a few times a second
 /// and applies the user's edits as they make them.</summary>

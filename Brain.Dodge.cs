@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Seeing things coming: balls and thrown figures on a course for this figure. It predicts where they'll
 /// cross its body and reacts in time (or doesn't): jump over low ones, duck high ones, dash aside, catch it,

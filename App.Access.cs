@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Quiet hours: on the chosen days, between the chosen times, everyone is hidden and the world is paused
 /// (as with "Hide the figures"), and comes back afterwards.</summary>

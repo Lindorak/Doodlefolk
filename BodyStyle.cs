@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 enum WalkStyle { Auto, Normal, Bouncy, Swagger, Sluggish, Sneaky, Stiff, March }
 enum RunStyle { Auto, Sprinter, Flailer, NinjaRun, Jogger, Tippy }

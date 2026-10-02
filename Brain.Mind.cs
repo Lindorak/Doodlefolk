@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The things a figure could do next, each with how much it wants to and a plain-English label.</summary>
 sealed class OptionList : IEnumerable<(float weight, Action act)>

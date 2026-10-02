@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Decides what a figure does. Needs (stamina, boredom, loneliness, annoyance) and personality
 /// weight a utility-style choice of goals; reactions to the cursor, other figures, balls and knocks

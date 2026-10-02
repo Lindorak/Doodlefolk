@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Likes and dislikes in action (Sims-style): tastes tilt choices, shared interests draw figures
 /// together, they react to things they love or hate, and each figure has its own relationship with the user.</summary>

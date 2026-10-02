@@ -1,6 +1,6 @@
-using static StickFight.Native;
+using static Doodlefolk.Native;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Borderless, topmost, non-activating window covering every monitor. Click-through
 /// everywhere except while the cursor is over a figure.</summary>
@@ -15,7 +15,7 @@ sealed class Overlay : Form
         StartPosition = FormStartPosition.Manual;
         Bounds = bounds;
         TopMost = true;
-        Text = "StickFight";
+        Text = "Doodlefolk";
     }
 
     protected override CreateParams CreateParams

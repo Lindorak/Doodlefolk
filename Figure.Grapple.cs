@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Grappling hook: spin it up, throw it onto a window's top edge, walk to the wall and climb the
 /// rope (walking up the wall, hauling hand over hand, or zipping up), mantle over, coil the rope away.

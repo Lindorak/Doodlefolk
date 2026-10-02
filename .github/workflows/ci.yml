@@ -1,4 +1,4 @@
-# StickFight's checks on GitHub (free for public repositories): the same script you can run at home,
+# Doodlefolk's checks on GitHub (free for public repositories): the same script you can run at home,
 # tools/ci.ps1. Runs on every push and pull request, and can be started by hand from the Actions tab.
 name: Checks
 

@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Things sitting still (most of the furniture, most of the time) are drawn once into two cached layers, one
 /// under the figures and one for the bits in front of them (chair backs, blankets), and each frame just copies the

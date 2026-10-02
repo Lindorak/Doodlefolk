@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A sparring tournament: everyone willing gathers at an arena on the floor, one bout at a time (knock the
 /// other down to win; a draw goes to whoever's less hurt), winners go through until there's a champion, who wears a

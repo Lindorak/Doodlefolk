@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Climbing window edges hand-over-hand, then mantling over the top onto the window.
 /// Each climbing "move" is a reach (one hand releases and grabs higher) followed by a pull (the body

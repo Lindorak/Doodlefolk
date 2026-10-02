@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using Xunit;
 
-namespace StickFight.Tests;
+namespace Doodlefolk.Tests;
 
 public class GifWriterTests
 {

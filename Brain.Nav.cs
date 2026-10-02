@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A point that stays attached to a window (or the floor) even if the window moves.</summary>
 readonly struct Anchor

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Using objects. Figures don't know "a bed", they know verbs (sit, lie, bounce, eat, hide...). Any object
 /// offering a verb is a candidate whenever the figure's needs, mood and tastes call for that verb.</summary>

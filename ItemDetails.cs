@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>What an object is made of, which decides its texture in the detailed art style.</summary>
 enum Material { Plain, Wood, Fabric, Metal, Plastic, Cardboard, Food, Paper }

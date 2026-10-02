@@ -1,7 +1,7 @@
-# Modding StickFight
+# Modding Doodlefolk
 
-Mods are plain JSON files in `%APPDATA%\StickFight\mods` (Studio → Settings → Mods → **Open the mods folder**).
-Every `.json` file there is loaded when StickFight starts. A file with a mistake is skipped, and the Studio shows
+Mods are plain JSON files in `%APPDATA%\Doodlefolk\mods` (Studio → Settings → Mods → **Open the mods folder**).
+Every `.json` file there is loaded when Doodlefolk starts. A file with a mistake is skipped, and the Studio shows
 what went wrong. Mods are data only: they can't run code.
 
 There's a working example in the folder, `example-mod.json.txt`. Rename it to end in `.json` and restart to try it.

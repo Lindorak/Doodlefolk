@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Speech.Recognition;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Talk to them out loud (opt-in): press the microphone button, say something, and Windows' own speech
 /// recognition, running on this PC, turns it into words. Nothing is sent anywhere. Say a figure's name to talk to

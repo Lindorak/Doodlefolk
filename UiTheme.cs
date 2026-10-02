@@ -2,7 +2,7 @@ using System.Numerics;
 using Microsoft.Win32;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The sketchbook look for everything drawn on the desktop (speech bubbles, link bubbles, scoreboards, health
 /// bars), matching the Studio: "paper" (cream card, dark ink) or "chalkboard" (dark slate, chalk-white). "Auto" follows

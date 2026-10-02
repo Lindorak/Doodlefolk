@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace StickFight.Tests;
+namespace Doodlefolk.Tests;
 
 public class CatalogTests
 {

@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Poses for using objects. Most are side-on like everything else; sitting in an armchair, on a couch or in
 /// a watching chair turns the figure to face out of (or into) the screen, which gives the desktop some depth.</summary>

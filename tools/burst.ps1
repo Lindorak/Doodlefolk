@@ -9,9 +9,9 @@ public static class Dpi { [DllImport("user32.dll")] public static extern bool Se
 $sheet = New-Object System.Drawing.Bitmap ($W * [Math]::Min($Frames, 4)), ($H * [Math]::Ceiling($Frames / 4))
 $gs = [System.Drawing.Graphics]::FromImage($sheet)
 # Optional debug command, sent once everything is loaded so frame 0 lines up with it.
-if ($Cmd) { Set-Content "$env:TEMP\stickfight_cmd.txt" ($Cmd -replace '\|', "`n"); Start-Sleep -Milliseconds (80 + $DelayMs) }
+if ($Cmd) { Set-Content "$env:TEMP\doodlefolk_cmd.txt" ($Cmd -replace '\|', "`n"); Start-Sleep -Milliseconds (80 + $DelayMs) }
 for ($i = 0; $i -lt $Frames; $i++) {
-  $s = Get-Content "$env:TEMP\stickfight_state.json" -Raw | ConvertFrom-Json
+  $s = Get-Content "$env:TEMP\doodlefolk_state.json" -Raw | ConvertFrom-Json
   $f = if ($Name) { $s.figures | Where-Object Name -eq $Name | Select-Object -First 1 } else { $s.figures[0] }
   $cx = ($f.bbox[0] + $f.bbox[2]) / 2; $cy = ($f.bbox[1] + $f.bbox[3]) / 2
   $x = [int]($cx - $W / 2); $y = [int]($cy - $H / 2)

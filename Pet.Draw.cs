@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Drawing: cats and dogs in every pose (walking, sitting, curled up asleep, crouched to stalk, head down at
 /// the bowl, squatting, cocking a leg, grooming, stretching, play-bowing, belly up for a rub, arched and hissing,

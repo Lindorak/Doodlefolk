@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Things out in the world: vehicles (wheels that turn as they're ridden), water (a pond with ducks and lily
 /// pads, a pool; swimmers show through the water), and lights (a lamp, fairy lights, a lantern, and homes whose windows

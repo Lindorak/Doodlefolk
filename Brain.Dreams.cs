@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Dreams: while asleep a figure dreams (a little cloud over its head) about its own life: what it loves, its
 /// crush, its pet, a party, you; a rival or a bad fall turns it into a nightmare, and it wakes with a start. In the

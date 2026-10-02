@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Procedural animation. Each action produces pose targets in "facing space" (+x = forward);
 /// springs smooth everything in world space so transitions and turns blend naturally.

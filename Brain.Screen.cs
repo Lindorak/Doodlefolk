@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Reacting to what's on your screen: walking over to words they know (and loving, hating or being scared
 /// of them), pointing out links (which only open if you click the bubble), grooving when music plays and sitting

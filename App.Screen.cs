@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Screen awareness on the app side: starts the background reader, turns text into ledges every frame, and
 /// shows the link bubble a figure raises. A link only ever opens when you click its bubble.</summary>

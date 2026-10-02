@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Babies arriving and growing up, home flags, and the tournament board.</summary>
 sealed partial class App

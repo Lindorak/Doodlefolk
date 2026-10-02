@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Body weight, drawn properly. At a healthy weight a figure is the classic stick; as it gets heavier the
 /// torso fills out into a real shape (a rounder back, a belly that bulges forward, or out to both sides when it faces

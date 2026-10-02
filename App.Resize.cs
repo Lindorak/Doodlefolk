@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Resizing things like windows (the fish tank): drag a side edge to make it wider or narrower, the top edge
 /// to make it taller or shorter, or a top corner for both. The bottom stays on whatever it's standing on.</summary>

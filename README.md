@@ -1,4 +1,4 @@
-﻿# StickFight
+﻿# Doodlefolk
 
 Stick figures that live on your Windows desktop. They walk along your taskbar, jump between windows,
 climb window edges (or throw a grappling hook up them), nap, chat, dance and high-five each other, play
@@ -8,7 +8,7 @@ about **you**, built from how you treat it.
 
 > Early preview (v0.4). Windows 10/11, 64-bit.
 
-![The StickFight Studio](docs/studio-cast.png)
+![The Doodlefolk Studio](docs/studio-cast.png)
 
 ## Why this exists
 
@@ -17,7 +17,7 @@ breaks loose on someone's desktop and starts fighting back. I always wanted one 
 my own screen. So I set out to see whether Claude could help turn that childhood memory into real,
 working software: I described what I remembered and what I wanted it to feel like, and Claude
 designed and built it with me, from the physics and animation to the personalities and fights, while I
-played with every build and kept pushing for more life in it. StickFight is the result: a little world of
+played with every build and kept pushing for more life in it. Doodlefolk is the result: a little world of
 stick figures that treats your real desktop as their playground, climbing your windows, playing with
 your cursor, and settling their differences in fights.
 
@@ -26,18 +26,18 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v1.1.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
-2. Unzip it anywhere and run `StickFight.exe`. It runs from wherever you put it; if you'd like it in the Start menu
-   (and in Installed apps, to remove it the usual way), click **Install StickFight** in Studio â†’ Settings. No admin
+1. Grab `Doodlefolk-v1.1.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/Doodlefolk/releases/latest).
+2. Unzip it anywhere and run `Doodlefolk.exe`. It runs from wherever you put it; if you'd like it in the Start menu
+   (and in Installed apps, to remove it the usual way), click **Install Doodlefolk** in Studio â†’ Settings. No admin
    rights needed, and your figures come along.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed (that needs a paid code-signing
    certificate): click **More info â†’ Run anyway**.
 
-StickFight checks GitHub once a day for a newer version and offers it in the Studio; updating is one click (you can
+Doodlefolk checks GitHub once a day for a newer version and offers it in the Studio; updating is one click (you can
 switch the check off).
 
 A figure appears and sketches itself onto your screen. Everything else lives in the **tray icon**
-(bottom-right, near the clock): **left-click** it for the **StickFight Studio**, **right-click** for a quick
+(bottom-right, near the clock): **left-click** it for the **Doodlefolk Studio**, **right-click** for a quick
 panel (draw a figure, toss in a toy, hide them, quit).
 
 ## What you can do
@@ -108,9 +108,9 @@ panel (draw a figure, toss in a toy, hide them, quit).
   (touch the ball to catch it and send it back). Or hold a **tournament**: a sparring bracket on the floor,
   the others cheering, and a crown for the champion.
 - **Photo mode**: everyone squeezes in, says cheese, and you get an instant-photo-style picture in
-  `Pictures\StickFight` (if your Pictures folder syncs to OneDrive, so do the photos).
+  `Pictures\Doodlefolk` (if your Pictures folder syncs to OneDrive, so do the photos).
 - **Record a clip**: ten seconds of everyone as an animated GIF (just them and their things, drawn on paper; never
-  what's on your screen), saved to `Pictures\StickFight`.
+  what's on your screen), saved to `Pictures\Doodlefolk`.
 - **Talk out loud** (opt-in): press ðŸŽ¤ and speak. Say a name and what to tell them ("Sparky, come here"), ask for
   something ("make a pizza"), or call for a race, a photo or some snow. Windows' own speech recognition, on your PC.
 - **AI conversations** (opt-in, your own OpenAI key): figures answer what you say with a language model, in
@@ -208,10 +208,10 @@ powershell -ExecutionPolicy Bypass -File tools\ci.ps1 -Quick   # without the sel
 powershell -ExecutionPolicy Bypass -File tools\install-hooks.ps1   # run the quick checks before every git push
 ```
 
-- **Unit tests** (`tests/StickFight.Tests`, xUnit): the GIF encoder, mods (JSON and SVG), the object catalogue,
+- **Unit tests** (`tests/Doodlefolk.Tests`, xUnit): the GIF encoder, mods (JSON and SVG), the object catalogue,
   settings saving and loading, quiet hours, reminders, weather codes.
 - **Studio tests** (`tests/studio.test.mjs`, Node): the calendar (.ics) import.
-- **Self-test** (`StickFight.exe --selftest`): the real app, hidden and sped up six times, with its own throwaway
+- **Self-test** (`Doodlefolk.exe --selftest`): the real app, hidden and sped up six times, with its own throwaway
   data (your cast is never touched). It plays through every feature (jobs, building, rides, swimming, fishing, each
   town event with people leaving mid-way, resizing, casts, clips, reminders, voice commands, mods, calm mode) while
   checking that nothing breaks, then writes `selftest-report.txt` and exits 0 or 1. It runs without a graphics card too.
@@ -251,12 +251,12 @@ The same checks run on GitHub (free for public repositories) on every push: see 
 | `Brain*.cs` | Needs, decisions (`Brain.Mind`), route following, social life, romance, wishes, screen reactions, tastes, feelings about you, ball play, sports, fighting, skills and celebrations (`Brain.Life`), games, talking, homes and families |
 | `Fight.cs` | Colour relationships, gear, and the move list |
 | `Prop.cs` | Ball physics and drawing |
-| `Settings.cs` | Persisted preferences, cast and library (`%APPDATA%\StickFight\settings.json`) |
+| `Settings.cs` | Persisted preferences, cast and library (`%APPDATA%\Doodlefolk\settings.json`) |
 
 ### Debug tools
 
-With `--debug`, the app writes `%TEMP%\stickfight_state.json`, logs events to
-`%TEMP%\stickfight_events.log`, and runs commands written to `%TEMP%\stickfight_cmd.txt` (one per
+With `--debug`, the app writes `%TEMP%\doodlefolk_state.json`, logs events to
+`%TEMP%\doodlefolk_events.log`, and runs commands written to `%TEMP%\doodlefolk_cmd.txt` (one per
 line), e.g. `spawn blue hothead`, `ball SoccerBall`, `rel Red Blue Enemies`, `Red fight Blue`,
 `Red spar Blue`, `Red juggle`, `Red chat Blue`, `Red flip`, `Red climb`, `place Red 1500 2000`,
 `fling Red 1800 -2000`, `Red grapple`, `Red dance Blue`, `taste Red Dancing 1`, `fond Red -0.8`,
@@ -267,7 +267,7 @@ sees), `screengo Red word|link|watch|groove`, `wish Red`, `love Red Blue 0.8`, `
 `game catch|tag|hideseek [Name] [quick]` / `game stop`, `photo`, `tourney`, `party Red`, `holiday halloween|none`,
 `back 3600` (pretend you were away), `home Red`, `baby Red Blue`, `grow Red 0.5`, `remove Red`, `summon a kitten`,
 `pets` (needs report), `petset Name hunger 0.9`, `petop Name treat|sit|come|leash|spraynow`, `petmode on|off`,
-`weight Red 0.8`, `season autumn`, `garden 1`, `trinket`, `snap [Name]` (offscreen picture to `%TEMP%\stickfight_snap.png`), `clear`, `exit`.
+`weight Red 0.8`, `season autumn`, `garden 1`, `trinket`, `snap [Name]` (offscreen picture to `%TEMP%\doodlefolk_snap.png`), `clear`, `exit`.
 `tools\burst.ps1` captures a contact sheet of frames around a figure; `tools\winshot.ps1` captures
 one of the app's windows; `tools\printwin.ps1` captures the Studio even when it's covered.
 

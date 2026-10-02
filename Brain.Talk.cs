@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Text.RegularExpressions;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Talk to them: type something in their right-click menu and they answer in their own voice, from how they
 /// feel, what they like and who they know. All local: simple keyword understanding, no AI and nothing sent anywhere.</summary>

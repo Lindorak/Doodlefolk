@@ -11,8 +11,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefaultItemExcludes>$(DefaultItemExcludes);tests/**;publish/**;dist/**</DefaultItemExcludes>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <RootNamespace>StickFight</RootNamespace>
-    <AssemblyName>StickFight</AssemblyName>
+    <RootNamespace>Doodlefolk</RootNamespace>
+    <AssemblyName>Doodlefolk</AssemblyName>
     <Version>1.1.0</Version>
     <PublishDocumentationFiles>false</PublishDocumentationFiles>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
@@ -20,7 +20,7 @@
     <PublishReadyToRun>true</PublishReadyToRun>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
-    <Product>StickFight</Product>
+    <Product>Doodlefolk</Product>
     <Description>Stick figures that live, play and fight on your Windows desktop.</Description>
   </PropertyGroup>
 
@@ -39,7 +39,7 @@
     <EmbeddedResource Include="Studio\web\**\*" Exclude="Studio\web\mock-*" LogicalName="studio/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="StickFight.Tests" />
+    <InternalsVisibleTo Include="Doodlefolk.Tests" />
   </ItemGroup>
 
 </Project>

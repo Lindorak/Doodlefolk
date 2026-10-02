@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Reacting to things happening on the desktop: riding a window you drag (thrill-seekers love it, the timid
 /// hang on for dear life), being shaken off one, the window under them vanishing, you finishing a long stretch of

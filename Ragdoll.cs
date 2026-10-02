@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>What a figure does while you're holding it.</summary>
 enum HeldMood { Limp, Flail, Fight, Happy, Grumpy, Wriggle }

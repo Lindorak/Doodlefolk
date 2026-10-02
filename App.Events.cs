@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Desktop happenings the figures react to: you finishing a stretch of typing (worked out from the time of the
 /// last input and whether the mouse moved; keys are never read) and notification pop-ups.</summary>
@@ -26,7 +26,7 @@ sealed partial class App
             case "open":
                 _testWin?.Close();
                 _testX = int.Parse(p[2]); _testY = int.Parse(p[3]);
-                _testWin = new Form { Text = "StickFight test window", StartPosition = FormStartPosition.Manual, ShowInTaskbar = false,
+                _testWin = new Form { Text = "Doodlefolk test window", StartPosition = FormStartPosition.Manual, ShowInTaskbar = false,
                                       Bounds = new Rectangle(_testX, _testY, p.Length > 4 ? int.Parse(p[4]) : 700, p.Length > 5 ? int.Parse(p[5]) : 400) };
                 _testWin.Show();
                 break;

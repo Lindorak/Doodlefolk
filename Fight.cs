@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>How two colours get along.</summary>
 enum Relation { Default = -1, Friends, Neutral, Rivals, Enemies, Ignore }

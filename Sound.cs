@@ -3,7 +3,7 @@ using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum Sfx
 {

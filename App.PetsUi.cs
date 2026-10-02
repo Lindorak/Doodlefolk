@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Text.Json;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Pets in the Studio, the right-click menu and the quick panel: their needs, mood, weight and training, and
 /// the things you can do for (and with) them.</summary>

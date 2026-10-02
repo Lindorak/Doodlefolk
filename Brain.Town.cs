@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>What a figure does for a living.</summary>
 enum Job { None, Shopkeeper, Chef, Builder, Entertainer, Teacher }
@@ -60,7 +60,7 @@ sealed partial class Brain
 
     /// <summary>Years of age: figures born here count up from childhood, everyone else from twenty, at the life pace.</summary>
     public float AgeYears => ParentIds.Count > 0 && Baby ? 3 + Grown * 15 : (ParentIds.Count > 0 ? 18 : 20) + AgeBank;
-    /// <summary>Years lived since it grew up (or since ageing was switched on): counted while StickFight runs.</summary>
+    /// <summary>Years lived since it grew up (or since ageing was switched on): counted while Doodlefolk runs.</summary>
     public float AgeBank;
     DateTime _ageTick = DateTime.Now;
 

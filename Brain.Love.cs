@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Romance, on top of friendship. Love (0..1) grows toward friends a figure is attracted to while they spend
 /// time together, faster doing things side by side; hurting someone kills it. A crush makes them blush, seek the other

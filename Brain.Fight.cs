@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Fighting: who picks fights with whom (colour rules + personality + grudges), footwork and
 /// spacing, choosing attacks, blocking/dodging, fleeing when hurt, celebrating, friends joining in,

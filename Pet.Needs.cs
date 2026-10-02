@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>What a pet is asking for (shown in a little thought bubble).</summary>
 enum PetNeed { None, Food, Water, Potty, Walk, Attention, Play, Sleep }

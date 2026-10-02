@@ -4,14 +4,14 @@ using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
-namespace StickFight;
+namespace Doodlefolk;
 
-/// <summary>The StickFight Studio: a borderless window (native shadow, snapping and rounded corners kept)
+/// <summary>The Doodlefolk Studio: a borderless window (native shadow, snapping and rounded corners kept)
 /// hosting the hand-drawn web UI. The page draws its own title bar; dragging uses CSS app-region and
 /// resizing is driven from the page's edges.</summary>
 sealed class StudioWindow : Form
 {
-    const string Host = "https://studio.stickfight/";
+    const string Host = "https://studio.doodlefolk/";
     readonly WebView2 _web;
     readonly Action<JsonElement> _onMessage;
     readonly bool _debug;
@@ -34,7 +34,7 @@ sealed class StudioWindow : Form
         _quick = quick;
         _pop = pop;
         _page = pop ? "pop.html" : quick ? "quick.html" : "index.html";
-        Text = "StickFight Studio";
+        Text = "Doodlefolk Studio";
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -78,15 +78,15 @@ sealed class StudioWindow : Form
     {
         try
         {
-            string data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StickFight", "WebView2");
+            string data = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Doodlefolk", "WebView2");
             var env = await CoreWebView2Environment.CreateAsync(null, data);
             await _web.EnsureCoreWebView2Async(env);
         }
         catch (Exception e)
         {
             World.Log($"Studio: WebView2 unavailable: {e.Message}");
-            MessageBox.Show(this, "StickFight Studio needs the Microsoft Edge WebView2 Runtime, which comes with Windows 11.\n\n" + e.Message,
-                            "StickFight", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(this, "Doodlefolk Studio needs the Microsoft Edge WebView2 Runtime, which comes with Windows 11.\n\n" + e.Message,
+                            "Doodlefolk", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             Close();
             return;
         }

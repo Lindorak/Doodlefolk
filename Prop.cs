@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 enum PropKind { Ball, SoccerBall, Basketball, BeachBall, TennisBall, Shuttlecock }
 

@@ -1,4 +1,4 @@
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>One line in a figure's diary.</summary>
 sealed class DiaryEntry

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>A town event in progress: a festival, a talent show or a race day.</summary>
 sealed class Happening

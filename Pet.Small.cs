@@ -1,7 +1,7 @@
 using System.Numerics;
 using Vortice.Mathematics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>The little ones. Rabbits hop, flop into a loaf, thump a back foot when alarmed, binky (leap and twist)
 /// when happy, use a litter box, and nibble whatever's green (the garden!). Hamsters are tiny, sleep the day away and

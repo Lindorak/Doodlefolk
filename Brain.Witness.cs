@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace StickFight;
+namespace Doodlefolk;
 
 /// <summary>Something one figure (or you, when actor is null) did to another.</summary>
 enum SocialAct { Hurt, Help, Kind }

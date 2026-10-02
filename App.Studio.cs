@@ -169,6 +169,7 @@ sealed partial class App
         historyCount = _settings.History.Count + _settings.Memorials.Count * 1000 + _w.Figures.Count * 100000,
         toybox = ToyboxState(),
         modContent = ModContentState(),
+        stream = StreamState(),
         songs = SongState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -508,6 +509,13 @@ sealed partial class App
                     }
                     _settings.Save();
                     break;
+                case "streamCmd":
+                {
+                    string g = Str(m, "group");
+                    if (g is "join" or "moves" or "weather" or "events") { if (m.GetProperty("v").GetBoolean()) _settings.StreamCommands.Add(g); else _settings.StreamCommands.Remove(g); _settings.Save(); }
+                    break;
+                }
+                case "streamView": ToggleStreamView(); break;
                 case "modchar": PostAll(new { t = "toast", text = SpawnModCharacter(m.TryGetProperty("index", out var mci) ? mci.GetInt32() : -1) }); break;
                 case "scenario": PostAll(new { t = "toast", text = StartScenario(Str(m, "key")) }); break;
                 case "checkmod":
@@ -861,6 +869,12 @@ sealed partial class App
                 PostAll(new { t = "toast", text = ApplyLayout() });
                 break;
             case "stripHeight": _settings.StripHeight = Math.Clamp(v.GetInt32(), 110, 400); if (_settings.TownLayout == "strip") ApplyLayout(); break;
+            case "streamOn": _settings.StreamOn = v.GetBoolean(); _settings.Save(); StartStream(); break;
+            case "streamChannel": _settings.StreamChannel = (v.GetString() ?? "").Trim(); _settings.Save(); StartStream(); break;
+            case "streamBubbles": _settings.StreamBubbles = v.GetBoolean(); break;
+            case "streamMax": _settings.StreamMaxViewers = Math.Clamp(v.GetInt32(), 1, 12); break;
+            case "streamCooldown": _settings.StreamCooldown = Math.Clamp(v.GetInt32(), 10, 3600); break;
+            case "streamKey": _settings.StreamKey = v.GetString() is "magenta" or "blue" ? v.GetString()! : "green"; break;
             case "devHooks": _settings.DevHooks = v.GetBoolean(); _settings.Save(); StartDevHooks(); break;
             case "internetMemes": _settings.InternetMemes = v.GetBoolean(); break;
             case "realMemes": _settings.RealMemes = v.GetBoolean(); if (_settings.RealMemes) _settings.InternetMemes = true; break;

@@ -109,6 +109,7 @@ sealed partial class App : ApplicationContext
         _w.MakePet = k => SpawnPet(k, quiet: true);
         InitSocial();
         StartDevHooks();
+        StartStream();
         if (_settings.TownLayout != "desktop") ApplyLayout();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
@@ -310,6 +311,7 @@ sealed partial class App : ApplicationContext
         ToyboxFrame(now);
         PrankFrame(now);
         DevHookFrame(now);
+        StreamFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -1358,6 +1360,10 @@ sealed partial class App : ApplicationContext
                 }
                 case "meme": _memeAt = 0; _memeReady = null; World.Log("meme: making one; context " + string.Join(",", MemeNow().Tags)); break;
                 case "layout": _settings.TownLayout = p.Length > 1 ? p[1] : "desktop"; World.Log("layout: " + ApplyLayout()); break;
+                case "chat":
+                    // chat <user> <text…>: pretend a Twitch chatter said it.
+                    if (p.Length > 2) _chat.Enqueue(new ChatLine(p[1].ToLowerInvariant(), p[1], "", string.Join(' ', p.Skip(2)), false, false));
+                    break;
                 case "dev": World.Log("dev: " + DevReact(p.Length > 1 ? p[1] : "build-passed", p.Length > 2 ? string.Join(' ', p.Skip(2)) : "")); break;
                 case "toy": World.Log("toy: " + Toybox(p.Length > 1 ? p[1] : "")); break;
                 case "ghost": World.Log("ghost: " + (_settings.Memorials.LastOrDefault() is { } gm ? GhostOf(gm) : "nobody to remember")); break;
@@ -1571,6 +1577,7 @@ sealed partial class App : ApplicationContext
             _sre?.Dispose();
             SteamHub.Shutdown();
             StopDevHooks();
+            _twitch?.Dispose();
             _w.Screen?.Dispose();
         }
         base.Dispose(disposing);

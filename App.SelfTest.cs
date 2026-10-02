@@ -219,6 +219,19 @@ sealed partial class App
             Check("cast name clash refused", SwitchCast("QA two", true).StartsWith("There's already"));
         });
         At(545, "reminder", () => AddReminder("selftest reminder", DateTime.Now.AddSeconds(2), "none"));
+        At(548, "chat joins", () =>
+        {
+            _settings.StreamOn = true;
+            foreach (var t in new[] { "!join", "hello everyone http://spam.example", "!dance", "!weather snow" }) _chat.Enqueue(new ChatLine("qaviewer", "QAViewer", "#9146FF", t, false, false));
+        });
+        At(549.5, "chat in town", () =>
+        {
+            var v = _w.Figures.FirstOrDefault(f => f.Visitor == VisitorKind.Viewer);
+            Check("a chatter can join the town and talk", v != null && v.Name == "QAViewer" && _viewers.ContainsKey("qaviewer"), v?.CurrentEmote ?? "nobody");
+            Check("links in chat are hidden and weather isn't allowed by default", !(_w.Figures.Any(f => f.CurrentEmote?.Contains("spam.example") == true)) && !_w.Weather.Snowing);
+            _chat.Enqueue(new ChatLine("qaviewer", "QAViewer", "", "!leave", false, false));
+        });
+        At(551, "chat leaves", () => { Check("…and leave", !_w.Figures.Any(f => f.Visitor == VisitorKind.Viewer)); _settings.StreamOn = false; });
         At(560, "voice", () =>
         {
             int items = _w.Items.Count;

@@ -215,6 +215,17 @@ sealed class Settings
     public bool DevHooks { get; set; }
     /// <summary>"desktop" (everywhere), "strip" (a taskbar village) or "wallpaper" (behind your windows).</summary>
     public string TownLayout { get; set; } = "desktop";
+    /// <summary>Stream mode: your Twitch chat can join the town (read anonymously; no account needed).</summary>
+    public bool StreamOn { get; set; }
+    public string StreamChannel { get; set; } = "";
+    /// <summary>What chat may do: "join", "moves" (wave, dance, jump, hats), "weather", "events".</summary>
+    public HashSet<string> StreamCommands { get; set; } = new() { "join", "moves" };
+    public bool StreamBubbles { get; set; } = true;
+    public int StreamMaxViewers { get; set; } = 6;
+    public int StreamCooldown { get; set; } = 120;
+    public int StreamIdleMinutes { get; set; } = 15;
+    /// <summary>The stream view's background, for OBS's chroma key: "green", "magenta" or "blue".</summary>
+    public string StreamKey { get; set; } = "green";
     /// <summary>How tall the taskbar village is (at 100% scale).</summary>
     public int StripHeight { get; set; } = 170;
     /// <summary>Memes made from classic templates (pictures from imgflip.com) with captions that fit the moment.</summary>

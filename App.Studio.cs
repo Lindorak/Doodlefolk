@@ -151,6 +151,8 @@ sealed partial class App
         }),
         pets = _w.Pets.Select(PetJson),
         sprayTool = _sprayTool,
+        paper = Paper(),
+        stickers = StickerBook(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -345,6 +347,7 @@ sealed partial class App
                         PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
+                case "sticker": if (Str(m, "key") == "paper") _w.Sticker("paper"); break;
                 case "tourney": PostAll(new { t = "toast", text = StartTourney() }); break;
                 case "adopt":
                     if (Enum.TryParse<PetKind>(Str(m, "kind"), true, out var ak)) { var np = AdoptPet(ak, m.TryGetProperty("young", out var yg) && yg.ValueKind == JsonValueKind.True); PostAll(new { t = "toast", text = $"Meet {np.Name} the {np.Species()}!" }); }

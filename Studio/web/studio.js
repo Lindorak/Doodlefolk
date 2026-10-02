@@ -300,7 +300,7 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", settings: "Settings" };
+  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", stickers: "Sticker book", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
@@ -907,6 +907,41 @@ PAGES.pets = {
       });
     }
     return () => ups.forEach(u => u());
+  },
+};
+
+
+// ---------------- The Stick Times ----------------
+
+PAGES.paper = {
+  sig: () => S.paper ? JSON.stringify([S.paper.lead, S.paper.sections.map(s => s.items.length)]) : "",
+  build(root) {
+    send({ t: "sticker", key: "paper" });
+    const p = S.paper;
+    if (!p) { add(root, h("p", { class: "sub" }, "The presses are warming up…")); return; }
+    const paper = h("div", { class: "paper" });
+    add(root, paper);
+    paper.append(
+      h("div", { class: "masthead" }, h("div", { class: "mast-title" }, "The Stick Times"), h("div", { class: "mast-line" }, h("span", null, p.date), h("span", null, `Edition ${p.edition}`), h("span", null, `Weather: ${p.weather}`))),
+      p.lead ? h("div", { class: "lead" }, h("div", { class: "lead-kicker" }, "This week"), h("h1", { class: "headline" }, p.lead.text)) : h("div", { class: "lead" }, h("h1", { class: "headline" }, "A quiet week on the desktop"), h("p", { class: "sub" }, "Nothing much happened. Give it time (or throw a party).")),
+      h("div", { class: "columns" },
+        h("div", { class: "col-main" }, ...p.sections.map(s => h("section", { class: "desk" }, h("h2", null, s.name), h("ul", { class: "stories" }, s.items.map(i => h("li", null, h("span", null, i.text), h("span", { class: "ago" }, i.when))))))),
+        h("aside", { class: "col-side" }, ...p.features.map(f => h("div", { class: "box" }, h("h3", null, f.title), h("p", null, f.text))),
+          h("div", { class: "box" }, h("h3", null, "By the numbers"), h("ul", { class: "nums" }, p.numbers.map(n => h("li", null, n)))))));
+  },
+};
+
+// ---------------- Sticker book ----------------
+
+PAGES.stickers = {
+  sig: () => (S.stickers || []).filter(s => s.got).length + "",
+  build(root) {
+    const all = S.stickers || [], got = all.filter(s => s.got).length;
+    add(root, h("h1", null, "Sticker book"), h("p", { class: "sub" }, `${got} of ${all.length} collected. Stickers come from things you do, and things you see happen.`));
+    const grid = h("div", { class: "stickers" });
+    for (const s of all)
+      grid.append(h("div", { class: "sticker" + (s.got ? " got" : "") }, h("div", { class: "art" }, s.got ? s.art : "?"), h("div", { class: "st-title" }, s.got ? s.title : "???"), h("div", { class: "hint" }, s.got ? `Got it ${s.got}` : s.hint)));
+    add(root, grid);
   },
 };
 

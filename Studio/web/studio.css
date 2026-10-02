@@ -398,6 +398,32 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .pop-reply { margin: -2px 0 6px; min-height: 0; font-family: var(--hand, inherit); }
 .pop-reply:empty { display: none; }
 .q-games { flex-wrap: wrap; gap: 6px; }
+/* The Stick Times */
+.paper { max-width: 920px; }
+.masthead { text-align: center; border-bottom: 3px double var(--ink); padding-bottom: 6px; margin-bottom: 14px; }
+.mast-title { font: 46px var(--hand); letter-spacing: 1px; line-height: 1.1; }
+.mast-line { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--pencil); border-top: 1.5px solid var(--ink); margin-top: 6px; padding-top: 4px; gap: 10px; flex-wrap: wrap; }
+.lead { border-bottom: 1.5px dashed var(--faint); padding-bottom: 10px; margin-bottom: 12px; }
+.lead-kicker { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); }
+.headline { font: 32px var(--hand); margin: 4px 0; line-height: 1.15; }
+.columns { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+@media (max-width: 720px) { .columns { grid-template-columns: 1fr; } }
+.desk h2 { font: 20px var(--hand); border-bottom: 1.5px solid var(--ink); margin: 6px 0 6px; }
+.stories { list-style: none; padding: 0; margin: 0 0 12px; }
+.stories li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dotted var(--faint); font-size: 14px; }
+.col-side .box { border: 1.5px solid var(--ink); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; }
+.col-side .box h3 { margin: 0 0 4px; font: 16px var(--hand); }
+.col-side .box p { margin: 0; font-size: 13.5px; }
+.nums { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+.nums li { padding: 2px 0; }
+/* Sticker book */
+.stickers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.sticker { border: 1.5px dashed var(--faint); border-radius: 12px; padding: 12px 10px; text-align: center; opacity: 0.6; }
+.sticker.got { border: 1.5px solid var(--ink); opacity: 1; transform: rotate(-1deg); box-shadow: 2px 3px 0 rgba(0,0,0,0.08); }
+.sticker:nth-child(even).got { transform: rotate(1.2deg); }
+.sticker .art { font-size: 40px; line-height: 1.2; height: 50px; }
+.sticker:not(.got) .art { font: 34px var(--hand); color: var(--pencil); }
+.st-title { font: 16px var(--hand); margin: 4px 0 2px; }
 .pop-foot { margin-top: 6px; padding-top: 8px; border-top: 1.5px dashed var(--faint); gap: 6px; align-items: center; }
 .row.tight { gap: 4px; align-items: center; flex-wrap: wrap; }
 .btn.icon { min-width: 30px; padding-left: 6px; padding-right: 6px; font-size: 16px; line-height: 1; }

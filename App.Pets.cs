@@ -156,7 +156,6 @@ sealed partial class App
         _sprayNote = notes[0];
         _sprayNoteUntil = now + 4;
         PostAll(new { t = "toast", text = notes[0] });
-        foreach (var p in hit) if (p.Habits.Any(h => p.R(h) >= 0.75f)) _w.Sticker("trained");
     }
 
     RectangleF? SprayRect()

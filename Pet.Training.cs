@@ -127,7 +127,9 @@ sealed partial class Pet
         if (_misdeed is { } md && now - md.at <= 3)
         {
             float q = 1 - (float)(now - md.at) / 3 * 0.6f;
+            float before = R(md.h);
             Learn(md.h, 0.16f * q);
+            if (before < 0.75f && R(md.h) >= 0.75f) { w.Sticker("trained"); Log($"Learned: {HabitGood(md.h).ToLowerInvariant()}"); }
             Stress = M.Clamp01(Stress + 0.12f);
             UserBond = MathF.Max(-1, UserBond - 0.005f);
             _misdeed = null;

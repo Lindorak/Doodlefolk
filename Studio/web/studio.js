@@ -1183,6 +1183,7 @@ PAGES.settings = {
     const careChips = [["relaxed", "Relaxed"], ["normal", "Normal"], ["realistic", "Realistic"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("petCare", k); } }, l); c.key = k; return c; });
     const staminaC = check("Stamina", "Everyone (figures and animals) gets out of puff with running, chasing and fighting, and needs to catch their breath.", () => st().stamina !== false, v => setS("stamina", v));
     const weightC = check("Weight", "Eating too much (and treats!) makes them chubbier, exercise slims them down. Heavier means slower and quicker to tire.", () => st().weight !== false, v => setS("weight", v));
+    const lassoC = check("Figures can lasso your cursor", "A figure with a lasso may rope your cursor, spin it round and fling it. Only when you've left the mouse alone for a few seconds; move it yourself and it breaks free.", () => st().lassoCursor !== false, v => setS("lassoCursor", v));
     const petHelpC = check("Figures help with the pets", "Your figures fill empty bowls and scoop the litter box now and then.", () => st().petHelp !== false, v => setS("petHelp", v));
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
@@ -1218,7 +1219,7 @@ PAGES.settings = {
       petMode,
       h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
-      staminaC, weightC, petHelpC,
+      staminaC, weightC, petHelpC, lassoC,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1240,7 +1241,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); lassoC.update();
       careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
     };
   },

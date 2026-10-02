@@ -140,6 +140,8 @@ sealed class Settings
     public bool WeightOn { get; set; } = true;
     /// <summary>Figures help look after the pets (fill bowls, scoop the litter box).</summary>
     public bool PetHelp { get; set; } = true;
+    /// <summary>Figures with a lasso may rope your cursor (only when you've left the mouse alone; moving it breaks free).</summary>
+    public bool LassoCursor { get; set; } = true;
     public DateTime? LastSeen { get; set; }
     public int WishesGranted { get; set; }
     public List<SavedClub> Clubs { get; set; } = new();

@@ -23,6 +23,7 @@ enum Verb
     Play,       // sports gear: goals, hoops, nets (figures organise games around it)
     Create,     // the Creator's Pencil: whoever holds it can draw things into the world
     Shelter,    // umbrella: carry it and stay dry
+    Lasso,      // lasso: carry it, twirl it, rope a friend, a ball or your cursor
 }
 
 enum Ammo { Dart, Water, Snow }
@@ -202,6 +203,13 @@ static class ItemCatalog
             Key = "campfire", Name = "Campfire", Words = new[] { "campfire", "camp fire", "fire", "bonfire", "fireplace", "fire pit" }, W = 28, H = 14, Color = M.Hex(0xFF7043),
             Shapes = new[] { L(-12, 1, 12, 5, 4, 3.4f), L(-12, 5, 12, 1, 3, 3.4f) },     // flames are drawn live by Item
             Verbs = new[] { Verb.Warm }, Likes = new[] { Thing.Chatting, Thing.Sitting },
+        });
+
+        Add(new ItemDef
+        {
+            Key = "lasso", Name = "Lasso", Words = new[] { "lasso", "lariat", "rope", "cowboy rope", "lasso rope" }, W = 14, H = 14, Color = M.Hex(0xC29A5B),
+            Shapes = new[] { new Shape('e', new[] { 0f, 9, 6, 5 }, 0, 1.6f, NoOutline: true), C(1, 1.6f, 0, 4, -1, 2, 1, 0), C(0, 1.4f, -6, 9, -4, 13, 0, 14, 4, 13, 6, 9, 4, 5, 0, 4, -4, 5, -6, 9) },
+            Verbs = new[] { Verb.Lasso }, Carry = true, Damage = 0.15f, Reach = 10, Likes = new[] { Thing.Tricks },
         });
 
         // ---------------- pet care ----------------

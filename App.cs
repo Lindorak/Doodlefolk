@@ -212,6 +212,7 @@ sealed partial class App : ApplicationContext
         EventsFrame(now);
         GameFrame(now);
         PetFrame(now);
+        LassoFrame(now, dt);
         TourneyFrame(now);
         _w.UpdateClubs(now);
         TidyTemporary();
@@ -494,6 +495,7 @@ sealed partial class App : ApplicationContext
         if (StickerRect() is RectangleF sr) _regNow.Add(ToRect(sr));
         if (SprayRect() is RectangleF spr) _regNow.Add(ToRect(spr));
         if (LeashRect() is RectangleF lr) _regNow.Add(ToRect(lr));
+        if (LassoRect() is RectangleF lsr) _regNow.Add(ToRect(lsr));
         if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -559,6 +561,7 @@ sealed partial class App : ApplicationContext
         DrawLeashes();
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(true);
+        DrawLassos();
         foreach (var it in _w.Items)
         {
             if (it.Holder == null) continue;

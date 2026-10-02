@@ -12,7 +12,7 @@ sealed partial class Brain
     static string VerbWord(Verb v) => v switch
     {
         Verb.Sit => "Sit in", Verb.Lie => "Nap on", Verb.Hammock => "Swing in", Verb.Bounce => "Bounce on", Verb.Eat => "Eat",
-        Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot => "Grab",
+        Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot or Verb.Lasso => "Grab",
         Verb.Create => "Grab", Verb.Shelter => "Take", _ => "Climb on",
     };
     Item? _item;
@@ -77,6 +77,7 @@ sealed partial class Brain
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
                     Verb.Wield or Verb.Shoot => WeaponWant(it, v),
+                    Verb.Lasso => f.Weapon == null && it.Holder == null ? (0.15f + P.Playfulness * 0.45f + (f.Hunter ? 1.2f : 0)) * Taste(Thing.Tricks) : 0,
                     Verb.Shelter => it.Holder == null && !HasUmbrella ? (w.Weather.Raining && !LovesRain ? 2.5f + Wet * 3 : 0.04f * P.Curiosity) : 0,
                     // Everyone's curious about the Creator's Pencil; the playful and creative most of all.
                     Verb.Create => it.Holder == null && !HasPencil ? (0.25f + P.Curiosity * 0.6f + P.Playfulness * 0.6f) * (0.5f + Boredom) * (_t0 > _pencilBreak ? 1 : 0) : 0,
@@ -130,7 +131,7 @@ sealed partial class Brain
     {
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
-        if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter) { Equipped(it); return; }
+        if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter or Verb.Lasso) { Equipped(it); return; }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {

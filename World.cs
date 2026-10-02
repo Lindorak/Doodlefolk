@@ -37,6 +37,10 @@ sealed partial class World
     /// <summary>A game with you in progress (hide-and-seek, tag, catch).</summary>
     public UserGame? Game;
     public Tournament? Tourney;
+    /// <summary>A figure has your cursor on a rope (see App.Lasso); how long the cursor has been left alone.</summary>
+    public Figure? CursorLasso;
+    public float CursorStill;
+    public static bool LassoCursor = true;
     /// <summary>Couples can have little ones (setting), up to a cap on how many figures there are in all.</summary>
     public bool Babies = true;
     public static int MaxFigures = 14;

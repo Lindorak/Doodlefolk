@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso,
     }
 
     readonly Figure f;
@@ -366,6 +366,7 @@ sealed partial class Brain
             case G.Game: DoGame(w); break;
             case G.Pose: DoPose(w); break;
             case G.Tourney: DoTourney(w); break;
+            case G.Lasso: DoLasso(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -717,6 +718,7 @@ sealed partial class Brain
         CampfireOptions(w, opts);
         ClubOptions(w, opts);
         PetCareOptions(w, opts);
+        LassoOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

@@ -26,7 +26,7 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v0.8.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+1. Grab `StickFight-v0.8.1-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
 2. Unzip it anywhere and run `StickFight.exe`. Nothing to install.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed yet:
    click **More info → Run anyway**.
@@ -66,6 +66,9 @@ panel (draw a figure, toss in a toy, hide them, quit).
     or on your cursor), and learn to say things they hear.
   - **Training**, with a spray bottle and treats. Timing matters: spray within a couple of seconds of the misdeed
     and they slowly learn; spray late, or for nothing, and they just get upset. Parrots love a misting.
+  - **Health and hygiene**: neglect, stress and scraps wear them down; they can catch a cold, an upset tummy,
+    fleas or a sprain. Take them to the vet, give them a bath (cats will not thank you) or a brush.
+  - **A fish tank** to keep fed: figures find it calming, cats can't stop staring.
   - **Pet-only mode** if you just want animals, and a care setting (relaxed, normal, realistic). The Studio's
     **Pets** tab shows needs, mood, weight, training and a care log.
 - **Weather and time of day**: now and then rain, a thunderstorm or (in winter) snow. Figures shelter, grab
@@ -90,6 +93,8 @@ panel (draw a figure, toss in a toy, hide them, quit).
 - **The world turns**: trinkets turn up for collectors, gardens grow from seed to bloom (water them!), leaves
   blow in during autumn (run through them!), blossom in spring, fireflies on summer nights, pumpkins at
   Halloween and a tree at Christmas.
+- **Campfires** that look and feel real: layered flames, embers, sparks and smoke, and warm flickering light on
+  everyone around them (stronger at night, when everyone else dims).
 - **Lassos**: figures rope each other, balls, and (if you allow it) your cursor, then spin it round and fling it.
   Only when you've left the mouse alone; move it and it breaks free.
 - **The Stick Times**: a weekly newspaper in the Studio with the week's big stories, and a **sticker book** to fill.

@@ -17,7 +17,7 @@ sealed partial class App
         World.Jobs = _settings.Jobs;
         World.Calm = _settings.Calm;
         World.Gestures = _settings.GesturesOnly;
-        World.Drama = _settings.TownMood switch { "cozy" => 0.35f, "chaos" => 2f, _ => 1f };
+        (World.Drama, World.EventRate, World.VisitorRate) = MoodNumbers(_settings.TownMood);
         (World.BeatPhase, World.BarPhase) = _settings.BeatDance && _w.ScreenMedia && _w.Screen != null ? _w.Screen.BeatPhase() : (-1, -1);
         World.ColourBlind = _settings.ColourBlind;
         World.LifePace = _settings.LifePace switch { "slow" => 1, "fast" => 24, _ => 0 };

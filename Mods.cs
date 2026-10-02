@@ -9,7 +9,7 @@ namespace Doodlefolk;
 /// <summary>Mods: JSON files in %APPDATA%\Doodlefolk\mods that add objects (drawn with shapes or a simple SVG),
 /// hats, names for new figures and pets, and jokes. See docs/MODDING.md. A broken file is skipped and its problem
 /// is shown in the Studio; nothing in a mod can run code.</summary>
-static class Mods
+static partial class Mods
 {
     public static string Dir => Path.Combine(Path.GetDirectoryName(Settings.FilePath)!, "mods");
     public static readonly List<string> Loaded = new(), Errors = new();
@@ -43,6 +43,10 @@ static class Mods
                 int before = items.Count + hats.Count;
                 if (root.TryGetProperty("items", out var its)) foreach (var it in its.EnumerateArray()) items.Add(ItemFrom(it, Path.GetDirectoryName(file)!));
                 if (root.TryGetProperty("hats", out var hs)) foreach (var h in hs.EnumerateArray()) hats.Add(HatFrom(h, Path.GetDirectoryName(file)!));
+                var warnings = new List<string>();
+                ContentFrom(root, name, warnings, register: true);
+                CrossCheck(root, warnings);
+                foreach (var w in warnings) World.Log($"mod {name}: {w}");
                 if (root.TryGetProperty("jokes", out var js)) foreach (var j in js.EnumerateArray()) if (j.GetString() is { Length: > 0 and <= 200 } s) Jokes.Add(s);
                 if (root.TryGetProperty("names", out var ns))
                     foreach (var prop in ns.EnumerateObject())
@@ -60,6 +64,7 @@ static class Mods
         var newItems = items.Where(d => ItemCatalog.Find(d.Key) == null).GroupBy(d => d.Key).Select(g => g.First()).ToList();
         foreach (var d in items.Except(newItems)) Errors.Add($"object \"{d.Key}\" skipped: that name's taken");
         ItemCatalog.AddMods(newItems);
+        foreach (var d in newItems) ModItemKeys.Add(d.Key);
         var newHats = hats.Where(h => Look.Find(Look.Hats, h.Key) == null).GroupBy(h => h.Key).Select(g => g.First()).ToList();
         Look.AddHats(newHats);
         ItemCount = newItems.Count; HatCount = newHats.Count;

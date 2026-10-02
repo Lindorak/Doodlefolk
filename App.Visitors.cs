@@ -39,7 +39,8 @@ sealed partial class App
         if (_crateEarnedAt == 0) _crateEarnedAt = now;
         if (now - _crateEarnedAt > 7200 && _settings.CratesWaiting < 2) { _settings.CratesWaiting++; _crateEarnedAt = now; }
         if (now < _visitorAt || !_settings.Visitors || PetMode || World.Focus || _w.Happening != null || _w.Figures.Any(f => f.Visitor != VisitorKind.None)) return;
-        _visitorAt = now + _w.Rng.Range(1500, 4200);
+        _visitorAt = now + _w.Rng.Range(1500, 4200) / MathF.Max(0.25f, World.VisitorRate);
+        if (World.VisitorRate <= 0) return;
         if (_w.Figures.Count(f => f.Mode == Mode.Control) < 1 || _w.Figures.Count >= World.MaxFigures) return;
         // Who: the mail carrier when a crate's waiting; the ghost only after dark; otherwise anyone (rarer ones rarer).
         VisitorKind kind;

@@ -74,7 +74,11 @@ sealed partial class App
                            "svg": "<svg viewBox='0 0 12 28'><rect x='3' y='24' width='6' height='4' fill='#5D6670'/><path d='M4 24 L2 8 L6 2 L10 8 L8 24 Z' fill='main'/></svg>" } ],
               "hats": [ { "key": "qa-hat", "name": "QA hat", "svg": "<svg viewBox='-12 -16 24 8'><path d='M-8 -9 L0 -15 L8 -9 Z' fill='#E53935'/></svg>" } ],
               "names": { "cats": ["Testy"] },
-              "jokes": ["a self-test joke"]
+              "jokes": ["a self-test joke"],
+              "characters": [ { "name": "QA Captain", "color": "#1E88E5", "look": { "hat": "crown" } } ],
+              "storytellers": [ { "key": "qa-calm", "name": "QA calm", "drama": 0.5 } ],
+              "events": [ { "key": "qa-fest", "title": "The QA fair", "decor": ["lantern"], "food": ["cake"] } ],
+              "songs": [ { "title": "QA tune", "lyrics": "la\nla" } ]
             }
             """);
     }
@@ -194,6 +198,15 @@ sealed partial class App
             catch (Exception e) { Check("clip decodes", false, e.Message); }
             Check("clip saved and decodes", frames >= 10, $"{frames} frames");
         });
+        At(531, "mod content", () =>
+        {
+            Check("mods can add characters, storytellers, festivals and songs", Mods.Characters.Any(c => c.fig.Name == "QA Captain") && Mods.Storytellers.Any(t => t.Key == "qa-calm") && Mods.Events.Any(e => e.Key == "qa-fest") && Mods.Songs.Count > 0,
+                  string.Join("; ", Mods.Errors));
+            string r = StartHappening("mod:qa-fest");
+            Check("a mod's festival starts", r.StartsWith("started") && _w.Happening?.Title == "The QA fair", r);
+            Check("a mod's character can join", SpawnModCharacter(Mods.Characters.FindIndex(c => c.fig.Name == "QA Captain")).Contains("on the way"));
+        });
+        At(533, "mod festival over", () => { if (_w.Happening is { } mh) EndHappening(mh, false); foreach (var f in _w.Figures.Where(f => f.Name.StartsWith("QA Captain")).ToList()) _w.RemoveFigure(f); });
         At(535, "casts", () =>
         {
             _castFigures = _w.Figures.Count;

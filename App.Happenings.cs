@@ -7,6 +7,8 @@ namespace Doodlefolk;
 sealed class Happening
 {
     public string Kind = "";
+    /// <summary>A festival from a mod: its own title, decorations, food and fireworks.</summary>
+    public ModEvent? Custom;
     public int Phase;
     public float T, PhaseT;
     public float Left, Right, Y;
@@ -24,7 +26,7 @@ sealed class Happening
     public float StartX, FinishX;
     public Figure? Winner;
     public float Centre => (Left + Right) / 2;
-    public string Title => Kind switch { "festival" => "the festival", "talent" => "the talent show", _ => "race day" };
+    public string Title => Custom != null ? Custom.Title : Kind switch { "festival" => "the festival", "talent" => "the talent show", _ => "race day" };
 }
 
 sealed partial class World
@@ -46,9 +48,11 @@ sealed partial class App
         if (h == null)
         {
             if (!_settings.Events || PetMode || now < _happeningAt || _w.Tourney != null || _w.Game != null) return;
-            _happeningAt = now + _w.Rng.Range(2400, 6000) / MathF.Max(0.5f, World.Drama);
-            if (_w.Figures.Count(f => f.Mode == Mode.Control) < 3) return;
-            StartHappening(new[] { "festival", "talent", "race" }[_w.Rng.Next(3)]);
+            _happeningAt = now + _w.Rng.Range(2400, 6000) / MathF.Max(0.5f, World.Drama * World.EventRate);
+            if (_w.Figures.Count(f => f.Mode == Mode.Control) < 3 || World.EventRate <= 0) return;
+            var kinds = new List<string> { "festival", "talent", "race" };
+            kinds.AddRange(Mods.Events.Select(e => "mod:" + e.Key));
+            StartHappening(kinds[_w.Rng.Next(kinds.Count)]);
             return;
         }
         h.T += dt; h.PhaseT += dt;
@@ -88,10 +92,17 @@ sealed partial class App
     public string StartHappening(string kind)
     {
         if (_w.Happening != null) return "something's already on";
+        ModEvent? custom = null;
+        if (kind.StartsWith("mod:"))
+        {
+            custom = Mods.Events.FirstOrDefault(e => e.Key == kind[4..]);
+            if (custom == null) return "no such event";
+            kind = "festival";
+        }
         float s = _w.Scale;
         var ground = HappeningGround(kind == "race" ? 700 * s : 450 * s);
         if (ground == null) return "nowhere wide enough";
-        var h = new Happening { Kind = kind, Y = ground.Y, Hwnd = ground.Hwnd };
+        var h = new Happening { Kind = kind, Y = ground.Y, Hwnd = ground.Hwnd, Custom = custom };
         float width = MathF.Min(ground.X2 - ground.X1 - 60 * s, kind == "race" ? 1500 * s : 900 * s);
         float mid = Math.Clamp(_w.Figures.Where(f => f.Mode == Mode.Control).Select(f => f.Base.X).DefaultIfEmpty((ground.X1 + ground.X2) / 2).Average(), ground.X1 + width / 2 + 30 * s, ground.X2 - width / 2 - 30 * s);
         h.Left = mid - width / 2; h.Right = mid + width / 2;
@@ -106,6 +117,12 @@ sealed partial class App
         }
         switch (kind)
         {
+            case "festival" when custom != null:
+                var things = custom.Decor.Concat(custom.Food).Where(k => ItemCatalog.Find(k) != null).ToList();
+                for (int i = 0; i < things.Count; i++) Put(things[i], h.Left + width * (i + 0.5f) / things.Count);
+                foreach (var f in people) { h.Crowd.Add(f); f.Brain.JoinHappening("reveller", _w); }
+                _w.News("town", custom.News.Length > 0 ? custom.News : $"{custom.Title} is on!", 3);
+                break;
             case "festival":
                 Put("fairylights", h.Left + width * 0.25f);
                 Put("fairylights", h.Right - width * 0.25f);
@@ -182,7 +199,7 @@ sealed partial class App
     {
         if (h.T > 180) { _w.Sticker("festival"); foreach (var f in h.Crowd) f.Brain.Remember("festival", _w); EndHappening(h, true); return; }
         // Fireworks after dark.
-        if (_w.Night > 0.35f && now > _festFireAt)
+        if ((h.Custom == null || h.Custom.Fireworks) && _w.Night > 0.35f && now > _festFireAt)
         {
             _festFireAt = now + _w.Rng.Range(0.6f, 1.6f);
             var at = new Vector2(_w.Rng.Range(h.Left, h.Right), h.Y - _w.Rng.Range(260, 520) * _w.Scale);

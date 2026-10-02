@@ -83,6 +83,8 @@ sealed partial class World
     public static float GravityMul = 1;
     /// <summary>Prank mode is on (and nobody's focusing).</summary>
     public static bool Pranks;
+    /// <summary>The storyteller's pace: how often town events and visitors come (1 = usual).</summary>
+    public static float EventRate = 1, VisitorRate = 1;
     public Func<Figure, string>? NoteFor;
     public Func<Figure, Song?>? SongFor;
     public Action<Item, double>? PrankLeft;

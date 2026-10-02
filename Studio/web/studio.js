@@ -37,6 +37,7 @@ function receive(m) {
     case "pop": buildPop(m.kind, m.id); break;
     case "said": popSaid(m); break;
     case "history": HISTORY = m; if (route.page === "history" && current) { current.sig = null; onState(); } break;
+    case "modcheck": MODCHECK = m; onModCheck && onModCheck(); break;
     case "album": ALBUM = m; if (route.page === "album" && current) { current.sig = null; onState(); } break;
   }
 }
@@ -400,6 +401,12 @@ PAGES.cast = {
             armed("Delete", "Sure?", () => send({ t: "song", op: "delete", id: s.id }), "btn small danger")),
           s.sung ? h("div", { class: "hint" }, `Sung ${s.sung}×.`) : null);
       }), h("div", null, h("button", { class: "btn small", onclick: () => send({ t: "song", op: "new" }) }, "✎ Write a song"))));
+    const scen = (S.modContent || {}).scenarios || [];
+    if (scen.length)
+      add(root, h("h2", null, "Start from a scenario"), h("p", { class: "sub" }, "Towns that mods have set up: their people, their things, their mood. It starts a new cast, so yours is kept just as it is."),
+        h("div", { class: "requests" }, scen.map(s => h("div", { class: "request" }, h("span", { class: "req-mark" }, "🏘"),
+          h("div", null, h("b", null, s.name), h("div", { class: "hint" }, `${s.blurb} (${s.size} ${s.size === 1 ? "character" : "characters"})`)),
+          h("button", { class: "btn small", onclick: () => send({ t: "scenario", key: s.key }) }, "Start it")))));
     // Those the town has lost.
     const gone = S.memorials || [];
     if (gone.length)
@@ -1006,7 +1013,7 @@ function relWord(r) { const x = INIT.relations.find(x => x.key === r); return x 
 // ---------------- Library ----------------
 
 PAGES.library = {
-  sig: () => S.library.map(l => l.name).join("|"),
+  sig: () => S.library.map(l => l.name).join("|") + "|" + ((S.modContent || {}).characters || []).length,
   build(root) {
     add(root, h("h1", null, "Saved figures"),
       h("p", { class: "sub" }, S.library.length ? "Your own characters. Spawn them back any time, as many as you like." : "Nothing saved yet. Open a figure and press “★ Save to library”."));
@@ -1021,6 +1028,18 @@ PAGES.library = {
           armed("Delete", "Sure?", () => send({ t: "lib", op: "delete", name: l.name }), "btn small danger"))));
     }
     add(root, grid);
+    const mc = (S.modContent || {}).characters || [];
+    if (mc.length) {
+      const mg = h("div", { class: "grid" });
+      for (const l of mc) {
+        const svg = figSvg(); svg.update(STANDING, l.hex);
+        mg.append(h("div", { class: "card", style: { cursor: "default" } }, h("div", { class: "tape" }),
+          h("div", { class: "name" }, h("span", { class: "dot", style: { background: l.hex } }), l.name), svg,
+          h("div", { class: "act" }, l.describe), l.likes ? h("div", { class: "likes" }, l.likes) : null, h("div", { class: "hint" }, `From ${l.from}`),
+          h("div", { class: "row", style: { marginTop: "8px" } }, h("button", { class: "btn small primary", onclick: () => send({ t: "modchar", index: l.index }) }, "Spawn"))));
+      }
+      add(root, h("h2", null, "From your mods"), h("p", { class: "sub" }, "Characters that mods (and Workshop items) bring along. They arrive fresh: no memories, no grudges."), mg);
+    }
   },
 };
 
@@ -1259,6 +1278,7 @@ PAGES.history = {
 // ---------------- Photo album ----------------
 
 let ALBUM = null, albumAsked = -1;
+let MODCHECK = null, onModCheck = null;
 PAGES.album = {
   sig: () => (S.memes || []).length + "|" + (ALBUM ? ALBUM.items.length + "|" + ALBUM.items.filter(a => a.starred).length + "|" + ALBUM.auto : "none") + "|" + (S.albumCount || 0),
   build(root) {
@@ -1624,6 +1644,7 @@ PAGES.settings = {
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "festival" }) }, "🎪 Hold a festival"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "talent" }) }, "🎤 Talent show"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "race" }) }, "🏁 Race day"),
+      ((S.modContent || {}).events || []).map(e => h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "mod:" + e.key }) }, "✨ " + e.title)),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "stop" }) }, "Stop"));
     const beatC = check("Dance to the beat", "When music's playing, dancers move in time with it. They listen to how loud your PC's sound is from moment to moment, on this PC only; nothing is recorded or kept.", () => st().beatDance !== false, v => setS("beatDance", v));
     const gestC = check("Gestures only", "No words in their bubbles: they wave, shrug, shake their heads, nod, point and cheer instead, with a little symbol. (Their diaries still use words.)", () => !!st().gesturesOnly, v => setS("gesturesOnly", v));
@@ -1661,6 +1682,15 @@ PAGES.settings = {
     const updBtn = h("button", { class: "btn small primary", onclick: () => send({ t: "applyUpdate" }) }, "Update now");
     const installBtn = h("button", { class: "btn small", title: "Copies Doodlefolk to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install Doodlefolk");
     const modsLine = h("p", { class: "hint" });
+    const modCheckOut = h("div", { class: "hint" });
+    const modCheckBox = h("div", null, h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "checkmod" }) }, "✓ Check a mod file…")), modCheckOut);
+    onModCheck = () => {
+      const r = MODCHECK; if (!r) return;
+      modCheckOut.replaceChildren(h("p", null, h("b", null, r.ok ? `✓ ${r.file} looks good. ` : `✗ ${r.file} has problems. `), r.summary),
+        r.problems.length ? h("ul", null, r.problems.map(p => h("li", { style: { color: "var(--accent)" } }, p))) : null,
+        r.warnings.length ? h("ul", null, r.warnings.map(w => h("li", null, w))) : null,
+        r.ok ? h("p", null, "Ready to share (Steam Workshop below, when Doodlefolk runs through Steam).") : null);
+    };
     const steamLine = h("p", { class: "hint" });
     const workshopBox = h("div");
     let workshopSig = null;
@@ -1671,7 +1701,7 @@ PAGES.settings = {
     const stripH = range(110, 400, 10, st().stripHeight || 170, v => { shv.textContent = v + " px"; sendSoon("strip", { t: "setting", key: "stripHeight", v }); });
     const stripRow = h("div", { class: "field" }, h("label", null, "Village height"), stripH, shv);
     const hemiChips = [["auto", "Automatic"], ["north", "Northern"], ["south", "Southern"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("hemisphere", k); } }, l); c.key = k; return c; });
-    const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
+    const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"], ...((S.modContent || {}).storytellers || []).map(s => [s.key, "✒ " + s.name])].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
     const ageChips = [["never", "Nobody dies of old age"], ["oldage", "Very old elders pass away peacefully"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("mortality", k); } }, l); c.key = k; return c; });
     const ghostsC = check("Ghost visits", "On dark nights, someone the town has lost may come back for a minute to wave at old friends (a headstone and a page on the Cast page remember them).", () => st().ghosts !== false, v => setS("ghosts", v));
     const prankC = check("Prank mode", "The playful ones leave sticky notes on your windows, hide a whoopee cushion on the couch, track muddy footprints after rain, and hang up memes. Everything they leave tidies itself away. Never while you're focusing, or in calm mode.", () => !!st().pranks, v => setS("pranks", v));
@@ -1757,8 +1787,8 @@ PAGES.settings = {
       h("p", { class: "sub" }, "A lighter frame rate (30 at most) and simpler graphics, to go easy on a laptop battery."),
       h("div", { class: "row" }, batChips),
       h("h2", null, "Mods"),
-      h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names and jokes with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart Doodlefolk after changing them."),
-      modsLine, steamLine, workshopBox,
+      h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names, jokes, whole characters, storytellers (town moods), festivals, scenarios and songs with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart Doodlefolk after changing them."),
+      modsLine, modCheckBox, steamLine, workshopBox,
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "openMods" }) }, "Open the mods folder"),
         h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/Doodlefolk/blob/main/docs/MODDING.md") }, "Modding guide")),
       h("h2", null, "Problems"),

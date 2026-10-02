@@ -85,3 +85,62 @@ Mod hats show up in the Studio's **Look** tab with the others.
 
 `names.figures` are used for newly drawn figures; the pet lists are mixed in with the built-in names. `jokes` are
 added to what figures say when you ask for a joke.
+
+## Characters
+
+Whole figures, ready to spawn from **Studio → Library → From your mods**. A character has the same shape as a
+figure saved to the library (colour, size, personality, tastes, look), so the easiest way to make one is to make
+the figure in the Studio, save it to the library, and copy its entry out of `settings.json`. They always arrive
+fresh: no diary, feelings or history come with them.
+
+```json
+"characters": [
+  { "name": "Captain Jo", "color": "#1E88E5", "size": 1.1,
+    "traits": { "Energy": 0.8, "Curiosity": 0.9, "Bravery": 0.7, "Playfulness": 0.6, "Aggression": 0.2, "Sociability": 0.7 },
+    "look": { "hat": "pirate" } }
+]
+```
+
+## Storytellers
+
+Town moods of your own, next to Cozy, Classic and Chaos. `drama` scales fights, break-ups and storms (Cozy is 0.35,
+Chaos is 2); `events` and `visitors` scale how often festivals and visitors come (0 turns them off).
+
+```json
+"storytellers": [ { "key": "seaside", "name": "Seaside", "blurb": "Calm, with lots of visitors", "drama": 0.5, "events": 1, "visitors": 2 } ]
+```
+
+## Festivals
+
+Your own town events. They run like the festival (everyone gathers, dances and chats) with your title, your
+decorations and food (any object keys, built-in or from mods; up to twelve), and fireworks after dark if you like.
+They come up on their own among the usual events, and there's a button for each in Settings → Town.
+
+```json
+"events": [ { "key": "regatta", "title": "The regatta", "news": "Boats on the pond!", "decor": ["pennant", "lantern"], "food": ["fish"], "fireworks": true } ]
+```
+
+## Scenarios
+
+A town to start from: who's in it (character names from your mod; anyone missing is replaced by a random figure),
+what's out (`x` is 0 for the left of the screen to 1 for the right), which animals, and the mood. Starting one makes
+a new cast, so the player's own town is kept as it is. They're on the Cast page.
+
+```json
+"scenarios": [ { "key": "harbour", "name": "Harbour town", "blurb": "A sleepy port", "characters": ["Captain Jo"],
+                 "items": [ { "key": "pond", "x": 0.3 } ], "pets": ["cat"], "mood": "seaside" } ]
+```
+
+## Songs
+
+Lyrics anyone may sing at the talent show (one line per line).
+
+```json
+"songs": [ { "title": "Sea shanty", "lyrics": "yo ho\nheave ho" } ]
+```
+
+## Checking a mod before you share it
+
+**Studio → Settings → Mods → Check a mod file…** reads a file without loading it and tells you what it adds, what's
+broken (it won't load until that's fixed) and what looks odd (a misspelt object key, a scenario character that isn't
+there, a section Doodlefolk doesn't know). Then share it on the Steam Workshop from the same place.

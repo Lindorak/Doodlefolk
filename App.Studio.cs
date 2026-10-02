@@ -168,6 +168,7 @@ sealed partial class App
         memorials = MemorialState(),
         historyCount = _settings.History.Count + _settings.Memorials.Count * 1000 + _w.Figures.Count * 100000,
         toybox = ToyboxState(),
+        modContent = ModContentState(),
         songs = SongState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -507,6 +508,16 @@ sealed partial class App
                     }
                     _settings.Save();
                     break;
+                case "modchar": PostAll(new { t = "toast", text = SpawnModCharacter(m.TryGetProperty("index", out var mci) ? mci.GetInt32() : -1) }); break;
+                case "scenario": PostAll(new { t = "toast", text = StartScenario(Str(m, "key")) }); break;
+                case "checkmod":
+                {
+                    using var dlg = new OpenFileDialog { Title = "Check a mod file", Filter = "Mod files (*.json)|*.json", InitialDirectory = Mods.Dir };
+                    if (dlg.ShowDialog() != DialogResult.OK) break;
+                    var (ok, problems, warnings, summary) = Mods.Check(dlg.FileName);
+                    PostAll(new { t = "modcheck", file = Path.GetFileName(dlg.FileName), path = dlg.FileName, ok, problems, warnings, summary });
+                    break;
+                }
                 case "toy":
                 {
                     string tr = Toybox(Str(m, "op"));
@@ -835,7 +846,7 @@ sealed partial class App
             case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
             case "beatDance": _settings.BeatDance = v.GetBoolean(); break;
             case "visitors": _settings.Visitors = v.GetBoolean(); break;
-            case "townMood": _settings.TownMood = v.GetString() is "cozy" or "chaos" ? v.GetString()! : "classic"; break;
+            case "townMood": _settings.TownMood = v.GetString() is "cozy" or "chaos" || Mods.Storytellers.Any(s => s.Key == v.GetString()) ? v.GetString()! : "classic"; break;
             case "ambienceOn": _settings.AmbienceOn = v.GetBoolean(); _ambAt = 0; break;
             case "ambienceVolume": _settings.AmbienceVolume = Math.Clamp(v.GetSingle(), 0, 1); _ambAt = 0; break;
             case "ambienceFollow": _settings.AmbienceFollow = v.GetBoolean(); _ambAt = 0; break;

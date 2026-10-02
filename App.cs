@@ -110,6 +110,7 @@ sealed partial class App : ApplicationContext
         else if (_settings.RememberCast && (_settings.Figures.Count > 0 || _settings.Pets.Count > 0)) RestoreCast();
         else if (!_settings.PetMode) Spawn(null);
         if (_settings.PetMode) { _settings.PetMode = false; SetPetMode(true); }
+        CatchUpAgeing();
         Mark("cast");
         World.Log("startup steps (ms): " + string.Join(", ", marks));
     }
@@ -271,6 +272,7 @@ sealed partial class App : ApplicationContext
         try { HappeningFrame(dt, now); }
         catch (Exception e) { World.Log("happening failed: " + e.Message); if (_w.Happening is { } hx) { _w.Happening = null; foreach (var f in hx.Who.Concat(hx.Crowd)) f.Brain.LeaveHappening(); } }
         DesktopFrame(now);
+        WelcomeFrame(now);
         RecordFrame(now);
         PowerFrame(now);
         UpdateFrame(now);

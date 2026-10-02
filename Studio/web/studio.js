@@ -296,6 +296,8 @@ function onState() {
   }
   current.update();
   crumbs();
+  // First time in the Studio: the tour.
+  if (S.settings.tourDone === false && !window.tourShown && typeof startTour === "function") { window.tourShown = true; startTour(); }
 }
 
 function crumbs() {
@@ -1407,7 +1409,7 @@ PAGES.settings = {
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
       eventsC, hapBtns, hapLine,
-      h("p", { class: "hint" }, "With ageing on, figures count their years (while StickFight is running): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
+      h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
@@ -1439,6 +1441,7 @@ PAGES.settings = {
       h("h2", null, "About"),
       h("p", null, `StickFight ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
       h("div", { class: "row" },
+        h("button", { class: "btn small", onclick: () => startTour() }, "Take the tour"),
         h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight") }, "GitHub page"),
         armed("Quit StickFight", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
     return () => {

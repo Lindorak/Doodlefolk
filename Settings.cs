@@ -173,6 +173,10 @@ sealed class Settings
     public bool Events { get; set; } = true;
     /// <summary>The name of the cast in play (others are kept in the casts folder).</summary>
     public string CastName { get; set; } = "My cast";
+    /// <summary>The Studio tour has been seen (or skipped).</summary>
+    public bool TourDone { get; set; }
+    /// <summary>Not saved: there was no settings file yet (the very first run).</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public bool FirstRun { get; set; }
     /// <summary>Accessibility: calm mode, colour-blind team badges.</summary>
     public bool Calm { get; set; }
     public bool ColourBlind { get; set; }
@@ -224,12 +228,17 @@ sealed class Settings
 
     public static Settings Load()
     {
+        if (!File.Exists(PathOnDisk)) return new Settings { FirstRun = true };
         try
         {
-            if (File.Exists(PathOnDisk))
-                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(PathOnDisk)) ?? new Settings();
+            return JsonSerializer.Deserialize<Settings>(File.ReadAllText(PathOnDisk)) ?? new Settings();
         }
-        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { }
+        catch (JsonException)
+        {
+            // Damaged (say, the PC lost power mid-save): keep it aside rather than overwrite it with a blank cast.
+            try { File.Copy(PathOnDisk, System.IO.Path.ChangeExtension(PathOnDisk, $".broken-{DateTime.Now:yyyyMMdd-HHmmss}.json"), true); } catch { }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
         return new Settings();
     }
 
@@ -238,7 +247,10 @@ sealed class Settings
         try
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(PathOnDisk)!);
-            File.WriteAllText(PathOnDisk, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            // Write beside it, then swap in: a crash mid-save leaves the old file whole.
+            string tmp = PathOnDisk + ".saving";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(tmp, PathOnDisk, true);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }

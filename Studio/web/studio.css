@@ -441,3 +441,16 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .diary-text { font: 17px var(--scrawl); color: var(--ink); }
 .pop-pet { font-size: 34px; line-height: 46px; }
 .pop-field input.text { font: 15px var(--scrawl); background: var(--card); color: var(--ink); border: 1.5px solid var(--faint); border-radius: 8px; padding: 3px 8px; width: 100%; }
+
+/* ---------------- first-run tour ---------------- */
+.tour { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; padding: 0 16px 28px;
+  background: color-mix(in srgb, var(--paper) 35%, transparent); animation: tour-in .2s ease-out; }
+.tour-card { max-width: 520px; width: 100%; background: var(--card); color: var(--ink); border-radius: 10px; box-shadow: var(--shadow), 0 0 0 2px var(--accent);
+  padding: 16px 18px 12px; transform: rotate(-0.4deg); }
+.tour-card h2 { margin: 2px 0 6px; }
+.tour-card p { margin: 0 0 12px; font-size: 15px; line-height: 1.45; }
+.tour-count { font: 12px var(--body); color: var(--pencil); }
+.tab.tour-here { box-shadow: 0 0 0 2px var(--accent), var(--shadow); animation: tour-pulse 1.4s ease-in-out infinite; }
+@keyframes tour-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tour-pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow); } }
+@media (prefers-reduced-motion: reduce) { .tour, .tab.tour-here { animation: none; } }

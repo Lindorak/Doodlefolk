@@ -200,6 +200,24 @@ Self-contained release build:
 dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
+### Checks
+
+```
+powershell -ExecutionPolicy Bypass -File tools\ci.ps1          # build, unit tests, Studio tests, self-test (~2 min)
+powershell -ExecutionPolicy Bypass -File tools\ci.ps1 -Quick   # without the self-test (~15 s)
+powershell -ExecutionPolicy Bypass -File tools\install-hooks.ps1   # run the quick checks before every git push
+```
+
+- **Unit tests** (`tests/StickFight.Tests`, xUnit): the GIF encoder, mods (JSON and SVG), the object catalogue,
+  settings saving and loading, quiet hours, reminders, weather codes.
+- **Studio tests** (`tests/studio.test.mjs`, Node): the calendar (.ics) import.
+- **Self-test** (`StickFight.exe --selftest`): the real app, hidden and sped up six times, with its own throwaway
+  data (your cast is never touched). It plays through every feature (jobs, building, rides, swimming, fishing, each
+  town event with people leaving mid-way, resizing, casts, clips, reminders, voice commands, mods, calm mode) while
+  checking that nothing breaks, then writes `selftest-report.txt` and exits 0 or 1. It runs without a graphics card too.
+
+The same checks run on GitHub (free for public repositories) on every push: see the Actions tab.
+
 ### Layout
 
 | File | What |

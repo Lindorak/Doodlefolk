@@ -69,12 +69,15 @@ public class SettingsTests
         try
         {
             var s = Settings.Load();
+            Assert.True(s.FirstRun);
             s.CastName = "Round trip";
             s.PauseDays = new() { 0, 6 };
             s.Reminders.Add(new Reminder { Id = 3, Text = "water the plants", When = new DateTime(2030, 1, 2, 3, 4, 0), Repeat = "weekly" });
             s.Figures.Add(new SavedFigure { Name = "Tester", Job = "Chef", Coins = 42, AgeBank = 1.5f });
             s.Save();
             var t = Settings.Load();
+            Assert.False(t.FirstRun);
+            Assert.False(File.Exists(Settings.FilePath + ".saving"));
             Assert.Equal("Round trip", t.CastName);
             Assert.Equal(new[] { 0, 6 }, t.PauseDays);
             Assert.Equal("water the plants", t.Reminders.Single().Text);
@@ -96,6 +99,8 @@ public class SettingsTests
             File.WriteAllText(Settings.FilePath, "{ this is not json");
             var s = Settings.Load();
             Assert.Equal("My cast", s.CastName);
+            // The damaged file is kept aside, not lost.
+            Assert.Single(Directory.GetFiles(dir, "settings.broken-*.json"));
         }
         finally { try { Directory.Delete(dir, true); } catch { } }
     }

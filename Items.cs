@@ -204,6 +204,81 @@ static class ItemCatalog
             Verbs = new[] { Verb.Warm }, Likes = new[] { Thing.Chatting, Thing.Sitting },
         });
 
+        // ---------------- pet care ----------------
+        Add(new ItemDef
+        {
+            Key = "foodbowl", Name = "Food bowl", Words = new[] { "food bowl", "pet bowl", "dog bowl", "cat bowl", "pet food", "dog food", "cat food", "kibble", "bird seed", "seed dish", "feeder", "bowl" }, W = 18, H = 6, Color = M.Hex(0xE53935),
+            Shapes = new[] { P(0, -9, 6, 9, 6, 6.5f, 0, -6.5f, 0), L(-9, 6, 9, 6, 1, 1.4f) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "waterbowl", Name = "Water bowl", Words = new[] { "water bowl", "water dish", "pet water", "drinking bowl", "water" }, W = 18, H = 6, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { P(0, -9, 6, 9, 6, 6.5f, 0, -6.5f, 0), L(-9, 6, 9, 6, 1, 1.4f) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "litterbox", Name = "Litter box", Words = new[] { "litter box", "litter tray", "kitty litter", "cat litter", "litterbox", "cat toilet" }, W = 34, H = 9, Color = M.Hex(0x78909C),
+            Shapes = new[] { O(-17, 0, 17, 9, 2, 0), R(-15, 2, 15, 7, 1), L(-17, 9, 17, 9, 1, 1.2f) },
+            Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "peepad", Name = "Pee pad", Words = new[] { "pee pad", "puppy pad", "training pad", "wee pad", "potty pad" }, W = 30, H = 2, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { R(-15, 0, 15, 1.6f, 0), R(-10, 0.4f, 10, 1.5f, 16) },
+            Mass = 0.5f,
+        });
+        Add(new ItemDef
+        {
+            Key = "petbed", Name = "Pet bed", Words = new[] { "pet bed", "dog bed", "cat bed", "pet basket", "dog basket", "cat basket", "cushion" }, W = 34, H = 9, Color = M.Hex(0x8E24AA),
+            Shapes = new[] { O(-17, 0, 17, 9, 4, 0), E(0, 6.5f, 13, 3, 2) },
+            Mass = 1, Material = Material.Fabric,
+        });
+        Add(new ItemDef
+        {
+            Key = "perch", Name = "Bird perch", Words = new[] { "perch", "bird perch", "bird stand", "birdcage", "bird cage", "parrot perch", "play stand" }, W = 22, H = 40, Color = M.Hex(0xA0703C),
+            Shapes = new[] { R(-11, 0, 11, 2.5f, 6), L(0, 2, 0, 38, 4, 2.2f), L(-10, 38, 10, 38, 3, 2.4f), E(7, 22, 4, 1.4f, 7), L(3, 22, 0, 22, 4, 1.2f) },
+            Surface = 39, SurfX1 = -9, SurfX2 = 9, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "chewtoy", Name = "Chew toy", Words = new[] { "chew toy", "bone", "dog toy", "squeaky toy", "squeaky", "dog bone", "toy bone" }, W = 14, H = 5, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { E(-5.2f, 2.5f, 2.4f, 2.4f, 0), E(5.2f, 2.5f, 2.4f, 2.4f, 0), R(-5, 1.3f, 5, 3.7f, 0) },
+            Carry = true, Mass = 0.4f,
+        });
+        Add(new ItemDef
+        {
+            Key = "yarn", Name = "Ball of yarn", Words = new[] { "yarn", "ball of yarn", "wool", "ball of wool", "cat toy", "string" }, W = 9, H = 9, Color = M.Hex(0xE53935),
+            Shapes = new[] { E(0, 4.5f, 4.5f, 4.5f, 0), C(1, 0.8f, -3, 6.5f, 0, 2, 3, 6.5f), C(1, 0.8f, -3.5f, 3, 0, 7.5f, 3.5f, 3), C(1, 0.8f, 3.5f, 1, 7, -0.5f) },
+            Carry = true, Mass = 0.3f, Bounce = 0.3f,
+        });
+        Add(new ItemDef
+        {
+            Key = "scratchpost", Name = "Scratching post", Words = new[] { "scratching post", "scratch post", "cat tree", "cat tower", "scratcher" }, W = 18, H = 34, Color = M.Hex(0x8E24AA),
+            Shapes = new[] { R(-10, 0, 10, 3, 0), R(-3.5f, 3, 3.5f, 30, 17), L(-3.5f, 9, 3.5f, 11, 4, 0.8f), L(-3.5f, 16, 3.5f, 18, 4, 0.8f), L(-3.5f, 23, 3.5f, 25, 4, 0.8f), O(-9, 30, 9, 34, 1.5f, 0) },
+            Surface = 34, SurfX1 = -8, SurfX2 = 8, Mass = 2, Material = Material.Fabric,
+        });
+        // Messes (click them to clean up).
+        Add(new ItemDef
+        {
+            Key = "puddle", Name = "Puddle", Words = new[] { "puddle", "pee" }, W = 20, H = 1, Color = M.Hex(0xF3E58A),
+            Shapes = new[] { new Shape('e', new[] { 0f, 0.5f, 10, 1.1f }, 0, NoOutline: true), new Shape('e', new[] { -4f, 0.7f, 3, 0.5f }, 2, NoOutline: true) },
+            Mass = 0.1f,
+        });
+        Add(new ItemDef
+        {
+            Key = "poop", Name = "Poop", Words = new[] { "poop", "poo", "dog poop", "doo doo", "mess" }, W = 7, H = 5, Color = M.Hex(0x7B5134),
+            Shapes = new[] { E(0, 1.2f, 3.5f, 1.4f, 0), E(0, 2.8f, 2.5f, 1.2f, 0), E(0.3f, 4.2f, 1.4f, 1, 0) },
+            Mass = 0.2f,
+        });
+        Add(new ItemDef
+        {
+            Key = "dropping", Name = "Bird dropping", Words = new[] { "bird dropping", "bird poop" }, W = 4, H = 2, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { E(0, 0.8f, 1.8f, 0.9f, 0), E(0.4f, 1, 0.6f, 0.5f, 8) },
+            Mass = 0.1f,
+        });
+
         // ---------------- hide / stand ----------------
         Add(new ItemDef
         {

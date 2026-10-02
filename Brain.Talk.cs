@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.RegularExpressions;
 
 namespace StickFight;
@@ -24,6 +25,7 @@ sealed partial class Brain
         }
         f.SetAction(Act.Talk);
         w.Sticker("talk");
+        foreach (var bird in w.Pets) if (bird.Kind == PetKind.Parrot && Vector2.Distance(bird.Pos, f.Base) < 700 * S) bird.Hear(said, false, w);
         string reply = Reply(s, w, out float fond);
         Write("talk", V($"You talked to me. You said \"{Clip(said)}\".", $"YOU TALKED TO ME!! \"{Clip(said)}\"", $"You said \"{Clip(said)}\". Okay then.", $"You said \"{Clip(said)}\" to me. I didn't know what to say.", $"Your words drifted by: \"{Clip(said)}\""), fond < 0 ? "…" : "♥", 120);
         return Say(reply, fond);

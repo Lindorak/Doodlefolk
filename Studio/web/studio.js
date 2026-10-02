@@ -300,7 +300,7 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", settings: "Settings" };
+  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
@@ -856,6 +856,60 @@ PAGES.library = {
   },
 };
 
+
+// ---------------- Pets ----------------
+
+const NEED_NAMES = [["food", "Food"], ["water", "Water"], ["bathroom", "Bathroom"], ["energy", "Energy"], ["love", "Attention"], ["fun", "Fun"], ["calm", "Calm"], ["comfort", "Comfort"]];
+const meterRow = (label, v, text, fill) => h("div", { class: "meter" }, h("label", null, label), h("div", { class: "bar" }, h("i", { style: { width: (Math.max(0, Math.min(1, v)) * 100) + "%", "--fill": fill || (v > 0.6 ? "var(--good)" : v > 0.3 ? "var(--meh)" : "var(--bad)") } })), h("span", { class: "n" }, text));
+const petGlyph = k => k === "Cat" ? "🐈" : k === "Dog" ? "🐕" : "🦜";
+
+function petActions(p, close) {
+  const act = (label, op, primary) => h("button", { class: "btn small" + (primary ? " primary" : ""), onclick: () => { send({ t: "pet", op, id: p.id }); if (close && (op === "spray")) close(); } }, label);
+  return [act("🍖 Treat", "treat", true), p.kind !== "Parrot" ? act("Sit", "sit") : null, act("Come", "come"),
+    p.kind === "Parrot" ? act(p.onCursor ? "Step down" : "Step up", "stepup") : act(p.leashed ? "Unleash" : "🦮 Leash", "leash"),
+    act("💦 Spray bottle", "spray")];
+}
+
+PAGES.pets = {
+  sig: () => (S.pets || []).map(p => p.id).join(","),
+  build(root) {
+    add(root, h("h1", null, "Pets"),
+      h("p", { class: "sub" }, "Real pets need real care: food and water, the litter box (or walks, for dogs), sleep, play and your attention. Click a bowl to fill it, a litter box to scoop it, a mess to clean it up. Kittens, puppies and chicks grow up over a few hours."),
+      h("h2", null, "Adopt"),
+      h("div", { class: "row" }, [["Cat", false, "🐈 Cat"], ["Cat", true, "Kitten"], ["Dog", false, "🐕 Dog"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜 Parrot"], ["Parrot", true, "Chick"]].map(([k, y, l]) =>
+        h("button", { class: "chip", onclick: () => send({ t: "adopt", kind: k, young: y }) }, l))),
+      h("h2", null, "Supplies"),
+      h("div", { class: "row" }, [["foodbowl", "Food bowl"], ["waterbowl", "Water bowl"], ["litterbox", "Litter box"], ["peepad", "Pee pad"], ["petbed", "Pet bed"], ["perch", "Bird perch"], ["scratchpost", "Scratching post"], ["chewtoy", "Chew toy"], ["yarn", "Yarn"]].map(([k, l]) =>
+        h("button", { class: "chip", onclick: () => send({ t: "supply", key: k }) }, l))),
+      h("p", { class: "hint" }, "Training works like it does with real animals: spray within a couple of seconds of a misdeed (chasing the bird, scratching the couch, a scrap) and it slowly sinks in; spray late or for nothing and they just get upset. Treats right after something good (the litter box, coming when called) reinforce it. Parrots love being sprayed: it's a bath."));
+    const list = h("div");
+    add(root, list);
+    const ups = [];
+    if (!(S.pets || []).length) list.append(h("p", { class: "sub" }, "No pets yet. Adopt one above, or type \"a kitten\" in Things."));
+    for (const p0 of S.pets || []) {
+      const id = p0.id;
+      const title = h("div", { class: "name" }), sub = h("div", { class: "act" }), needs = h("div", { class: "thoughts" }), train = h("div", { class: "thoughts" }), extra = h("div", { class: "hint" }), log = h("ul", { class: "memories" });
+      const acts = h("div", { class: "row tight" });
+      list.append(h("div", { class: "card wide", style: { cursor: "default", marginBottom: "14px" } }, h("div", { class: "tape" }), title, sub,
+        h("div", { class: "split" }, h("div", null, h("h3", null, "Needs"), needs), h("div", null, h("h3", null, "Training"), train)), extra, acts, h("h3", null, "Lately"), log));
+      let actSig = "";
+      ups.push(() => {
+        const p = (S.pets || []).find(x => x.id === id); if (!p) return;
+        title.replaceChildren(h("span", { class: "dot", style: { background: p.hex } }), `${petGlyph(p.kind)} ${p.name}`, h("span", { class: "hint" }, `  ${p.species}${p.young ? ` · ${Math.round(p.age * 100)}% grown` : ""} · ${p.weightWord}`));
+        sub.textContent = `${p.activity}. ${p.mood}.${p.owner ? ` ${p.owner}'s favourite.` : ""}`;
+        needs.replaceChildren(...NEED_NAMES.map(([k, l]) => meterRow(l, p.needs[k], Math.round(p.needs[k] * 100) + "%")),
+          meterRow("Stamina", p.stamina, Math.round(p.stamina * 100) + "%"), meterRow("Loves you", (p.bond + 1) / 2, p.bond > 0.6 ? "adores you" : p.bond > 0.25 ? "likes you" : p.bond > -0.1 ? "warming up" : "wary"));
+        train.replaceChildren(...p.habits.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--accent)")), ...p.skills.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--good)")));
+        extra.textContent = [p.friends.length ? "Gets on with: " + p.friends.map(f => `${f.name} (${f.v > 0.45 ? "friends" : f.v > 0 ? "okay" : f.v > -0.4 ? "wary" : "enemies"})`).join(", ") : "", p.words ? `Says: ${p.words.map(w => "“" + w + "”").join(" ")}` : "", `Sprayed ${p.sprays}× · ${p.treats} treats · born ${p.born}`].filter(Boolean).join("  ·  ");
+        const sig = [p.leashed, p.onCursor].join();
+        if (sig !== actSig) { actSig = sig; acts.replaceChildren(...petActions(p).filter(Boolean)); }
+        log.replaceChildren(...(p.log.length ? p.log.map(l => h("li", null, h("span", null, l.text), h("span", { class: "ago" }, ago(l.ago)))) : [h("li", { class: "none" }, "Nothing yet.")]));
+      });
+    }
+    return () => ups.forEach(u => u());
+  },
+};
+
 // ---------------- Colours & fights ----------------
 
 const REL_GLYPH = { Default: "·", Friends: "♥", Neutral: "–", Rivals: "⚔", Enemies: "☠", Ignore: "∅" };
@@ -1125,6 +1179,11 @@ PAGES.settings = {
       c.key = k;
       return c;
     });
+    const petMode = check("Just pets", "Only animals on your desktop. Your figures are kept safe and come back when you switch this off.", () => !!st().petMode, v => setS("petMode", v));
+    const careChips = [["relaxed", "Relaxed"], ["normal", "Normal"], ["realistic", "Realistic"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("petCare", k); } }, l); c.key = k; return c; });
+    const staminaC = check("Stamina", "Everyone (figures and animals) gets out of puff with running, chasing and fighting, and needs to catch their breath.", () => st().stamina !== false, v => setS("stamina", v));
+    const weightC = check("Weight", "Eating too much (and treats!) makes them chubbier, exercise slims them down. Heavier means slower and quicker to tire.", () => st().weight !== false, v => setS("weight", v));
+    const petHelpC = check("Figures help with the pets", "Your figures fill empty bowls and scoop the litter box now and then.", () => st().petHelp !== false, v => setS("petHelp", v));
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
     const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
@@ -1155,6 +1214,11 @@ PAGES.settings = {
       h("div", { class: "row" }, weatherChips),
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
       dayNight, celebrations, babies,
+      h("h2", null, "Pets and bodies"),
+      petMode,
+      h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
+      h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
+      staminaC, weightC, petHelpC,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1176,7 +1240,8 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update();
+      careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
     };
   },
 };
@@ -1204,6 +1269,7 @@ function buildQuick() {
   const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
   const soundC = check("Sound", null, () => S.settings.sound, v => send({ t: "setting", key: "sound", v }));
+  const petModeC = check("Just pets", null, () => S.settings.petMode, v => send({ t: "setting", key: "petMode", v }));
   const count = h("span", { class: "hint" });
   const stopG = h("button", { class: "btn small danger", onclick: () => send({ t: "game", kind: "stop" }) }, "Stop game");
   const gameNote = h("p", { class: "hint" });
@@ -1225,13 +1291,17 @@ function buildQuick() {
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       stopG),
     gameNote,
-    h("div", { class: "q-checks" }, hideC, fightC, soundC),
+    h("h3", null, "Pets"),
+    h("div", { class: "row tight q-games" },
+      [["Cat", false, "🐈"], ["Cat", true, "Kitten"], ["Dog", false, "🐕"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜"]].map(([k, y, l]) => h("button", { class: "btn small", title: `Adopt a ${y ? (k === "Cat" ? "kitten" : "puppy") : k.toLowerCase()}`, onclick: () => send({ t: "adopt", kind: k, young: y }) }, l)),
+      h("button", { class: "btn small", onclick: () => send({ t: "spray" }) }, "💦 Spray bottle")),
+    h("div", { class: "q-checks" }, petModeC, hideC, fightC, soundC),
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
       h("span", { class: "spacer" }),
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
-    hideC.update(); fightC.update(); soundC.update();
+    hideC.update(); fightC.update(); soundC.update(); petModeC.update();
     const gm = S.game;
     stopG.hidden = !gm;
     gameNote.textContent = !gm ? "" : gm.kind === "HideSeek" ? `Hide & seek: found ${gm.found} of ${gm.players}` : gm.kind === "Tag" ? `Tag: ${gm.players} playing` : `Catch: ${gm.streak} in a row (best ${gm.best})`;
@@ -1265,17 +1335,25 @@ function buildPop(kind, id) {
 
   if (kind === "pet") {
     const sub = h("div", { class: "hint" });
-    const art = h("span", { class: "pop-pet" }, x.kind === "Cat" ? "🐈" : "🐕");
+    const art = h("span", { class: "pop-pet" }, petGlyph(x.kind));
     const name = h("input", { class: "text", value: x.name, maxlength: 24, onchange: () => send({ t: "pet", op: "rename", id, v: name.value }) });
     const col = colourPicker(x.hex, hex => sendSoon("petc", { t: "pet", op: "color", id, hex }));
     const sz = range(0.5, 2.5, 0.05, x.size, v => sendSoon("pets", { t: "pet", op: "size", id, v }));
-    add(root, head(art, x.name, sub), field("Name", name), field("Colour", col), field("Size", sz),
+    const needs = h("div", { class: "thoughts" });
+    const acts = h("div", { class: "row tight pop-acts" });
+    const teach = x.kind === "Parrot" ? h("input", { class: "text", placeholder: "Say a word or phrase to teach…", maxlength: 32,
+      onkeydown: e => { if (e.key === "Enter" && teach.value.trim()) { send({ t: "pet", op: "talk", id, v: teach.value }); teach.value = ""; } } }) : null;
+    let actSig = "";
+    add(root, head(art, x.name, sub), needs, acts, teach && field("Teach", teach), field("Name", name), field("Colour", col), field("Size", sz),
       h("div", { class: "row pop-foot" },
-        h("button", { class: "btn small primary", onclick: () => { send({ t: "pet", op: "call", id }); close(); } }, "Here, " + (x.kind === "Cat" ? "kitty!" : "boy!")),
+        h("button", { class: "btn small", onclick: () => send({ t: "studio", page: "pets" }) }, "Care & training…"),
         h("span", { class: "spacer" }),
         armed("Remove", "Sure?", () => { send({ t: "pet", op: "remove", id }); close(); }, "btn small danger")));
     updates.push(() => {
-      sub.textContent = `${x.activity}${x.owner ? ` · ${x.owner}'s ${x.kind === "Cat" ? "cat" : "dog"}` : " · nobody's pet yet"}`;
+      sub.textContent = `${x.species || ""} · ${x.activity} · ${x.mood || ""}`;
+      if (x.needs) needs.replaceChildren(...NEED_NAMES.slice(0, 6).map(([k, l]) => meterRow(l, x.needs[k], Math.round(x.needs[k] * 100) + "%")), meterRow("Weight", x.weight, x.weightWord, x.weight > 0.5 ? "var(--bad)" : "var(--good)"));
+      const sig = [x.leashed, x.onCursor].join();
+      if (sig !== actSig) { actSig = sig; acts.replaceChildren(...petActions(x, close).filter(Boolean)); fit(); }
       if (idle(name)) name.value = x.name;
       col.set(x.hex); setRange(sz, x.size);
     });

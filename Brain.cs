@@ -695,6 +695,7 @@ sealed partial class Brain
         RivalOptions(w, opts);
         CampfireOptions(w, opts);
         ClubOptions(w, opts);
+        PetCareOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

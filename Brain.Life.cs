@@ -102,6 +102,7 @@ sealed partial class Brain
         _lifeCheck = 5;
         DriftAffinity(5);
         f.ClubColour = w.ClubOf(f)?.Colour;
+        NoticeMess(w);
         // Holiday dress-up.
         f.HatOverride = w.Celebrations ? w.Holiday switch
         {

@@ -78,7 +78,7 @@ sealed partial class App
             _r.Line(pole, top, Ui.Ink.A(0.85f), 1.3f * s);
             var flagCol = it.OwnerColour;
             _r.FillPolygon(stackalloc Vector2[] { top, top + new Vector2(16 * s, 4.5f * s), top + new Vector2(0, 9 * s) }, flagCol);
-            _r.Text(it.OwnerName + "'s", top + new Vector2(20 * s + (it.OwnerName.Length + 2) * 2.6f * s, 4.5f * s), 9.5f * s, Ui.Ink.A(0.8f), true);
+            _r.Text(it.OwnerName + (it.OwnerName.EndsWith('s') ? "'" : "'s"), top + new Vector2(20 * s + (it.OwnerName.Length + 2) * 2.6f * s, 4.5f * s), 9.5f * s, Ui.Ink.A(0.8f), true);
         }
     }
 

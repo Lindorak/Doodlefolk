@@ -63,8 +63,28 @@ sealed class SavedPet
     public PetKind Kind { get; set; }
     public string Name { get; set; } = "";
     public string Color { get; set; } = "";
+    public string Accent { get; set; } = "";
     public float Size { get; set; } = 1;
     public string? Owner { get; set; }
+    public float Age { get; set; } = 1;
+    public DateTime? Born { get; set; }
+    public float Weight { get; set; } = 0.18f;
+    public float UserBond { get; set; } = 0.2f;
+    /// <summary>Hunger, thirst, bladder, bowel, energy, attention, boredom, stress, stamina, frustration.</summary>
+    public float[]? Needs { get; set; }
+    public Dictionary<string, float> Restraint { get; set; } = new();
+    public Dictionary<string, float> Skills { get; set; } = new();
+    public List<string> Vocabulary { get; set; } = new();
+    public Dictionary<string, float> PetBonds { get; set; } = new();
+    public List<SavedLog> Log { get; set; } = new();
+    public int Sprays { get; set; }
+    public int Treats { get; set; }
+}
+
+sealed class SavedLog
+{
+    public DateTime When { get; set; }
+    public string Text { get; set; } = "";
 }
 
 sealed class SavedProp
@@ -109,6 +129,17 @@ sealed class Settings
     public bool Celebrations { get; set; } = true;
     /// <summary>Couples who've been together a long while can have a baby.</summary>
     public bool Babies { get; set; } = true;
+    /// <summary>Just pets on the desktop (the figures are kept aside).</summary>
+    public bool PetMode { get; set; }
+    /// <summary>How demanding pets are: relaxed (slow needs, no accidents), normal, realistic.</summary>
+    public string PetCare { get; set; } = "normal";
+    /// <summary>Everyone (figures and animals) gets tired with exertion.</summary>
+    public bool StaminaOn { get; set; } = true;
+    /// <summary>Everyone's weight changes with eating and exercise.</summary>
+    public bool WeightOn { get; set; } = true;
+    /// <summary>Figures help look after the pets (fill bowls, scoop the litter box).</summary>
+    public bool PetHelp { get; set; } = true;
+    public DateTime? LastSeen { get; set; }
     public int WishesGranted { get; set; }
     public List<SavedClub> Clubs { get; set; } = new();
     public List<NewsItem> News { get; set; } = new();

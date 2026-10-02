@@ -85,8 +85,9 @@ sealed partial class App : ApplicationContext
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
             for (int i = 0; i < count; i++) Spawn(null);
-        else if (_settings.RememberCast && _settings.Figures.Count > 0) RestoreCast();
-        else Spawn(null);
+        else if (_settings.RememberCast && (_settings.Figures.Count > 0 || _settings.Pets.Count > 0)) RestoreCast();
+        else if (!_settings.PetMode) Spawn(null);
+        if (_settings.PetMode) { _settings.PetMode = false; SetPetMode(true); }
     }
 
     // ---------------- frame rate ----------------
@@ -210,6 +211,7 @@ sealed partial class App : ApplicationContext
         WishFrame();
         EventsFrame(now);
         GameFrame(now);
+        PetFrame(now);
         TourneyFrame(now);
         _w.UpdateClubs(now);
         TidyTemporary();
@@ -359,7 +361,7 @@ sealed partial class App : ApplicationContext
         _w.Hover = _dragging ? null : fig;
         if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
         if (_w.Wish != null) _w.Wish.Hot = WishHit(c);
-        _overlay.SetClickThrough(_w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        _overlay.SetClickThrough(!_sprayTool && _w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -391,6 +393,12 @@ sealed partial class App : ApplicationContext
 
     void OnMouseDown(object? sender, MouseEventArgs e)
     {
+        if (_sprayTool)
+        {
+            if (e.Button == MouseButtons.Left) Spray();
+            else if (e.Button == MouseButtons.Right) PickUpSpray(false);
+            return;
+        }
         if (HitPet(_w.Cursor) is { } pet && HitTest(_w.Cursor).fig == null)
         {
             if (e.Button == MouseButtons.Left) { pet.Grab(); _pressPet = pet; }
@@ -418,6 +426,7 @@ sealed partial class App : ApplicationContext
         {
             if (HitItem(_w.Cursor) is { } item)
             {
+                if (e.Button == MouseButtons.Left && CareClick(item)) return;
                 if (e.Button == MouseButtons.Left) GrabItem(item);
                 else if (e.Button == MouseButtons.Right) ShowPop("item", item.Id);
             }
@@ -483,6 +492,8 @@ sealed partial class App : ApplicationContext
         if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
         if (TourneyRect() is RectangleF tr) _regNow.Add(ToRect(tr));
         if (StickerRect() is RectangleF sr) _regNow.Add(ToRect(sr));
+        if (SprayRect() is RectangleF spr) _regNow.Add(ToRect(spr));
+        if (LeashRect() is RectangleF lr) _regNow.Add(ToRect(lr));
         if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -545,6 +556,7 @@ sealed partial class App : ApplicationContext
                 Gfx.GroundShadow(_r, c, rx, ry, a);
         if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
         foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) pet.Draw(_r);
+        DrawLeashes();
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(true);
         foreach (var it in _w.Items)
@@ -561,6 +573,7 @@ sealed partial class App : ApplicationContext
         DrawTourney();
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
         DrawStickerToast();
+        DrawSprayTool();
         DrawGameCurtain();
         DrawFlash();
     }
@@ -805,6 +818,15 @@ sealed partial class App : ApplicationContext
 
     void SaveCast()
     {
+        // In pet-only mode the figures are set aside, not gone: save them too.
+        bool swap = _stash.Count > 0;
+        if (swap) _w.Figures.AddRange(_stash);
+        try { SaveCastInner(); }
+        finally { if (swap) _w.Figures.RemoveAll(_stash.Contains); }
+    }
+
+    void SaveCastInner()
+    {
         _settings.Figures = _w.Figures.Select(f => new SavedFigure
         {
             Name = f.Name,
@@ -834,7 +856,8 @@ sealed partial class App : ApplicationContext
         }).ToList();
         _settings.Items = SaveItems();
         SaveSocial();
-        _settings.Pets = _w.Pets.Select(p => new SavedPet { Kind = p.Kind, Name = p.Name, Color = Settings.Hex(p.Color), Size = p.SizeMul, Owner = p.Owner?.Name }).ToList();
+        _settings.Pets = SavePets();
+        _settings.LastSeen = DateTime.Now;
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();
         _settings.Save();
     }
@@ -864,14 +887,7 @@ sealed partial class App : ApplicationContext
         }
         RestoreItems(_settings.Items);
         RestoreClubs();
-        foreach (var sp in _settings.Pets)
-        {
-            var pet = SpawnPet(sp.Kind);
-            pet.Name = sp.Name.Length > 0 ? sp.Name : pet.Name;
-            if (sp.Color.Length == 7) pet.Color = Settings.ParseHex(sp.Color);
-            pet.SizeMul = Math.Clamp(sp.Size, 0.5f, 2.5f);
-            if (sp.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == sp.Owner) is { } owner) { pet.Owner = owner; pet.Bond[owner.Id] = 0.5f; }
-        }
+        RestorePets();
         foreach (var s in _settings.Props)
         {
             var p = SpawnProp(s.Kind);
@@ -1127,6 +1143,17 @@ sealed partial class App : ApplicationContext
                 case "talk": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } talkF) World.Log($"talk {talkF.Name}: {talkF.Brain.Talk(string.Join(' ', p.Skip(2)), _w)}"); break;
                 case "back": _w.OnUserBack(p.Length > 1 ? double.Parse(p[1], inv) : 1800); break;
                 case "pet": World.Log("summon: " + Summon(p.Length > 1 ? p[1] : "cat")); break;
+                case "petop": if (_w.Pets.FirstOrDefault(x => x.Name == p[1]) is { } po) { PetCareEdit(po, p[2], default); World.Log($"petop {po.Name} {p[2]}: {po.Activity}"); } break;
+                case "petset":
+                    if (_w.Pets.FirstOrDefault(x => x.Name == p[1]) is { } ps)
+                    {
+                        float pv = float.Parse(p[3], inv);
+                        switch (p[2]) { case "hunger": ps.Hunger = pv; break; case "thirst": ps.Thirst = pv; break; case "bladder": ps.Bladder = pv; break; case "bowel": ps.Bowel = pv; break;
+                            case "energy": ps.Energy = pv; break; case "attention": ps.Attention = pv; break; case "boredom": ps.Boredom = pv; break; case "weight": ps.Weight = pv; break; case "age": ps.Age = pv; break; }
+                    }
+                    break;
+                case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;
+                case "petmode": SetPetMode(p[1] == "on"); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)

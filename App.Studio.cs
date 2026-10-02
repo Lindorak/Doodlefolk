@@ -149,7 +149,8 @@ sealed partial class App
             tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing, owner = i.OwnerId, homeable = Brain.HomeKind(i),
             users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
         }),
-        pets = _w.Pets.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = p.Name, hex = Settings.Hex(p.Color), size = p.SizeMul, owner = p.Owner?.Name, activity = p.Activity }),
+        pets = _w.Pets.Select(PetJson),
+        sprayTool = _sprayTool,
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -161,7 +162,8 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
-            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies, sky = _w.Weather.Kind.ToString(),
+            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -343,6 +345,11 @@ sealed partial class App
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
                 case "tourney": PostAll(new { t = "toast", text = StartTourney() }); break;
+                case "adopt":
+                    if (Enum.TryParse<PetKind>(Str(m, "kind"), true, out var ak)) { var np = AdoptPet(ak, m.TryGetProperty("young", out var yg) && yg.ValueKind == JsonValueKind.True); PostAll(new { t = "toast", text = $"Meet {np.Name} the {np.Species()}!" }); }
+                    break;
+                case "supply": if (ItemCatalog.Find(Str(m, "key")) is { } sdef) SpawnItem(sdef); break;
+                case "spray": PickUpSpray(!_sprayTool); _quick?.Close(); break;
                 case "quit": ExitThread(); break;
             }
         }
@@ -502,6 +509,7 @@ sealed partial class App
             case "color": p.Color = Settings.ParseHex(Str(m, "hex")); break;
             case "rename": { var n = Str(m, "v").Trim(); if (n.Length is > 0 and <= 24) p.Name = n; break; }
             case "call": p.CallTo(_w.Cursor); break;
+            default: PetCareEdit(p, Str(m, "op"), m); break;
         }
     }
 
@@ -593,6 +601,11 @@ sealed partial class App
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;
             case "celebrations": _settings.Celebrations = v.GetBoolean(); break;
             case "babies": _settings.Babies = v.GetBoolean(); break;
+            case "petMode": SetPetMode(v.GetBoolean()); break;
+            case "petCare": _settings.PetCare = v.GetString() ?? "normal"; break;
+            case "stamina": _settings.StaminaOn = v.GetBoolean(); break;
+            case "weight": _settings.WeightOn = v.GetBoolean(); break;
+            case "petHelp": _settings.PetHelp = v.GetBoolean(); break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

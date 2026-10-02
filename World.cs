@@ -24,6 +24,8 @@ sealed partial class World
     public static void Play(Sfx s, Vector2 at, float vol = 1, float pitch = 1, double gap = 0.03) => Current?.Sound?.Play(s, at, vol, pitch, gap);
     /// <summary>Babble voices for speech bubbles (off: just the little reaction sounds).</summary>
     public static bool Voices = true;
+    /// <summary>Everyone tires with exertion / everyone's weight changes / figures help with the pets (settings).</summary>
+    public static bool StaminaOn = true, WeightOn = true, PetHelp = true;
     public static void Babble(string text, Vector2 at, float pitch, float vol, float speed) { if (Voices) Current?.Sound?.Babble(text, at, pitch, vol, speed); }
     /// <summary>Hooks for the brain to bring things into the world (a ball for a game, rackets).</summary>
     public Func<PropKind, Prop>? MakeProp;

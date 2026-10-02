@@ -12,6 +12,7 @@ enum Sfx
     Pew, Squirt, DartHit, Boing, Clank, Whirr, Munch, Snore, Scribble, Thud,
     Pip, Chime, Grumble, Laugh, Tune, TaDa, Whistle, Swish,
     Thunder, Splat, Bark, Meow, Purr,
+    Hiss, Growl, Chirp, Squawk, Whine, Spray, Yowl, Lap, Squeak,
 }
 
 /// <summary>Dynamic sound effects, synthesized at start-up (no sound files): every effect is a few short
@@ -289,6 +290,17 @@ sealed class Sound : IDisposable
                        Make(0.14f, (t, p) => MathF.Sign(Sine(t, 300 - 120 * p)) * Env(p, 0.02f) * 0.14f + Rnd() * Env(p) * 0.05f));
         Add(Sfx.Meow, Make(0.5f, (t, p) => Sine(t, 520 + 260 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.16f + Sine(t, 1040 + 400 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.05f));
         Add(Sfx.Purr, Lp(Make(1.2f, (t, p) => Rnd() * (0.5f + 0.5f * MathF.Sin(t * MathF.Tau * 26)) * MathF.Sin(MathF.PI * p) * 0.25f), 0.06f));
+        // Animals.
+        Add(Sfx.Hiss, Make(0.55f, (t, p) => Rnd() * (p < 0.08f ? p / 0.08f : MathF.Pow(1 - p, 0.8f)) * 0.22f));
+        Add(Sfx.Growl, Lp(Make(0.7f, (t, p) => (MathF.Sign(Sine(t, 85 + 10 * MathF.Sin(t * 30))) * 0.5f + Rnd() * 0.3f) * MathF.Sin(MathF.PI * p) * (0.7f + 0.3f * MathF.Sin(t * 45)) * 0.3f), 0.2f));
+        Add(Sfx.Chirp, Make(0.12f, (t, p) => Sine(t, 2400 + 1600 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.18f),
+                       Make(0.18f, (t, p) => Sine(t, 2800 - 1200 * p + 400 * MathF.Sin(t * 120)) * MathF.Sin(MathF.PI * p) * 0.16f));
+        Add(Sfx.Squawk, Make(0.35f, (t, p) => (MathF.Sign(Sine(t, 900 + 500 * MathF.Sin(t * 60))) * 0.5f + Rnd() * 0.25f) * MathF.Sin(MathF.PI * p) * 0.16f));
+        Add(Sfx.Whine, Make(0.6f, (t, p) => Sine(t, 700 + 300 * MathF.Sin(MathF.PI * p) - 200 * p) * MathF.Sin(MathF.PI * p) * 0.14f));
+        Add(Sfx.Spray, Lp(Make(0.18f, (t, p) => Rnd() * (p < 0.1f ? p / 0.1f : 1 - p) * 0.35f), 0.85f));
+        Add(Sfx.Yowl, Make(0.8f, (t, p) => Sine(t, 450 + 250 * MathF.Sin(t * 9) + 120 * MathF.Sin(t * 31)) * MathF.Sin(MathF.PI * p) * 0.15f));
+        Add(Sfx.Lap, Lp(Make(0.06f, (t, p) => Rnd() * Env(p, 0.05f) * 0.3f), 0.5f));
+        Add(Sfx.Squeak, Make(0.2f, (t, p) => Sine(t, 1600 + 700 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.2f));
         _rainLoop = Lp(Make(2.4f, (t, p) => Rnd() * 0.5f + (r.NextDouble() < 0.0015 ? 0.8f : 0)), 0.35f);
         // Crossfade the ends so the loop doesn't click.
         for (int i = 0; i < 2000; i++) { float k = i / 2000f; _rainLoop[i] = _rainLoop[i] * k + _rainLoop[^(2000 - i)] * (1 - k); }

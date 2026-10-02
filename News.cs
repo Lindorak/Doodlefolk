@@ -48,6 +48,12 @@ static class Stickers
         new("welcome", "👋", "Welcome back", "Get welcomed back after time away"),
         new("paper", "📰", "Hot off the press", "Read the weekly paper"),
         new("seasons", "🍂", "Turn of the season", "See leaves, petals or fireflies"),
+        new("walkies", "🦮", "Walkies!", "Take a dog for a good long walk"),
+        new("grownup", "🐾", "All grown up", "A kitten, puppy or chick grows up"),
+        new("cleanup", "🧹", "On poop patrol", "Clean up after a pet"),
+        new("trained", "🎓", "Good boy!", "Train a pet out of a bad habit (75%)"),
+        new("pettalk", "🦜", "Pretty bird", "Teach a parrot a new word"),
+        new("petmode", "🏡", "Pet parent", "Try pet-only mode"),
     };
 
     public static StickerDef? Find(string key) => All.FirstOrDefault(s => s.Key == key) is { Key.Length: > 0 } d ? d : null;

@@ -212,6 +212,7 @@ sealed class Item
         if (Def.Verbs.Contains(Verb.Hammock)) DrawHammock(r);
         if (Def.Verbs.Contains(Verb.Warm)) DrawFire(r, time);
         if (Def.Verbs.Contains(Verb.Dance) && Playing && Free && OnGround) DrawNotes(r, time);
+        DrawCare(r, time);
     }
 
     /// <summary>A faint, offset silhouette cast onto the window behind (drop shadows).</summary>
@@ -383,6 +384,62 @@ sealed class Item
         for (int i = 2; i < 15; i += 3) r.Line(band[i], band[33 - i], Col(1), 0.8f * sc);
     }
 
+    /// <summary>Pet care things: how full the bowls are, what's in the litter box, and the smell of a mess.</summary>
+    void DrawCare(Renderer r, double time)
+    {
+        float sc = Sc, t = (float)time;
+        switch (Def.Key)
+        {
+            case "foodbowl":
+                if (Fill <= 0.01f) break;
+                for (int i = 0; i < 9; i++)
+                {
+                    float x = -6.5f + i * 1.6f, y = 5.6f + Fill * 2.4f * MathF.Sin((i + 0.5f) / 9 * MathF.PI) - (i % 2) * 0.6f;
+                    if (MathF.Abs(x) > 4 + Fill * 2.6f) continue;
+                    r.Disc(Local(x, y), 1.15f * sc, i % 3 == 0 ? M.Hex(0x8D5A2B) : M.Hex(0xB07A3E));
+                }
+                break;
+            case "waterbowl":
+                if (Fill <= 0.01f) break;
+                r.Oval(Local(0, 4.2f + Fill * 1.6f), (5.5f + Fill * 2.6f) * sc, 1.1f * sc, new Color4(0.45f, 0.72f, 1, 0.9f));
+                r.Line(Local(-2, 4.6f + Fill * 1.6f), Local(1, 4.6f + Fill * 1.6f), new Color4(1, 1, 1, 0.7f), 0.7f * sc);
+                break;
+            case "litterbox":
+                r.Line(Local(-15, 7.5f), Local(15, 7.5f), M.Hex(0xE6D3A3), 2.6f * sc);
+                for (int i = 0; i < Math.Min(Dirt, 8); i++) r.Disc(Local(-12 + (i * 7.3f % 24), 8.4f + (i % 2) * 0.6f), 1.5f * sc, i % 2 == 0 ? M.Hex(0x8C7B5E) : M.Hex(0x6E5B3F));
+                if (Dirt >= 3) Smell(r, t, 4);
+                break;
+            case "peepad":
+                for (int i = 0; i < Math.Min(Dirt, 4); i++) r.Oval(Local(-8 + i * 5.5f, 1.6f), 3.2f * sc, 0.8f * sc, new Color4(0.93f, 0.85f, 0.4f, 0.8f));
+                if (Dirt >= 3) Smell(r, t, 3);
+                break;
+            case "puddle": Smell(r, t, 1); break;
+            case "poop": Smell(r, t, 5); break;
+        }
+    }
+
+    /// <summary>Wavy smell lines rising off something.</summary>
+    void Smell(Renderer r, float t, float h)
+    {
+        float sc = Sc;
+        var c = new Color4(0.45f, 0.55f, 0.25f, 0.55f);
+        for (int i = 0; i < 3; i++)
+        {
+            float x = (i - 1) * 3.5f, ph = t * 2 + i * 2;
+            float k = (ph % 3) / 3;
+            for (int j = 0; j < 3; j++)
+            {
+                float y0 = h + 2 + k * 6 + j * 2.2f, y1 = y0 + 2.2f;
+                r.Line(Local(x + MathF.Sin(y0 + t * 3) * 0.9f, y0), Local(x + MathF.Sin(y1 + t * 3) * 0.9f, y1), c.A(1 - k), 0.7f * sc);
+            }
+        }
+    }
+
+    /// <summary>Bowls: how full (1 full … 0 empty). Litter boxes and pee pads: how dirty (uses since cleaned).</summary>
+    public float Fill = 1;
+    public int Dirt;
+    public bool IsMess => Def.Key is "puddle" or "poop" or "dropping";
+
     void DrawFire(Renderer r, double time)
     {
         float sc = Sc, t = (float)time;
@@ -450,9 +507,10 @@ sealed class Item
     public bool Changed()
     {
         bool animated = Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
+                     || Def.Key is "puddle" or "poop" || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
         int key = HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
-                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId);
+                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt));
         bool changed = key != _lastKey;
         _lastKey = key;
         return animated || changed;

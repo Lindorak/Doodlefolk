@@ -27,7 +27,7 @@ sealed partial class Brain
             var v = w.Items.Where(i => i.IsVehicle && i.Rider == null && i.Free && i.OnGround && !Unreachable(i) && Vector2.Distance(i.Pos, f.Base) < 1800 * S
                            && w.Env.SupportAt(i.Pos.X, i.Pos.Y, i.GroundHwnd) is { Item: null } vs && vs.X2 - vs.X1 >= 160 * S)
                            .OrderBy(i => Vector2.Distance(i.Pos, f.Base)).FirstOrDefault();
-            if (v != null && !(Baby && v.Def.Key == "gokart"))
+            if (v != null && !(Baby && v.Def.Key == "gokart") && (!World.StaminaOn || Stamina > 0.25f))
                 opts.Add((0.25f + P.Energy * 0.45f + P.Playfulness * 0.35f) * (0.4f + Boredom) * (w.Weather.Raining ? 0.3f : 1) * (1 + ItemLike(v)), () => GoRide(v, w), $"Ride the {v.Def.Name.ToLowerInvariant()}");
         }
         // A swim.
@@ -73,6 +73,7 @@ sealed partial class Brain
     void Mount(Item v, World w)
     {
         if (v.Rider != null || !v.Free || !w.Items.Contains(v)) { Go(G.Idle, 1); return; }
+        if (World.StaminaOn && Stamina < 0.15f) { f.Emote(V("too tired to ride…", "TOO… TIRED…", "too tired.", "m-maybe later…", "my legs are sleeping"), 1.4f); Go(G.Idle, 1); return; }
         if (w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd) is not { } floor || floor.Item != null || floor.X2 - floor.X1 < 160 * S) { f.Emote(V("no room to ride…", "NOWHERE TO RIDE!", "no room.", "it's too small here…", "no road here"), 1.2f); Go(G.Idle, 1); return; }
         v.Rider = f; f.Riding = v;
         _vehicle = v;

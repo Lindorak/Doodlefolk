@@ -296,6 +296,7 @@ sealed partial class App : ApplicationContext
         BreakFrame(now);
         FocusFrame(now);
         VisitorFrame(now);
+        QuestFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -1338,6 +1339,7 @@ sealed partial class App : ApplicationContext
                     _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
                     break;
                 }
+                case "quest": World.Log("quest: " + NewQuest(null, p.Length > 1 && Enum.TryParse<QuestKind>(p[1], true, out var qk) ? qk : null)); break;
                 case "album": World.Log("album: " + TakeAlbumPhoto("snapshot", p.Length > 1 ? string.Join(' ', p.Skip(1)) : "A debug snapshot", _w.Figures.ToList(), _w.Pets.ToList())); break;
                 case "snappet":
                 {

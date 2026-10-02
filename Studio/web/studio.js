@@ -352,7 +352,7 @@ PAGES.focus = {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind,
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(","),
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -371,6 +371,16 @@ PAGES.cast = {
       cards.push({ id: f.id, svg, name, act, feels, likes, dot });
     });
     grid.append(newFigureCard());
+    // Requests from the town.
+    const quests = S.quests || [];
+    if (quests.length)
+      add(root, h("div", { class: "requests" }, h("h3", null, "Requests"),
+        quests.map(q => h("div", { class: "request" + (q.done ? " done" : "") },
+          h("span", { class: "req-mark" }, q.done ? "✓" : "✦"),
+          h("div", null, h("b", null, q.by), ": “", q.text, "”",
+            h("div", { class: "hint" }, q.done ? "Done. They were thrilled." : `${q.how} ${q.left < 1 ? "Less than an hour left." : `About ${Math.round(q.left)} hours left.`}`)),
+          !q.done && q.kind === "Thing" ? h("button", { class: "btn small", onclick: () => send({ t: "quest", op: "grant", id: q.id }) }, "Put one out") : null,
+          !q.done ? h("button", { class: "btn small ghost", title: "Not this time", onclick: () => send({ t: "quest", op: "decline", id: q.id }) }, "✕") : null))));
     add(root, grid);
     // Save slots.
     const casts = S.casts || { current: "", others: [] };
@@ -1492,6 +1502,8 @@ PAGES.settings = {
     let probSig = null;
     const hemiChips = [["auto", "Automatic"], ["north", "Northern"], ["south", "Southern"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("hemisphere", k); } }, l); c.key = k; return c; });
     const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
+    const reqC = check("Requests", "Now and then someone asks for something that suits them (a swing, a race, a new hat, a dog…). They're listed on the Cast page; do it within a day and they're thrilled.", () => st().requests !== false, v => setS("requests", v));
+    const albumC = check("Photo album", "Big moments (a first date, a baby, a race won) are photographed for the Album: just the town, never your screen.", () => !ALBUM || ALBUM.auto, v => send({ t: "album", op: "auto", v }));
     const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
@@ -1539,7 +1551,7 @@ PAGES.settings = {
       h("p", { class: "hint" }, "How much drama happens. Cozy: fights are rare, couples forgive more, gentle weather and fewer events. Classic: as it is. Chaos: fights, breakups, storms, pet scraps and town events come thick and fast."),
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
-      eventsC, hapBtns, hapLine, visitC,
+      eventsC, hapBtns, hapLine, visitC, reqC, albumC,
       h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
@@ -1590,7 +1602,7 @@ PAGES.settings = {
       ambOn.update(); ambFollow.update(); lofiC.update(); focusLofiC.update(); ambRows.forEach(r => r.update());
       ambBox.style.display = amb().on ? "" : "none";
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update();
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
       hemiChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().hemisphere || "auto")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";
@@ -1884,6 +1896,10 @@ const Mock = {
         if (q.get("theme")) st.settings.theme = q.get("theme");
         // Newer parts of the state an older mock dump may not have.
         st.albumCount = st.albumCount || 3;
+        st.quests = st.quests || [
+          { id: 2, by: "Mo", text: "CAN WE GET A TRAMPOLINE?! PLEASE!!", kind: "Thing", target: "trampoline", done: false, left: 20.5, how: "Put one out from Things (or just say it)." },
+          { id: 1, by: "Bea", text: "Play hide-and-seek with me?", kind: "Game", target: "HideSeek", done: true, left: 3, how: "" },
+        ];
         st.settings.dex = st.settings.dex || { visitors: [], hats: [], pets: [] };
         st.settings.dex.fish = st.settings.dex.fish || [
           { key: "perch", name: "Perch", hint: "Spring to autumn, in daylight.", months: "Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov", rarity: "Common", junk: false, colour: "#9CCC65", now: true, count: 4, best: 31.5, bestBy: "Mo", first: "1 Oct 2026" },

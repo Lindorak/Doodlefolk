@@ -63,6 +63,8 @@ static class Stickers
         new("focus", "🎯", "In the zone", "Finish a focus session"),
         new("album", "📷", "Say cheese", "A big moment goes in the photo album"),
         new("fishdex", "🐟", "Angler", "Catch ten different kinds of fish"),
+        new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
+        new("goodfriend", "💛", "Good friend", "Grant ten requests"),
         new("legendfish", "🌟", "The one that didn't get away", "Catch a legendary fish"),
         new("allfish", "🏆", "Master angler", "Catch every kind of thing in the pond"),
         new("built", "🔨", "Master builder", "A fort or treehouse gets built"),

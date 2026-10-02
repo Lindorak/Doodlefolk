@@ -199,6 +199,10 @@ sealed class Settings
     public bool Visitors { get; set; } = true;
     /// <summary>Big moments (a first date, a baby, a race won) are photographed for the album, town only.</summary>
     public bool AutoAlbum { get; set; } = true;
+    /// <summary>Figures ask for things now and then (a swing, a race, a new hat…), listed in the Studio.</summary>
+    public bool Requests { get; set; } = true;
+    public List<Quest> Quests { get; set; } = new();
+    public int QuestsDone { get; set; }
     /// <summary>Background sound (rain, birds, the pond, the town talking…): off until you turn it on.</summary>
     public bool AmbienceOn { get; set; }
     public float AmbienceVolume { get; set; } = 0.6f;

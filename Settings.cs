@@ -50,6 +50,8 @@ sealed class SavedItem
     /// <summary>Whose home it is (a figure's name), if anyone's.</summary>
     public string? Owner { get; set; }
     public float Fill { get; set; } = 1;
+    public float ScaleX { get; set; } = 1;
+    public float ScaleY { get; set; } = 1;
     public int Dirt { get; set; }
     public float Growth { get; set; }
     public string PlantKind { get; set; } = "";

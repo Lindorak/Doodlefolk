@@ -275,7 +275,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "fishtank", Name = "Fish tank", Words = new[] { "fish tank", "aquarium", "fishbowl", "fish bowl", "fish", "goldfish" }, W = 44, H = 30, Color = M.Hex(0x4FC3F7),
-            Shapes = new[] { R(-22, 0, 22, 3, 6), new Shape('r', new float[] { -21, 3, 21, 29 }, 0, 1.2f, NoOutline: true), R(-21, 3, 21, 6, 17), L(-21, 29, 21, 29, 6, 1.4f), L(-21, 3, -21, 29, 6, 1.2f), L(21, 3, 21, 29, 6, 1.2f) },
+            Shapes = new[] { R(-22, 0, 22, 3, 6), R(-21, 3, 21, 6, 17), L(-21, 29, 21, 29, 6, 1.4f), L(-21, 3, -21, 29, 6, 1.2f), L(21, 3, 21, 29, 6, 1.2f) },
             Mass = 3, Surface = 30, SurfX1 = -20, SurfX2 = 20,
         });
 

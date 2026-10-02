@@ -363,7 +363,9 @@ sealed partial class App : ApplicationContext
         _w.Hover = _dragging ? null : fig;
         if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
         if (_w.Wish != null) _w.Wish.Hot = WishHit(c);
-        _overlay.SetClickThrough(!_sprayTool && _w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        if (_resizeIt != null) ResizeStep(c);
+        bool overEdge = ResizeHover(c);
+        _overlay.SetClickThrough(!_sprayTool && !overEdge && _w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -401,6 +403,7 @@ sealed partial class App : ApplicationContext
             else if (e.Button == MouseButtons.Right) PickUpSpray(false);
             return;
         }
+        if (e.Button == MouseButtons.Left && StartResize(_w.Cursor)) return;
         if (HitPet(_w.Cursor) is { } pet && HitTest(_w.Cursor).fig == null)
         {
             if (e.Button == MouseButtons.Left) { pet.Grab(); _pressPet = pet; }

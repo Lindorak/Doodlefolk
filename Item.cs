@@ -35,6 +35,9 @@ sealed class Item
 
     public IntPtr Handle => (IntPtr)(-1000 - Id);
     public float Sc => _s * SizeMul;
+    /// <summary>Stretch (resizable things like the fish tank): width and height, separately.</summary>
+    public float ScaleX = 1, ScaleY = 1;
+    public bool Resizable => Def.Key == "fishtank";
     public bool Held => Pinned || Holder != null;
     public bool Free => !Held;
 
@@ -51,7 +54,7 @@ sealed class Item
     public Vector2 Local(float x, float y)
     {
         float sc = Sc;
-        var v = new Vector2((Flip ? -x : x) * sc, -y * sc);
+        var v = new Vector2((Flip ? -x : x) * sc * ScaleX, -y * sc * ScaleY);
         if (Angle != 0) v = M.Rotate(v, Angle);
         return Pos + v;
     }
@@ -82,7 +85,7 @@ sealed class Item
         }
         if (Holder != null)
         {
-            Pos = Holder.HoldPoint + new Vector2(0, Def.H * Sc * 0.4f);
+            Pos = Holder.HoldPoint + new Vector2(0, Def.H * Sc * ScaleY * 0.4f);
             Vel = Holder.HoldVelocity;
             OnGround = false;
             Angle = 0;
@@ -107,10 +110,10 @@ sealed class Item
         Pos += Vel * dt;
         Angle += Spin * dt;
         var (L, R, T) = env.BoundsAt(Pos.X);
-        float half = Def.W * Sc * 0.5f;
+        float half = Def.W * Sc * ScaleX * 0.5f;
         if (Pos.X < L + half) { Pos.X = L + half; Vel.X = MathF.Abs(Vel.X) * 0.3f; }
         if (Pos.X > R - half) { Pos.X = R - half; Vel.X = -MathF.Abs(Vel.X) * 0.3f; }
-        if (Pos.Y - Def.H * Sc < T) { Pos.Y = T + Def.H * Sc; Vel.Y = MathF.Max(0, Vel.Y); }
+        if (Pos.Y - Def.H * Sc * ScaleY < T) { Pos.Y = T + Def.H * Sc * ScaleY; Vel.Y = MathF.Max(0, Vel.Y); }
         if (Vel.Y > 0 && Landing(env, py) is { } p)
         {
             float impact = Vel.Y;
@@ -155,7 +158,7 @@ sealed class Item
         if (d.Surface >= 0)
         {
             float a = Local(d.SurfX1, d.Surface).X, b = Local(d.SurfX2, d.Surface).X;
-            yield return (Pos.Y - d.Surface * Sc, MathF.Min(a, b), MathF.Max(a, b), d.Bounce);
+            yield return (Pos.Y - d.Surface * Sc * ScaleY, MathF.Min(a, b), MathF.Max(a, b), d.Bounce);
         }
         foreach (float sx in d.Seats)
         {
@@ -275,7 +278,7 @@ sealed class Item
                 return;
         }
         if (n < 3) return;
-        var world = Matrix3x2.CreateScale(Flip ? -sc : sc, -sc) * Matrix3x2.CreateRotation(Angle) * Matrix3x2.CreateTranslation(Pos);
+        var world = Matrix3x2.CreateScale((Flip ? -sc : sc) * ScaleX, -sc * ScaleY) * Matrix3x2.CreateRotation(Angle) * Matrix3x2.CreateTranslation(Pos);
         if (shadow is Vector2 off)
         {
             r.CachedShape(sh, (int)MathF.Round(k * 100), pts.AsSpan(0, n), world * Matrix3x2.CreateTranslation(off), DropInk, DropInk, 0);
@@ -429,29 +432,35 @@ sealed class Item
     void DrawTank(Renderer r, float t)
     {
         float sc = Sc;
-        r.FillPolygon(stackalloc Vector2[] { Local(-21, 6), Local(21, 6), Local(21, 26), Local(-21, 26) }, new Color4(0.3f, 0.65f, 0.9f, 0.45f));
-        for (int i = 0; i < 3; i++)
+        // Glass (barely there above the water), then the water itself.
+        r.FillPolygon(stackalloc Vector2[] { Local(-21, 26), Local(21, 26), Local(21, 29), Local(-21, 29) }, new Color4(0.85f, 0.95f, 1, 0.18f));
+        r.FillPolygon(stackalloc Vector2[] { Local(-21, 6), Local(21, 6), Local(21, 26), Local(-21, 26) }, new Color4(Color.R, Color.G, Color.B, 0.55f));
+        r.Line(Local(-20, 8), Local(-20, 27), new Color4(1, 1, 1, 0.35f), 1.2f * sc);   // a glint on the glass
+        int weeds = Math.Clamp((int)MathF.Round(3 * ScaleX), 2, 10);
+        for (int i = 0; i < weeds; i++)
         {
-            float x = -14 + i * 13, sw = MathF.Sin(t * 1.3f + i) * 1.6f;
+            float x = -17 + i * 34f / MathF.Max(1, weeds - 1), sw = MathF.Sin(t * 1.3f + i) * 1.6f / ScaleX;
             r.Line(Local(x, 6), Local(x + sw, 13), M.Hex(0x43A047), 1.6f * sc);
             r.Line(Local(x + sw, 13), Local(x + sw * 1.8f, 19), M.Hex(0x66BB6A), 1.3f * sc);
         }
         bool hungry = Fill < 0.3f;
-        var cols = new[] { M.Hex(0xFB8C00), M.Hex(0xFDD835), M.Hex(0xE53935) };
-        for (int i = 0; i < 3; i++)
+        var cols = new[] { M.Hex(0xFB8C00), M.Hex(0xFDD835), M.Hex(0xE53935), M.Hex(0x29B6F6), M.Hex(0xAB47BC) };
+        int fish = Math.Clamp((int)MathF.Round(3 * ScaleX * MathF.Sqrt(ScaleY)), 2, 12);
+        for (int i = 0; i < fish; i++)
         {
-            float speed = 0.35f + i * 0.12f, ph = t * speed + i * 2.1f;
-            float x = MathF.Sin(ph) * 15, y = hungry ? 23 - i * 0.8f : 11 + i * 4 + MathF.Sin(ph * 2.3f) * 2;
+            float speed = (0.35f + (i % 4) * 0.12f) / MathF.Sqrt(ScaleX), ph = t * speed + i * 2.1f;
+            float x = MathF.Sin(ph) * 15, y = hungry ? 23 - (i % 3) * 0.8f / ScaleY : 9 + ((i * 37) % 13) + MathF.Sin(ph * 2.3f) * 2 / ScaleY;
             int dir = MathF.Cos(ph) >= 0 ? 1 : -1;
             var c = Local(x, y);
-            r.Oval(c, 2.6f * sc, 1.5f * sc, cols[i]);
-            r.FillPolygon(stackalloc Vector2[] { c - new Vector2(dir * 2.2f * sc, 0), c - new Vector2(dir * 4 * sc, 1.4f * sc), c - new Vector2(dir * 4 * sc, -1.4f * sc) }, cols[i]);
+            var fc = cols[i % cols.Length];
+            r.Oval(c, 2.6f * sc, 1.5f * sc, fc);
+            r.FillPolygon(stackalloc Vector2[] { c - new Vector2(dir * 2.2f * sc, 0), c - new Vector2(dir * 4 * sc, 1.4f * sc), c - new Vector2(dir * 4 * sc, -1.4f * sc) }, fc);
             r.Disc(c + new Vector2(dir * 1.3f * sc, -0.4f * sc), 0.45f * sc, new Color4(0.1f, 0.1f, 0.1f, 1));
         }
         for (int i = 0; i < 4; i++)
         {
             float ph = (t * 0.5f + i * 0.27f) % 1;
-            r.Ring(Local(12 + MathF.Sin(t * 3 + i) * 0.8f, 7 + ph * 18), (0.6f + ph * 0.5f) * sc, new Color4(1, 1, 1, 0.6f * (1 - ph)), 0.4f * sc);
+            r.Ring(Local(12 + MathF.Sin(t * 3 + i) * 0.8f / ScaleX, 7 + ph * 18), (0.6f + ph * 0.5f) * sc, new Color4(1, 1, 1, 0.6f * (1 - ph)), 0.4f * sc);
         }
         r.Line(Local(-20, 26), Local(20, 26), new Color4(1, 1, 1, 0.5f), 0.8f * sc);   // the water line
         if (Fill > 0.85f) for (int i = 0; i < 5; i++) r.Disc(Local(-6 + i * 3, 25.5f - (1 - Fill) * 40 * (i % 2 + 1)), 0.5f * sc, M.Hex(0xA1887F));   // flakes sinking
@@ -646,8 +655,8 @@ sealed class Item
     public System.Drawing.RectangleF? FlagRect()
     {
         if (OwnerId == 0) return null;
-        float sc = Sc, x = Pos.X + Def.W * sc * 0.28f, top = Pos.Y - Def.H * sc - 24 * _s;
-        return System.Drawing.RectangleF.FromLTRB(x - 3 * _s, top, x + 26 * _s + (OwnerName.Length + 2) * 5.4f * _s, Pos.Y - Def.H * sc * 0.5f);
+        float sc = Sc, x = Pos.X + Def.W * sc * ScaleX * 0.28f, top = Pos.Y - Def.H * sc * ScaleY - 24 * _s;
+        return System.Drawing.RectangleF.FromLTRB(x - 3 * _s, top, x + 26 * _s + (OwnerName.Length + 2) * 5.4f * _s, Pos.Y - Def.H * sc * ScaleY * 0.5f);
     }
 
     public System.Drawing.RectangleF Bounds()
@@ -658,7 +667,7 @@ sealed class Item
 
     System.Drawing.RectangleF BoundsBody()
     {
-        float sc = Sc, w = Def.W * sc, h = Def.H * sc, pad = 6 * sc;
+        float sc = Sc, w = Def.W * sc * ScaleX, h = Def.H * sc * ScaleY, pad = 6 * sc;
         if (Def.Verbs.Contains(Verb.Warm)) { h += 46 * sc; w = MathF.Max(w, (World.Current?.Night > 0.3f ? 250 : 150) * sc); }
         if (Def.Verbs.Contains(Verb.Dance)) h += 30 * sc;
         if (Def.Verbs.Contains(Verb.Read)) w = MathF.Max(w, 20 * sc);
@@ -671,7 +680,7 @@ sealed class Item
         Vector2 d = p - Pos;
         if (Angle != 0) d = M.Rotate(d, -Angle);
         float sc = Sc;
-        return MathF.Abs(d.X) < Def.W * sc * 0.5f + 2 * sc && d.Y < 3 * sc && d.Y > -Def.H * sc - 2 * sc;
+        return MathF.Abs(d.X) < Def.W * sc * ScaleX * 0.5f + 2 * sc && d.Y < 3 * sc && d.Y > -Def.H * sc * ScaleY - 2 * sc;
     }
 
     public void Shadow(Env env, out Vector2 c, out float rx, out float ry, out float a)
@@ -681,7 +690,7 @@ sealed class Item
         if (env.Below(Pos.X, Pos.Y - 2 * _s) is not { } p) return;
         float k = M.Clamp01(1 - MathF.Max(0, p.Y - Pos.Y) / (300 * _s));
         c = new Vector2(Pos.X, p.Y);
-        rx = Def.W * Sc * 0.48f * (0.6f + 0.4f * k);
+        rx = Def.W * Sc * ScaleX * 0.48f * (0.6f + 0.4f * k);
         ry = 2.2f * _s;
         a = 0.18f * k;
     }

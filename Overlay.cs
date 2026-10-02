@@ -51,7 +51,15 @@ sealed class Overlay : Form
         long ex = ExStyle(Handle);
         ex = on ? ex | WS_EX_TRANSPARENT : ex & ~WS_EX_TRANSPARENT;
         SetWindowLongPtr(Handle, GWL_EXSTYLE, (IntPtr)ex);
-        Cursor = on ? Cursors.Default : Cursors.Hand;
+        Cursor = on ? Cursors.Default : _override ?? Cursors.Hand;
+    }
+
+    Cursor? _override;
+    /// <summary>A particular cursor while over something (a resize edge), or null for the usual hand.</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Cursor? CursorOverride
+    {
+        set { if (_override == value) return; _override = value; if (!_clickThrough) Cursor = value ?? Cursors.Hand; }
     }
 
     protected override void OnPaintBackground(PaintEventArgs e) { }

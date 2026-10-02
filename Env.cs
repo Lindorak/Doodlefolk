@@ -194,7 +194,7 @@ sealed class Env
             Vector2 d = _items.TryGetValue(h, out var prev) ? it.Pos - prev.last : Vector2.Zero;
             if (d.LengthSquared() > 400 * 400) d = Vector2.Zero;   // teleported: don't fling riders
             _itemDelta[h] = d;
-            var rect = new RECT { Left = (int)MathF.Round(it.Pos.X), Top = (int)MathF.Round(it.Pos.Y - it.Def.H * it.Sc), Right = (int)MathF.Round(it.Pos.X + 1), Bottom = (int)MathF.Round(it.Pos.Y) };
+            var rect = new RECT { Left = (int)MathF.Round(it.Pos.X), Top = (int)MathF.Round(it.Pos.Y - it.Def.H * it.Sc * it.ScaleY), Right = (int)MathF.Round(it.Pos.X + 1), Bottom = (int)MathF.Round(it.Pos.Y) };
             _items[h] = (it.Pos, rect);
             foreach (var (y, x1, x2, bounce) in it.Surfaces())
                 Platforms.Add(new Platform { Hwnd = h, Y = y, PrevY = y - d.Y, X1 = x1, X2 = x2, Bounce = bounce, Item = it });

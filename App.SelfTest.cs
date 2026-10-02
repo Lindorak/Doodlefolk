@@ -77,6 +77,7 @@ sealed partial class App
               "jokes": ["a self-test joke"],
               "characters": [ { "name": "QA Captain", "color": "#1E88E5", "look": { "hat": "crown" } } ],
               "storytellers": [ { "key": "qa-calm", "name": "QA calm", "drama": 0.5 } ],
+              "behaviours": [ { "key": "qa-ponder", "name": "Pondering (QA)", "weight": 0.01, "steps": [ { "say": "hmm, QA" }, { "act": "sitfloor", "seconds": 2 }, { "diary": "Pondered things (QA)." } ] } ],
               "events": [ { "key": "qa-fest", "title": "The QA fair", "decor": ["lantern"], "food": ["cake"] } ],
               "songs": [ { "title": "QA tune", "lyrics": "la\nla" } ]
             }
@@ -206,6 +207,9 @@ sealed partial class App
             Check("a mod's festival starts", r.StartsWith("started") && _w.Happening?.Title == "The QA fair", r);
             Check("a mod's character can join", SpawnModCharacter(Mods.Characters.FindIndex(c => c.fig.Name == "QA Captain")).Contains("on the way"));
         });
+        At(533.5, "mod behaviour", () => { if (Fig(1) is { } fb && Mods.Behaviours.FirstOrDefault(b => b.Key == "qa-ponder") is { } mb) fb.Brain.StartBehaviour(mb); });
+        At(534, "mod behaviour runs", () => Check("a mod's behaviour runs its steps", Fig(1)?.Brain.Activity == "Pondering (QA)", Fig(1)?.Brain.Activity ?? ""));
+        At(542, "mod behaviour done", () => Check("…and finishes", Fig(1) is { } fb2 && fb2.Brain.Activity != "Pondering (QA)" && fb2.Brain.Diary.Any(d => d.Text.Contains("QA")), Fig(1)?.Brain.Activity ?? ""));
         At(533, "mod festival over", () => { if (_w.Happening is { } mh) EndHappening(mh, false); foreach (var f in _w.Figures.Where(f => f.Name.StartsWith("QA Captain")).ToList()) _w.RemoveFigure(f); });
         At(535, "casts", () =>
         {

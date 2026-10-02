@@ -144,3 +144,45 @@ Lyrics anyone may sing at the talent show (one line per line).
 **Studio → Settings → Mods → Check a mod file…** reads a file without loading it and tells you what it adds, what's
 broken (it won't load until that's fixed) and what looks odd (a misspelt object key, a scenario character that isn't
 there, a section Doodlefolk doesn't know). Then share it on the Steam Workshop from the same place.
+
+## Behaviours
+
+New things for figures to do. A behaviour is a description, not a program: when it can happen, how likely it is,
+and a few steps from a fixed list. That's what keeps it safe: a mod can't read or write files, reach the network or
+do anything outside the town, and it can't run away (twenty steps at most, two minutes a step, and a cooldown before
+it can happen again).
+
+```json
+"behaviours": [
+  { "key": "stargazing", "name": "Watching the stars", "weight": 0.6, "cooldown": 1200,
+    "when": { "night": true, "weather": "clear", "traits": { "curiosity": 0.5 }, "hours": [21, 3] },
+    "steps": [
+      { "go": "high" },
+      { "say": ["look at them all", "so many stars"] },
+      { "act": "sitfloor", "seconds": 20 },
+      { "feel": { "joy": 0.2 } },
+      { "diary": "Watched the stars from up high.", "mood": "★" }
+    ] }
+]
+```
+
+**When** (all optional): `night` (true/false), `weather` (`rain`, `snow` or `clear`), `seasons` (`["Spring", "Summer"]`),
+`hours` (`[from, to]`, can wrap past midnight), `traits` (each at least this much: energy, curiosity, bravery,
+playfulness, aggression, sociability), `likes` (a thing they must like, e.g. `"HighPlaces"`), `near` (an object key
+within reach), `alone` (true: nobody nearby; false: company), `stamina` (at least this much energy left).
+
+**Weight** is how tempting it is next to everything else they could do (0.3 is a usual small pleasure; most built-in
+choices are between 0.1 and 2). **Cooldown** is seconds before the same figure does it again (60 to a day).
+
+**Steps**:
+
+| Step | What it does |
+| --- | --- |
+| `{ "go": "high" }` | Walk (and climb and jump) to somewhere high; also `low`, `random`, `friend`, or `item:<key>` (next to the nearest one) |
+| `{ "say": "…" }` or `["…", "…"]` | A speech bubble (one of them, picked at random); `seconds` to keep it up |
+| `{ "act": "sitfloor", "seconds": 20 }` | Hold a pose: `stand`, `sitfloor`, `sitedge`, `wave`, `cheer`, `dance`, `talk`, `tap`, `sleep` |
+| `{ "wait": 5 }` | Just be, for a few seconds |
+| `{ "diary": "…", "mood": "★" }` | A line in their diary (in the Studio) |
+| `{ "feel": { "joy": 0.2 } }` | Nudge a feeling by up to ±0.5: `joy`, `sadness`, `boredom`, `loneliness`, `stamina` |
+
+While a behaviour runs, the Studio shows its name as what they're doing.

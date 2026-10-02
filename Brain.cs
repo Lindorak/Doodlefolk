@@ -267,6 +267,9 @@ sealed partial class Brain
 
         // Singing (you asked them to): nothing else until the song's done. (On stage, the act handles it.)
         if (_song != null && _g != G.Happening) { SingStep(w); return; }
+        // A mod's behaviour: its steps are in charge (except while it's walking somewhere, which the usual walking does).
+        if (_mb != null && _mbWalking && _t0 > _mbUntil + 60) _mb = null;   // couldn't get there: give up
+        if (_mb != null && BehaviourStep(w)) return;
         bool calm = f.Grounded && !f.JumpPending && _g is G.Idle or G.Walk or G.SitEdge or G.SitFloor or G.Watch or G.Sleep;
         bool errand = _g == G.Walk && _purpose != WalkPurpose.Wander;
         if (calm && !World.Focus && ReactToCursor(w, cur, dist, cspeed, near, errand)) return;
@@ -746,6 +749,7 @@ sealed partial class Brain
         VisitorOptions(w, opts);
         MemorialOptions(w, opts);
         PrankOptions(w, opts);
+        ModBehaviourOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

@@ -61,5 +61,6 @@ sealed partial class App
         scenarios = Mods.Scenarios.Select(s => new { key = s.Key, name = s.Name, blurb = s.Blurb, size = s.Characters.Count }),
         events = Mods.Events.Select(e => new { key = e.Key, title = e.Title }),
         songs = Mods.Songs.Count,
+        behaviours = Mods.Behaviours.Select(b => b.Name),
     };
 }

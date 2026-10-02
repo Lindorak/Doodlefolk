@@ -71,6 +71,12 @@ static partial class Mods
                 foreach (var (k, _) in sc.Items) if (ItemCatalog.Find(k) == null) warnings.Add($"scenario \"{sc.Key}\": no object called \"{k}\"");
                 if (register) Scenarios.Add(sc);
             }
+        if (root.TryGetProperty("behaviours", out var bs) || root.TryGetProperty("behaviors", out bs))
+            foreach (var b in bs.EnumerateArray())
+            {
+                var mb = BehaviourFrom(b, warnings);
+                if (register) { Behaviours.RemoveAll(x => x.Key == mb.Key); Behaviours.Add(mb); }
+            }
         if (root.TryGetProperty("songs", out var sg))
             foreach (var s in sg.EnumerateArray())
             {
@@ -109,13 +115,13 @@ static partial class Mods
             if (root.TryGetProperty("hats", out var hs)) foreach (var h in hs.EnumerateArray()) { HatFrom(h, dir); hats++; }
             ContentFrom(root, Path.GetFileName(file), warnings, register: false);
             CrossCheck(root, warnings);
-            var known = new HashSet<string> { "items", "hats", "jokes", "names", "characters", "storytellers", "events", "scenarios", "songs", "name", "description", "author", "version" };
+            var known = new HashSet<string> { "items", "hats", "jokes", "names", "characters", "storytellers", "events", "scenarios", "songs", "behaviours", "behaviors", "name", "description", "author", "version" };
             foreach (var p in root.EnumerateObject()) if (!known.Contains(p.Name)) warnings.Add($"\"{p.Name}\" isn't something mods can have (it's ignored)");
             int Count(string k) => root.TryGetProperty(k, out var a) && a.ValueKind == JsonValueKind.Array ? a.GetArrayLength() : 0;
             var parts = new List<string>();
             void Part(int n, string one, string many) { if (n > 0) parts.Add($"{n} {(n == 1 ? one : many)}"); }
             Part(items, "object", "objects"); Part(hats, "hat", "hats"); Part(Count("jokes"), "joke", "jokes"); Part(Count("characters"), "character", "characters");
-            Part(Count("storytellers"), "storyteller", "storytellers"); Part(Count("events"), "festival", "festivals"); Part(Count("scenarios"), "scenario", "scenarios"); Part(Count("songs"), "song", "songs");
+            Part(Count("storytellers"), "storyteller", "storytellers"); Part(Count("events"), "festival", "festivals"); Part(Count("scenarios"), "scenario", "scenarios"); Part(Count("songs"), "song", "songs"); Part(Count("behaviours") + Count("behaviors"), "behaviour", "behaviours");
             summary = parts.Count > 0 ? "Adds " + string.Join(", ", parts) + "." : "It doesn't add anything yet.";
             if (parts.Count == 0) warnings.Add("nothing in it yet");
         }

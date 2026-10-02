@@ -8,6 +8,7 @@ sealed partial class Brain
         get
         {
             if (f.Dead) return "Gone";
+            if (_mb != null) return _mb.Name;
             if (f.KO) return "Knocked out";
             if (f.Mode == Mode.Spawning) return "Being drawn";
             if (f.Mode == Mode.Ragdoll) return f.Held ? "Being held by you" : "Tumbling";

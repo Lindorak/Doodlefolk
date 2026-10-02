@@ -190,6 +190,18 @@ sealed partial class App
                   $"figures {_w.Figures.Count}/{_scaleBefore.Count}, items {_w.Items.Count(i => !i.Temporary)}/{_scaleItems}, pets {_w.Pets.Count}/{_petBefore.Count}");
         });
         At(182, "back to size", () => { Rescale(1f); Check("…and back again", _w.Figures.All(f => _scaleBefore.TryGetValue(f.Id, out var b) && MathF.Abs(f.S - b) < 0.02f * b)); });
+        At(183, "no bathroom stuff", () =>
+        {
+            foreach (var pt in _w.Pets) { pt.Bladder = 0.95f; pt.Bowel = 0.95f; }
+            if (ItemCatalog.Find("poop") is { } pd) SpawnItem(pd);
+            SetPetBathroom(false);
+        });
+        At(190, "still clean", () =>
+        {
+            Check("no-bathroom mode: no needs, no messes", _w.Pets.All(p => p.Bladder == 0 && p.Bowel == 0 && p.Want is not (PetNeed.Potty or PetNeed.Walk)) && !_w.Items.Any(i => i.IsMess),
+                  string.Join(", ", _w.Pets.Select(p => $"{p.Name} {p.Bladder:0.0}/{p.Bowel:0.0} {p.Want}")));
+            SetPetBathroom(true);
+        });
         At(176, "village check", () =>
         {
             float top = _w.Env.BoundsAt(960).T;

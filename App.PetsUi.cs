@@ -7,9 +7,21 @@ namespace Doodlefolk;
 /// the things you can do for (and with) them.</summary>
 sealed partial class App
 {
+    /// <summary>Bathroom stuff on or off; off tidies away any mess and cleans the litter boxes.</summary>
+    public void SetPetBathroom(bool on)
+    {
+        _settings.PetBathroom = Pet.Potty = on;
+        if (on) return;
+        foreach (var it in _w.Items.Where(i => i.IsMess).ToList()) _w.RemoveItem(it);
+        foreach (var it in _w.Items.Where(i => i.Def.Key is "litterbox" or "peepad")) it.Dirt = 0;
+        foreach (var pt in _w.Pets) { pt.Bladder = pt.Bowel = 0; if (pt.Want is PetNeed.Potty or PetNeed.Walk) pt.Want = PetNeed.None; }
+    }
+
     void PetFrame(double now)
     {
         (Pet.CarePace, Pet.Accidents) = _settings.PetCare switch { "relaxed" => (0.5f, false), "realistic" => (1.6f, true), _ => (1f, true) };
+        Pet.Potty = _settings.PetBathroom;
+        if (!Pet.Potty) Pet.Accidents = false;
         Pet.StaminaOn = World.StaminaOn = _settings.StaminaOn;
         Pet.WeightOn = World.WeightOn = _settings.WeightOn;
         World.PetHelp = _settings.PetHelp;
@@ -35,7 +47,7 @@ sealed partial class App
         health = R2(p.Health), clean = R2(p.Clean), sick = p.IllnessName, cone = p.InCone,
         temper = p.TemperWord, female = p.Female, wear = p.Wear, wearColour = p.WearColour, expecting = p.Pregnant > 0, mother = p.MotherName,
         tricks = Pet.TrickNames.Where(p.CanTrick),
-        needs = new { food = R2(1 - p.Hunger), water = R2(1 - p.Thirst), bathroom = R2(1 - MathF.Max(p.Bladder, p.Bowel)), energy = R2(p.Energy), love = R2(1 - p.Attention), fun = R2(1 - p.Boredom), calm = R2(1 - p.Stress), comfort = R2(1 - p.Frustration) },
+        needs = new { food = R2(1 - p.Hunger), water = R2(1 - p.Thirst), bathroom = Pet.Potty ? R2(1 - MathF.Max(p.Bladder, p.Bowel)) : (float?)null, energy = R2(p.Energy), love = R2(1 - p.Attention), fun = R2(1 - p.Boredom), calm = R2(1 - p.Stress), comfort = R2(1 - p.Frustration) },
         habits = p.Habits.Select(h => new { key = h.ToString(), name = Pet.HabitGood(h), v = R2(p.R(h)) }),
         skills = p.SkillList.Select(s => new { key = s.ToString(), name = Pet.SkillName(s), v = R2(p.Sk(s)) }),
         friends = _w.Pets.Where(o => o != p).Select(o => new { name = o.Name, v = R2(p.PetBond(o)) }),

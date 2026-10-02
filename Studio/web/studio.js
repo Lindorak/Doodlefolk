@@ -1089,7 +1089,7 @@ PAGES.pets = {
         const p = (S.pets || []).find(x => x.id === id); if (!p) return;
         title.replaceChildren(h("span", { class: "dot", style: { background: p.hex } }), `${petGlyph(p.kind)} ${p.name}`, h("span", { class: "hint" }, `  ${p.female ? "♀" : "♂"} ${p.temper} ${p.species}${p.young ? ` · ${Math.round(p.age * 100)}% grown` : ""} · ${p.weightWord}${p.expecting ? " · expecting!" : ""}${p.mother ? ` · ${p.mother}'s` : ""}`));
         sub.textContent = `${p.activity}. ${p.mood}.${p.owner ? ` ${p.owner}'s favourite.` : ""}`;
-        needs.replaceChildren(...NEED_NAMES.map(([k, l]) => meterRow(l, p.needs[k], Math.round(p.needs[k] * 100) + "%")),
+        needs.replaceChildren(...NEED_NAMES.filter(([k]) => p.needs[k] != null).map(([k, l]) => meterRow(l, p.needs[k], Math.round(p.needs[k] * 100) + "%")),
           meterRow("Stamina", p.stamina, Math.round(p.stamina * 100) + "%"), meterRow("Health", p.health, p.sick ? p.sick : Math.round(p.health * 100) + "%", p.sick ? "var(--bad)" : null), meterRow("Clean", p.clean, Math.round(p.clean * 100) + "%"), meterRow("Loves you", (p.bond + 1) / 2, p.bond > 0.6 ? "adores you" : p.bond > 0.25 ? "likes you" : p.bond > -0.1 ? "warming up" : "wary"));
         train.replaceChildren(...p.habits.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--accent)")), ...p.skills.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--good)")));
         extra.textContent = [p.friends.length ? "Gets on with: " + p.friends.map(f => `${f.name} (${f.v > 0.45 ? "friends" : f.v > 0 ? "okay" : f.v > -0.4 ? "wary" : "enemies"})`).join(", ") : "", p.words ? `Says: ${p.words.map(w => "“" + w + "”").join(" ")}` : "", `Sprayed ${p.sprays}× · ${p.treats} treats · born ${p.born}`].filter(Boolean).join("  ·  ");
@@ -1656,6 +1656,7 @@ PAGES.settings = {
       return c;
     });
     const petMode = check("Just pets", "Only animals on your desktop. Your figures are kept safe and come back when you switch this off.", () => !!st().petMode, v => setS("petMode", v));
+    const bathC = check("Bathroom stuff", "Litter boxes, pee pads, walks to go, the odd accident to clean up. Off: none of that, ever, and any mess is tidied away.", () => st().petBathroom !== false, v => setS("petBathroom", v));
     const careChips = [["relaxed", "Relaxed"], ["normal", "Normal"], ["realistic", "Realistic"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("petCare", k); } }, l); c.key = k; return c; });
     const staminaC = check("Stamina", "Everyone (figures and animals) gets out of puff with running, chasing and fighting, and needs to catch their breath.", () => st().stamina !== false, v => setS("stamina", v));
     const weightC = check("Weight", "Eating too much (and treats!) makes them chubbier, exercise slims them down. Heavier means slower and quicker to tire.", () => st().weight !== false, v => setS("weight", v));
@@ -1812,7 +1813,7 @@ PAGES.settings = {
       h("p", { class: "hint" }, "Which way round the seasons (and the pond's fish) go. Automatic uses your real-weather town if you've set one, otherwise northern."),
       h("h2", null, "Pets and bodies"),
       petMode,
-      h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
+      h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)), bathC,
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
       staminaC, weightC, petHelpC, breedC, lassoC,
       h("h2", null, "Town"),
@@ -1935,7 +1936,7 @@ PAGES.settings = {
       wxStatus.textContent = st().weather === "real" ? (st().weatherStatus || (st().weatherPlace ? st().weatherPlace : "Type your town or city and press \"Use this place\".")) : "";
       hapLine.textContent = st().happening ? `On now: ${st().happening}.` : "";
       paceChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().lifePace || "off")); });
-      careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
+      careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); }); bathC.update();
     };
   },
 };

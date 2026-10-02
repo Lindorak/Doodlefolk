@@ -186,7 +186,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, visitors = _settings.Visitors, unlockedHats = _settings.UnlockedHats, cratesWaiting = _settings.CratesWaiting,
+            petMode = _settings.PetMode, petCare = _settings.PetCare, petBathroom = _settings.PetBathroom, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, visitors = _settings.Visitors, unlockedHats = _settings.UnlockedHats, cratesWaiting = _settings.CratesWaiting,
             dex = new
             {
                 visitors = Visitors.Select(v => new { kind = v.kind.ToString(), name = v.name, title = v.title, blurb = v.blurb, met = _settings.Dex.TryGetValue("visitor:" + v.kind, out var d) ? d.Count : 0, first = _settings.Dex.TryGetValue("visitor:" + v.kind, out var d2) ? d2.First.ToString("d MMM yyyy") : "" }),
@@ -850,6 +850,7 @@ sealed partial class App
             case "babies": _settings.Babies = v.GetBoolean(); break;
             case "petMode": SetPetMode(v.GetBoolean()); break;
             case "petCare": _settings.PetCare = v.GetString() ?? "normal"; break;
+            case "petBathroom": SetPetBathroom(v.GetBoolean()); break;
             case "stamina": _settings.StaminaOn = v.GetBoolean(); break;
             case "weight": _settings.WeightOn = v.GetBoolean(); break;
             case "petHelp": _settings.PetHelp = v.GetBoolean(); break;

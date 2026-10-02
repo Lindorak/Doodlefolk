@@ -14,6 +14,9 @@ sealed partial class Pet
     /// <summary>How quickly needs build (relaxed 0.5, normal 1, realistic 1.6) and whether pets can have accidents.</summary>
     public static float CarePace = 1;
     public static bool Accidents = true;
+    /// <summary>Off ("no bathroom stuff"): no bladders or bowels at all, so no litter boxes, accidents, poop on walks or
+    /// droppings.</summary>
+    public static bool Potty = true;
 
     public float Hunger = 0.2f, Thirst = 0.2f, Bladder = 0.2f, Bowel = 0.1f, Energy = 1, Attention = 0.3f, Boredom = 0.3f, Stress, Wet;
     public PetNeed Want;
@@ -44,6 +47,7 @@ sealed partial class Pet
         Energy = M.Clamp01(Energy + (asleep ? dt * 0.012f * (Young ? 1.4f : 1) : -dt / (1.4f * Hour) * busy * (Young ? 1.5f : 1)));
         Stress = MathF.Max(0, Stress - dt * 0.006f * (asleep || _st == State.Petted ? 3 : 1));
         Wet = MathF.Max(0, Wet - dt * 0.04f);
+        if (!Potty) Bladder = Bowel = 0;
         TrainingDecay(dt);
         UpdateBody(w, dt);
         UpdateHealth(w, dt);
@@ -93,6 +97,7 @@ sealed partial class Pet
         Thirst = MathF.Min(0.85f, Thirst + h / 2.5f);
         if (Kind != PetKind.Parrot) Bladder = MathF.Min(0.8f, Bladder + h / 2.5f);
         Bowel = MathF.Min(0.8f, Bowel + h / 6);
+        if (!Potty) Bladder = Bowel = 0;
         Attention = MathF.Min(0.9f, Attention + h / 1.5f);
         Boredom = MathF.Min(0.8f, Boredom + h / 2);
         Energy = MathF.Min(1, Energy + h * 0.3f);

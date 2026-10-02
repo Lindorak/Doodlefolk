@@ -29,9 +29,9 @@ sealed partial class App
         StopGame(false);
         if (_w.Happening is { } h) EndHappening(h, false);
         // Where everything is, and what it is.
-        var keepItems = _w.Items.Where(i => i.BitesLeft == i.Def.Bites && !i.Temporary).ToList();
-        var itemPos = keepItems.Select(i => i.Pos).ToList();
-        var savedItems = SaveItems();
+        var keepItems = _w.Items.Where(i => !i.Temporary).ToList();
+        var itemPos = keepItems.Select(i => (i.Pos, i.BitesLeft)).ToList();
+        var savedItems = SaveItems(evenEaten: true);
         var savedPets = SavePets();
         var petPos = _w.Pets.Select(p => p.Pos).ToList();
         var props = _w.Props.Where(p => p.Holder == null).Select(p => (p.Kind, p.SizeMul, p.Bounce, p.Color, p.Pos)).ToList();
@@ -55,7 +55,7 @@ sealed partial class App
         // Things, animals, balls: back where they were.
         int before = _w.Items.Count;
         RestoreItems(savedItems);
-        for (int i = before, k = 0; i < _w.Items.Count && k < itemPos.Count; i++, k++) { var it = _w.Items[i]; it.Pos = itemPos[k]; it.Vel = Vector2.Zero; it.OnGround = false; }
+        for (int i = before, k = 0; i < _w.Items.Count && k < itemPos.Count; i++, k++) { var it = _w.Items[i]; it.Pos = itemPos[k].Pos; it.BitesLeft = itemPos[k].BitesLeft; it.Vel = Vector2.Zero; it.OnGround = false; }
         _settings.Pets = savedPets;
         RestorePets();
         for (int i = 0; i < _w.Pets.Count && i < petPos.Count; i++) { _w.Pets[i].Pos = petPos[i]; _w.Pets[i].Vel = Vector2.Zero; _w.Pets[i].Grounded = false; }

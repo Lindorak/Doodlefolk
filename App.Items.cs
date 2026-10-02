@@ -123,7 +123,7 @@ sealed partial class App
     }
 
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
-    List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites && !i.Temporary)
+    List<SavedItem> SaveItems(bool evenEaten = false) => _w.Items.Where(i => (evenEaten || i.BitesLeft == i.Def.Bites) && !i.Temporary)
         .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI),
                                      Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name,
                                      ScaleX = i.ScaleX, ScaleY = i.ScaleY, Fill = MathF.Round(i.Fill, 3), Dirt = i.Dirt, Growth = MathF.Round(i.Growth, 3), PlantKind = i.PlantKind,

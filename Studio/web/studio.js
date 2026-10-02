@@ -839,8 +839,8 @@ function matrix() {
 // ---------------- Things (objects + balls) ----------------
 
 const VERB_WORDS = { Sit: "sit on it", Lie: "nap on it", Hammock: "swing in it", Bounce: "bounce on it", Stand: "climb on it",
-  Eat: "eat it", Hide: "hide in it", Dance: "dance to it", Read: "read it", Warm: "warm up by it", Wield: "swing it", Shoot: "shoot it" };
-const GROUPS = [["Seats", ["Sit"]], ["Beds", ["Lie", "Hammock"]], ["Play & music", ["Bounce", "Dance", "Read"]], ["Food", ["Eat"]], ["Hide, climb & gather", ["Hide", "Stand", "Warm"]], ["Weapons", ["Wield", "Shoot"]]];
+  Eat: "eat it", Hide: "hide in it", Dance: "dance to it", Read: "read it", Warm: "warm up by it", Wield: "swing it", Shoot: "shoot it", Play: "play games with it" };
+const GROUPS = [["Seats", ["Sit"]], ["Beds", ["Lie", "Hammock"]], ["Play & music", ["Bounce", "Dance", "Read"]], ["Food", ["Eat"]], ["Hide, climb & gather", ["Hide", "Stand", "Warm"]], ["Weapons", ["Wield", "Shoot"]], ["Sports", ["Play"]]];
 
 function lighten(hex, k = 0.35) {
   const n = parseInt(hex.slice(1), 16);

@@ -14,6 +14,10 @@ sealed partial class World
     public readonly List<Prop> Props = new();
     public readonly List<Item> Items = new();
     public readonly List<Projectile> Projectiles = new();
+    public readonly List<Match> Matches = new();
+    /// <summary>Hooks for the brain to bring things into the world (a ball for a game, rackets).</summary>
+    public Func<PropKind, Prop>? MakeProp;
+    public Func<string, Item?>? MakeItem;
     public readonly Fx Fx = new();
     public readonly Random Rng = new();
     public FightSettings Fight = new();

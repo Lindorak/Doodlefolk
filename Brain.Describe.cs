@@ -52,6 +52,7 @@ sealed partial class Brain
                 G.CursorFight => "Boxing your cursor",
                 G.Revive => "Helping a friend up",
                 G.Hunt => "Hunting your cursor",
+                G.Sport => Match != null ? $"Playing {Match.Name} ({Match.ScoreText})" : "Playing",
                 G.UseItem => _item == null ? "Busy" : _verb switch
                 {
                     Verb.Sit => $"Sitting in the {_item.Def.Name.ToLowerInvariant()}",

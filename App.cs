@@ -66,6 +66,8 @@ sealed partial class App : ApplicationContext
         Application.Idle += OnIdle;
 
         _w.Env.Refresh(_overlay.Handle);
+        _w.MakeProp = kind => SpawnProp(kind);
+        _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
             for (int i = 0; i < count; i++) Spawn(null);
@@ -220,6 +222,7 @@ sealed partial class App : ApplicationContext
             if (_pressItem != null) _pressItem.PinTarget = pin;
             foreach (var it in _w.Items.ToArray()) it.Step(World.Dt, _w);
             _w.Projectiles.RemoveAll(pr => !pr.Step(World.Dt, _w));
+            _w.Matches.RemoveAll(m => !m.Step(World.Dt, _w));
             foreach (var f in _w.Figures.Where(f => f.Gone).ToArray())
             {
                 if (_pressFig == f) { _pressFig = null; _dragging = false; }
@@ -398,6 +401,7 @@ sealed partial class App : ApplicationContext
         }
         foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
         foreach (var pr in _w.Projectiles) _regNow.Add(ToRect(pr.Bounds()));
+        foreach (var m in _w.Matches) _regNow.Add(ToRect(m.Bounds()));
         foreach (var it in _w.Items)
         {
             _regNow.Add(ToRect(it.Bounds()));
@@ -450,6 +454,7 @@ sealed partial class App : ApplicationContext
             it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
         }
         foreach (var pr in _w.Projectiles) pr.Draw(_r);
+        foreach (var m in _w.Matches) m.Draw(_r);
         foreach (var p in _w.Props) p.Draw(_r);
     }
 
@@ -876,6 +881,14 @@ sealed partial class App : ApplicationContext
                 case "boxcursor":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } bcf) bcf.Brain.Force("boxcursor", Array.Empty<string>(), _w);
                     break;
+                case "moveitem":
+                    // moveitem <key> <x> <y>
+                    if (p.Length >= 4 && _w.Items.LastOrDefault(i => i.Def.Key == p[1]) is { } mi)
+                    {
+                        mi.Pos = new Vector2(float.Parse(p[2], inv), float.Parse(p[3], inv));
+                        mi.Vel = default; mi.OnGround = false; mi.Angle = 0;
+                    }
+                    break;
                 case "duck":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } dkf) dkf.DuckT = 1.2f;
                     break;
@@ -957,6 +970,7 @@ sealed partial class App : ApplicationContext
                 bbox = new[] { f.Jt.Min(j => j.X), f.Jt.Min(j => j.Y), f.Jt.Max(j => j.X), f.Jt.Max(j => j.Y) },
             }),
             props = _w.Props.Select(p => new { kind = p.Kind.ToString(), x = p.Pos.X, y = p.Pos.Y, vx = p.Vel.X, vy = p.Vel.Y, held = p.Holder?.Name, r = p.Radius }),
+            matches = _w.Matches.Select(m => new { kind = m.Kind.ToString(), score = m.ScoreText, t = m.T, players = m.Players.Select(p => p.Name), pause = m.Pause, ball = new[] { m.Ball.Pos.X, m.Ball.Pos.Y }, ballHeld = m.Ball.Holder?.Name, rim = new[] { m.Kind == Sport.Basketball ? m.RimCentre.X : m.NetX, m.Kind == Sport.Basketball ? m.RimCentre.Y : 0 } }),
             items = _w.Items.Select(i => new { key = i.Def.Key, x = i.Pos.X, y = i.Pos.Y, ground = i.OnGround, w = i.Def.W * i.Sc, h = i.Def.H * i.Sc, user = i.User?.Name, seated = i.Seated.Where(s => s != null).Select(s => s!.Name), holder = i.Holder?.Name }),
         };
         try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "stickfight_state.json"), JsonSerializer.Serialize(state)); }

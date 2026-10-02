@@ -97,7 +97,7 @@ sealed class Item
         }
         if (OnGround)
         {
-            if (env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { } sup && sup.Hwnd != Handle) { Pos.Y = sup.Y; GroundHwnd = sup.Hwnd; Vel = default; Angle = M.MoveTowards(Angle, 0, dt * 6); return; }
+            if (env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { } sup && sup.Hwnd != Handle && !(sup.Item != null && (Def.W * SizeMul > 30 || Def.H * SizeMul > 30))) { Pos.Y = sup.Y; GroundHwnd = sup.Hwnd; Vel = default; Angle = M.MoveTowards(Angle, 0, dt * 6); return; }
             OnGround = false;
         }
         float py = Pos.Y;
@@ -128,6 +128,8 @@ sealed class Item
         foreach (var p in env.Platforms)
         {
             if (p.Hwnd == Handle || Pos.X < p.X1 || Pos.X > p.X2) continue;
+            // Big things (furniture, sports gear) don't pile up on other objects; small things can sit on them.
+            if (p.Item != null && (Def.W * SizeMul > 30 || Def.H * SizeMul > 30)) continue;
             bool hit = p.Solid ? Pos.Y >= p.Y : py <= p.PrevY + 0.5f && Pos.Y >= p.Y;
             if (hit && (best == null || p.Y < best.Y)) best = p;
         }

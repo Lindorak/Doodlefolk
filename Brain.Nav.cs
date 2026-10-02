@@ -288,6 +288,13 @@ sealed partial class Brain
                 _forceGrapple = true;
                 return true;
             }
+            case "sport":
+            {
+                var gear = w.Items.Where(i => i.Def.Sport != null && (args.Length == 0 || i.Def.Key == args[0])).OrderBy(i => Vector2.Distance(i.Pos, f.Base)).FirstOrDefault();
+                if (gear == null) return false;
+                StartMatch(gear, w);
+                return Match != null;
+            }
             case "chat": return Other() is { } o1 && StartSocialWith(o1, SocialKind.Chat, w);
             case "highfive": return Other() is { } o2 && StartSocialWith(o2, SocialKind.HighFive, w);
             case "follow": return Other() is { } o3 && StartSocialWith(o3, SocialKind.Follow, w);

@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport,
     }
 
     readonly Figure f;
@@ -51,6 +51,8 @@ sealed partial class Brain
         f.AimAt = null;
         if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
         if (g != G.Walk) _itemPending = false;
+        if (_g == G.Sport && g != G.Sport && Match != null && !(g == G.Walk && _toMatch)) LeaveMatch();
+        if (g == G.Sport) _toMatch = false;
         if (g != G.Throw) _fastball = false;
         if (g is not (G.Carry or G.Walk)) _huntThrow = false;
         if (f.GrappleBusy && !f.Climbing) f.CancelGrapple();
@@ -304,6 +306,7 @@ sealed partial class Brain
             case G.CursorFight: DoCursorFight(w); break;
             case G.Hunt: DoHunt(w); break;
             case G.UseItem: DoUseItem(w); break;
+            case G.Sport: DoSport(w); break;
             case G.Revive: DoRevive(w); break;
             case G.DanceWith: DoDanceWith(w); break;
             case G.Victory:
@@ -567,6 +570,9 @@ sealed partial class Brain
 
     void Choose(World w)
     {
+        // Still in a game (e.g. got knocked over): back to it.
+        if (Match != null && w.Matches.Contains(Match) && !Match.Over) { Go(G.Sport, 600); return; }
+        Match = null;
         var env = w.Env;
         var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (seg == null || !f.Grounded) { Go(G.Idle, 0.5f); return; }
@@ -594,6 +600,7 @@ sealed partial class Brain
         if (UserOption(w) is { } user) opts.Add(user);
         if (HuntOption(w) is { } hunt) opts.Add(hunt);
         if (ItemOption(w) is { } useItem) opts.Add(useItem);
+        if (SportOption(w) is { } sport) opts.Add(sport);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);

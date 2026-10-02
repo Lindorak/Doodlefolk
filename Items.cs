@@ -20,6 +20,7 @@ enum Verb
     Warm,       // campfire: sit around it, hands out
     Wield,      // sword, bat, frying pan: carry it and swing it in fights
     Shoot,      // toy blaster, water gun: carry it and fire it
+    Play,       // sports gear: goals, hoops, nets (figures organise games around it)
 }
 
 enum Ammo { Dart, Water }
@@ -49,6 +50,10 @@ sealed class ItemDef
     public int Bites = 4;                      // food portions
     // Weapons: held by the grip (origin), pointing along +y.
     public float Reach, Damage = 1, Knock = 1, FireRate = 0.4f;
+    /// <summary>Sports gear: segments balls bounce off, as x0 y0 x1 y1 give (object units; give 1 = solid, low = net).</summary>
+    public float[] Colliders = Array.Empty<float>();
+    /// <summary>Which game this gear is for (Soccer, Basketball, Tennis, Badminton), or null.</summary>
+    public string? Sport;
     public Ammo Ammo;
     public bool Weapon => Verbs.Contains(Verb.Wield) || Verbs.Contains(Verb.Shoot);
     public bool Ranged => Verbs.Contains(Verb.Shoot);
@@ -270,6 +275,53 @@ static class ItemCatalog
             Shapes = new[] { O(-2, -2, 2.5f, 6, 1, 1), O(-4, 5, 4, 13, 3, 0), E(0, 9, 2.5f, 2.5f, 11), R(-1, 12, 1, 20, 1) },
             Verbs = new[] { Verb.Shoot }, Carry = true, Reach = 20, Damage = 0.05f, Knock = 0.3f, FireRate = 0.1f, Ammo = Ammo.Water, Likes = new[] { Thing.PlayingBall, Thing.Tricks },
         });
+        // ---------------- sports ----------------
+        // Side-on soccer goal: the open mouth faces -x (the field), the net slopes back to +x.
+        Add(new ItemDef
+        {
+            Key = "goal", Name = "Soccer goal", Words = new[] { "goal", "soccer goal", "football goal", "goalpost", "goal post", "soccer net", "football net" }, W = 44, H = 34, Color = M.Hex(0xF4F4F4),
+            Shapes = new[] { C(5, 0.5f, -18, 32, -14, 0), C(5, 0.5f, -10, 31, -4, 0), C(5, 0.5f, -2, 29, 6, 0), C(5, 0.5f, 6, 27, 14, 0),
+                             C(5, 0.5f, -18, 22, 15, 18), C(5, 0.5f, -18, 12, 17, 9), L(-18, 0, 18, 0, 5, 1), L(12, 25, 18, 0, 0, 1.8f), L(-18, 32, 12, 25, 0, 2.2f), L(-18, 0, -18, 32, 0, 2.6f) },
+            Verbs = new[] { Verb.Play }, Sport = "Soccer", Mass = 2, Likes = new[] { Thing.PlayingBall, Thing.SoccerBalls },
+            Colliders = new float[] { -18, 32, 12, 25, 1, 12, 25, 18, 0, 0.25f, -18, 30, -18, 33, 1 },
+        });
+        Add(new ItemDef
+        {
+            Key = "hoop", Name = "Basketball hoop", Words = new[] { "hoop", "basketball hoop", "basket", "basketball net", "net hoop" }, W = 30, H = 92, Color = M.Hex(0xFB8C00),
+            Shapes = new[] { R(10, 0, 22, 3, 6), L(16, 0, 16, 82, 6, 2.6f), L(16, 80, 9, 80, 6, 2), R(6, 62, 9, 92, 7), R(6.6f, 66, 8.4f, 73, 9),
+                             C(7, 0.5f, -14, 72, -9, 60), C(7, 0.5f, -8, 72, -5, 60), C(7, 0.5f, -2, 72, -1, 60), C(7, 0.5f, 4, 72, 3, 60), C(7, 0.5f, -9, 60, 3, 60), C(7, 0.5f, -11.5f, 66, 3.5f, 66),
+                             L(-14, 72, 6, 72, 0, 1.6f) },
+            Verbs = new[] { Verb.Play }, Sport = "Basketball", Mass = 3, Likes = new[] { Thing.PlayingBall, Thing.Basketballs },
+            Colliders = new float[] { 7, 62, 7, 92, 1, -14.5f, 71.5f, -13.5f, 72.5f, 1 },
+        });
+        Add(new ItemDef
+        {
+            Key = "tennisnet", Name = "Tennis net", Words = new[] { "tennis net", "tennis", "tennis court" }, W = 6, H = 18, Color = M.Hex(0xF4F4F4),
+            Shapes = new[] { L(0, 0, 0, 18, 6, 1.8f), C(5, 0.4f, -1, 4, 1, 4), C(5, 0.4f, -1, 8, 1, 8), C(5, 0.4f, -1, 12, 1, 12), R(-1.2f, 15.5f, 1.2f, 17.5f, 0) },
+            Verbs = new[] { Verb.Play }, Sport = "Tennis", Likes = new[] { Thing.PlayingBall },
+            Colliders = new float[] { 0, 0, 0, 17.5f, 0.3f },
+        });
+        Add(new ItemDef
+        {
+            Key = "badmintonnet", Name = "Badminton net", Words = new[] { "badminton net", "badminton", "volleyball net", "volleyball" }, W = 6, H = 32, Color = M.Hex(0xF4F4F4),
+            Shapes = new[] { L(0, 0, 0, 32, 6, 1.6f), R(-1.2f, 18, 1.2f, 31, 8), C(7, 0.4f, -1, 22, 1, 22), C(7, 0.4f, -1, 26, 1, 26), R(-1.4f, 30, 1.4f, 32, 7) },
+            Verbs = new[] { Verb.Play }, Sport = "Badminton", Likes = new[] { Thing.PlayingBall },
+            Colliders = new float[] { 0, 18, 0, 32, 0.3f },
+        });
+        Add(new ItemDef
+        {
+            Key = "racket", Name = "Tennis racket", Words = new[] { "racket", "tennis racket", "racquet", "tennis racquet" }, W = 12, H = 26, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { L(0, -2, 0, 12, 8, 2.2f), C(0, 1.3f, 0, 12, -5, 17, -5.5f, 22, -3, 26, 3, 26, 5.5f, 22, 5, 17, 0, 12),
+                             C(7, 0.3f, -4, 16, 4, 16), C(7, 0.3f, -5, 20, 5, 20), C(7, 0.3f, -4, 24, 4, 24), C(7, 0.3f, -2, 13, -2, 26), C(7, 0.3f, 2, 13, 2, 26) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 26, Damage = 0.2f, Knock = 0.8f, Likes = new[] { Thing.PlayingBall },
+        });
+        Add(new ItemDef
+        {
+            Key = "badmintonracket", Name = "Badminton racket", Words = new[] { "badminton racket", "badminton racquet" }, W = 10, H = 28, Color = M.Hex(0xE53935),
+            Shapes = new[] { L(0, -2, 0, 16, 5, 1.4f), C(0, 1.0f, 0, 16, -4, 20, -4.2f, 25, -2, 28.5f, 2, 28.5f, 4.2f, 25, 4, 20, 0, 16),
+                             C(7, 0.3f, -3, 20, 3, 20), C(7, 0.3f, -3.5f, 24, 3.5f, 24), C(7, 0.3f, 0, 17, 0, 28) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 28, Damage = 0.1f, Knock = 0.6f, Likes = new[] { Thing.PlayingBall },
+        });
         return list.ToArray();
     }
 
@@ -325,6 +377,8 @@ static class ItemCatalog
         "soccer ball" or "football" or "soccerball" => PropKind.SoccerBall,
         "basketball" or "basket ball" => PropKind.Basketball,
         "beach ball" or "beachball" => PropKind.BeachBall,
+        "tennis ball" or "tennisball" => PropKind.TennisBall,
+        "shuttlecock" or "shuttle" or "birdie" or "shuttlecock birdie" => PropKind.Shuttlecock,
         _ => null,
     };
 }

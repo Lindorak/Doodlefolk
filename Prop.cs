@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 
 namespace StickFight;
 
-enum PropKind { Ball, SoccerBall, Basketball, BeachBall }
+enum PropKind { Ball, SoccerBall, Basketball, BeachBall, TennisBall, Shuttlecock }
 
 /// <summary>A physics ball the figures can kick, juggle, carry and throw. Bounces off window tops,
 /// the taskbar and screen edges, rolls with spin, rides moving windows, and knocks figures over.</summary>
@@ -43,18 +43,19 @@ sealed class Prop
         Color = kind switch
         {
             PropKind.Basketball => M.Hex(0xE8762B),
-            PropKind.SoccerBall or PropKind.BeachBall => M.Hex(0xF5F5F5),
+            PropKind.SoccerBall or PropKind.BeachBall or PropKind.Shuttlecock => M.Hex(0xF5F5F5),
+            PropKind.TennisBall => M.Hex(0xD4E157),
             _ => M.Hex(0xE53935),
         };
-        Bounce = kind switch { PropKind.Basketball => 0.78f, PropKind.BeachBall => 0.55f, PropKind.SoccerBall => 0.62f, _ => 0.68f };
-        SizeMul = kind == PropKind.BeachBall ? 1.6f : 1;
+        Bounce = kind switch { PropKind.Basketball => 0.78f, PropKind.BeachBall => 0.55f, PropKind.SoccerBall => 0.62f, PropKind.TennisBall => 0.74f, PropKind.Shuttlecock => 0.15f, _ => 0.68f };
+        SizeMul = kind switch { PropKind.BeachBall => 1.6f, PropKind.TennisBall => 0.62f, PropKind.Shuttlecock => 0.6f, _ => 1 };
     }
 
     public float S => _s;
     public float Radius => 6.5f * _s * SizeMul;
     /// <summary>Relative to a default-size ball; 2D so mass grows with area.</summary>
-    public float Mass => SizeMul * SizeMul * (Kind == PropKind.BeachBall ? 0.35f : 1f);
-    public float Grav => 2300 * _s * (Kind == PropKind.BeachBall ? 0.55f : 1f);
+    public float Mass => SizeMul * SizeMul * Kind switch { PropKind.BeachBall => 0.35f, PropKind.TennisBall => 0.5f, PropKind.Shuttlecock => 0.25f, _ => 1f };
+    public float Grav => 2300 * _s * Kind switch { PropKind.BeachBall => 0.55f, PropKind.Shuttlecock => 0.55f, _ => 1f };
     public bool Free => Holder == null && !Pinned;
 
     public static string KindName(PropKind k) => k switch
@@ -62,6 +63,8 @@ sealed class Prop
         PropKind.SoccerBall => SoccerWord(),
         PropKind.Basketball => "Basketball",
         PropKind.BeachBall => "Beach ball",
+        PropKind.TennisBall => "Tennis ball",
+        PropKind.Shuttlecock => "Shuttlecock",
         _ => "Ball",
     };
 
@@ -161,7 +164,7 @@ sealed class Prop
         if (OnGround && env.SupportAt(Pos.X, Pos.Y + r, GroundHwnd) == null) OnGround = false;
 
         if (!OnGround) Vel.Y += Grav * dt;
-        float drag = Kind == PropKind.BeachBall ? 0.9f : 0.15f;
+        float drag = Kind switch { PropKind.BeachBall => 0.9f, PropKind.Shuttlecock => 2.4f, _ => 0.15f };
         Vel *= 1 - drag * dt;
         Vector2 prev = Pos;
         Pos += Vel * dt;
@@ -199,8 +202,38 @@ sealed class Prop
             Spin = Vel.X / r;
         }
         Angle += Spin * dt;
+        if (Kind == PropKind.Shuttlecock && !OnGround && Vel.LengthSquared() > 1) Angle = MathF.Atan2(Vel.Y, Vel.X);   // cork first
 
+        CollideItems(w);
         CollideFigures(w);
+    }
+
+    /// <summary>Sports gear: crossbars, backboards, rims and nets the ball bounces off (segments in object units).</summary>
+    void CollideItems(World w)
+    {
+        float r = Radius;
+        foreach (var it in w.Items)
+        {
+            var segs = it.Def.Colliders;
+            if (segs.Length == 0 || it.Held) continue;
+            if (Vector2.DistanceSquared(it.Pos, Pos) > MathF.Pow((it.Def.W + it.Def.H) * it.Sc, 2)) continue;
+            for (int i = 0; i + 4 < segs.Length; i += 5)
+            {
+                Vector2 a = it.Local(segs[i], segs[i + 1]), b = it.Local(segs[i + 2], segs[i + 3]);
+                float give = segs[i + 4];   // 1 = solid (rim, backboard), lower = net (soaks it up)
+                Vector2 ab = b - a;
+                float t = M.Clamp01(Vector2.Dot(Pos - a, ab) / MathF.Max(ab.LengthSquared(), 1e-4f));
+                Vector2 q = a + ab * t, d = Pos - q;
+                float dist = d.Length();
+                if (dist >= r || dist < 1e-4f) continue;
+                Vector2 n = d / dist;
+                Pos = q + n * r;
+                float vn = Vector2.Dot(Vel, n);
+                if (vn < 0) Vel -= (1 + Bounce * give) * vn * n;
+                if (give < 0.5f) Vel *= 0.6f;
+                OnGround = false;
+            }
+        }
     }
 
     void Bounced(World w, float speed)
@@ -245,7 +278,11 @@ sealed class Prop
             float hit = -vn * MathF.Sqrt(Mass);
             if (f.Mode == Mode.Ragdoll) f.Rag.Push(joint, -n * hit * 0.5f);
             // Your own ball bouncing back at you is a stumble at most, never a knockdown by "yourself".
-            else if (LastTouch == f && !ThrownByUser) { if (hit > 350 * _s) f.HitStun = MathF.Max(f.HitStun, 0.15f); }
+            else if ((LastTouch == f && !ThrownByUser) || (LastTouch?.Brain.Match is { } mt && mt == f.Brain.Match))
+            {
+                // Your own ball, or a stray one in a game: a stumble at most.
+                if (hit > 350 * _s && f.Mode == Mode.Control) f.HitStun = MathF.Max(f.HitStun, 0.15f);
+            }
             else if (hit > 350 * _s) f.TakeHit(-n * hit, ThrownByUser ? null : LastTouch, w);
         }
     }
@@ -265,6 +302,21 @@ sealed class Prop
             case PropKind.SoccerBall: DrawSoccer(rd, c, r); break;
             case PropKind.Basketball: DrawBasketball(rd, c, r); break;
             case PropKind.BeachBall: DrawBeach(rd, c, r); break;
+            case PropKind.TennisBall:
+                rd.Disc(c, r, Color);
+                for (int i = 0; i < 6; i++) { rd.Line(Polar(c, r * 0.75f, i * 0.3f - 0.75f), Polar(c, r * 0.75f, (i + 1) * 0.3f - 0.75f), new Color4(1, 1, 1, 0.9f), 0.5f * _s); rd.Line(Polar(c, r * 0.75f, MathF.PI + i * 0.3f - 0.75f), Polar(c, r * 0.75f, MathF.PI + (i + 1) * 0.3f - 0.75f), new Color4(1, 1, 1, 0.9f), 0.5f * _s); }
+                break;
+            case PropKind.Shuttlecock:
+            {
+                // Cork leading, feather skirt trailing behind.
+                Vector2 dir = new(MathF.Cos(Angle), MathF.Sin(Angle)), perp = new(-dir.Y, dir.X);
+                Vector2 cork = c + dir * r * 0.6f, tail = c - dir * r * 1.4f;
+                Span<Vector2> skirt = stackalloc Vector2[] { cork - perp * r * 0.35f, cork + perp * r * 0.35f, tail + perp * r * 1.1f, tail - perp * r * 1.1f };
+                rd.FillPolygon(skirt, new Color4(0.97f, 0.97f, 0.95f, 1));
+                for (int i = 0; i < 4; i++) rd.Line(skirt[i], skirt[(i + 1) % 4], Ink, 0.6f * _s);
+                rd.Disc(cork, r * 0.5f, new Color4(0.85f, 0.25f, 0.2f, 1));
+                return;
+            }
             default: rd.Disc(c, r, Color); break;
         }
         rd.Ring(c, r, outline, MathF.Max(1, 0.7f * _s));

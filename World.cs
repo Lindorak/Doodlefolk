@@ -39,6 +39,15 @@ sealed partial class World
 
     public World() => Current = this;
 
+    /// <summary>AI audit log (only with --debug): decisions, failures and a periodic snapshot of every figure, for
+    /// checking how sensible their behaviour is over time. %TEMP%\stickfight_audit.log.</summary>
+    public static void Audit(string msg)
+    {
+        if (!Debug) return;
+        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "stickfight_audit.log"), $"{Now:F1}\t{msg}\n"); }
+        catch (IOException) { }
+    }
+
     /// <summary>Debug event log (only with --debug): %TEMP%\stickfight_events.log.</summary>
     public static void Log(string msg)
     {

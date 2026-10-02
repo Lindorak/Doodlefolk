@@ -25,6 +25,8 @@ sealed partial class App : ApplicationContext
     readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "stickfight.log");
     double _last, _acc, _nextTopmost, _nextDump, _fpsT;
     int _frames, _fps, _hitches, _hitchAcc;
+    double _nextAutosave = 120, _msDraw, _nextAuditSample;
+    float _regionsPerFrame;
     float _maxDt, _maxDtAcc;
     double _tRefresh, _tRender, _msRefresh, _msRender, _tSim, _msSim;
     bool _paused, _showPlatforms, _hiddenCleared, _displayChanged, _disposed;
@@ -63,6 +65,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
+        SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;
 
         _w.Env.Refresh(_overlay.Handle);
@@ -98,6 +101,7 @@ sealed partial class App : ApplicationContext
             _r.SyncInterval = cap > _refresh ? 0u : 1u;
             _frameInterval = 1.0 / cap;
         }
+        _baseSync = _r.SyncInterval;
         bool fine = _frameInterval > 0;
         if (fine != _fineTimer)
         {
@@ -170,6 +174,8 @@ sealed partial class App : ApplicationContext
             _r.Resize(_w.Env.Virtual);
         }
         if (now > _nextTopmost) { _nextTopmost = now + 2; _overlay.KeepOnTop(); Ui.Update(_settings.Theme); }
+        // Save every couple of minutes, so a crash or a forced shutdown loses little.
+        if (now > _nextAutosave) { _nextAutosave = now + 120; if (_settings.RememberCast && _w.Figures.Count > 0) SaveCast(); }
         long tr0 = Stopwatch.GetTimestamp();
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
@@ -200,6 +206,13 @@ sealed partial class App : ApplicationContext
         WishFrame();
         EventsFrame(now);
         WeatherFrame(dt, now);
+        SmartFps(dt);
+        if (World.Debug && now > _nextAuditSample)
+        {
+            _nextAuditSample = now + 2;
+            foreach (var f in _w.Figures)
+                World.Audit($"snap\t{f.Name}\t{f.Brain.State}\t{f.Brain.Activity}\t{f.Base.X:0},{f.Base.Y:0}\t{f.Mode}\tst={f.Brain.Stamina:F2} bo={f.Brain.Boredom:F2} lo={f.Brain.Loneliness:F2} hu={f.Brain.Hunger:F2} joy={f.Brain.Joy:F2} fear={f.Brain.Fear:F2}\t{f.CurrentEmote}");
+        }
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
@@ -267,7 +280,7 @@ sealed partial class App : ApplicationContext
         _tRender += Stopwatch.GetElapsedTime(tr1).TotalMilliseconds;
 
         _frames++;
-        if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
+        if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _msDraw = _r.DrawMs / _frames; _regionsPerFrame = _r.Regions / (float)_frames; _r.DrawMs = 0; _r.Regions = 0; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
         if (_debug && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
     }
 
@@ -567,7 +580,7 @@ sealed partial class App : ApplicationContext
                 for (int j = i + 1; j < rects.Count; j++)
                 {
                     var grown = rects[i];
-                    grown.Inflate(16, 16);
+                    grown.Inflate(40, 40);
                     if (!grown.IntersectsWith(rects[j])) continue;
                     rects[i] = Rectangle.Union(rects[i], rects[j]);
                     rects.RemoveAt(j);
@@ -575,6 +588,43 @@ sealed partial class App : ApplicationContext
                     break;
                 }
         }
+        // Each region means drawing the scene again: past a handful, merge the pairs that waste the least area.
+        while (rects.Count > 8)
+        {
+            int bi = 0, bj = 1;
+            long best = long.MaxValue;
+            for (int i = 0; i < rects.Count; i++)
+                for (int j = i + 1; j < rects.Count; j++)
+                {
+                    var u = Rectangle.Union(rects[i], rects[j]);
+                    long waste = (long)u.Width * u.Height - (long)rects[i].Width * rects[i].Height - (long)rects[j].Width * rects[j].Height;
+                    if (waste < best) { best = waste; bi = i; bj = j; }
+                }
+            rects[bi] = Rectangle.Union(rects[bi], rects[bj]);
+            rects.RemoveAt(bj);
+        }
+    }
+
+    // ---------------- smart frame rate ----------------
+
+    float _calmT;
+    uint _baseSync = 1;
+
+    /// <summary>When nothing is moving fast, draw at half the monitor's rate (motion is interpolated, so walking and
+    /// idling look the same); anything fast (running, flying, throwing, weather, you dragging something) brings full
+    /// speed straight back.</summary>
+    void SmartFps(float dt)
+    {
+        if (!_settings.SmartFps || _frameInterval > 0 || _baseSync != 1 || _refresh < 100) { _calmT = 0; return; }
+        bool calm = !_w.Weather.Active && _pressFig == null && _pressProp == null && _pressItem == null && _pressPet == null && _w.Projectiles.Count == 0
+                    && _w.CursorVel.Length() < 600 * _w.Scale && _w.Matches.Count == 0;
+        if (calm)
+            foreach (var f in _w.Figures)
+                if (f.Mode != Mode.Control || !f.Grounded || f.Climbing || MathF.Abs(f.Vel.X) > 150 * f.S || f.Brain.InFight) { calm = false; break; }
+        if (calm) foreach (var p in _w.Props) if (p.Vel.LengthSquared() > 40 * 40 * _w.Scale * _w.Scale) { calm = false; break; }
+        if (calm) foreach (var p in _w.Pets) if (!p.Grounded) { calm = false; break; }
+        _calmT = calm ? _calmT + dt : 0;
+        _r.SyncInterval = _calmT > 0.6f ? 2u : 1u;
     }
 
     // ---------------- figures ----------------
@@ -1089,6 +1139,8 @@ sealed partial class App : ApplicationContext
             msRender = _msRender,
             maxFrameMs = _maxDt * 1000,
             msSim = _msSim,
+            msDraw = _msDraw,
+            regions = _regionsPerFrame,
             hitches = _hitches,
             windows = _w.Env.WindowCount,
             platforms = _w.Env.Platforms.Select(p => new[] { p.X1, p.X2, p.Y, p.Solid ? 1 : 0 }),

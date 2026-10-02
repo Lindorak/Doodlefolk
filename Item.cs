@@ -219,7 +219,8 @@ sealed class Item
         float sc = Sc;
         var pts = _pts;
         int n = 0;
-        void Pt(float x, float y) { if (n < pts.Length) pts[n++] = Local(x * k, y * k); }
+        // Polygons are built in the object's own units (cached once per shape) and placed with a transform.
+        void Pt(float x, float y) { if (n < pts.Length) pts[n++] = new Vector2(x * k, y * k); }
         switch (sh.Kind)
         {
             case 'r': Pt(p[0], p[1]); Pt(p[2], p[1]); Pt(p[2], p[3]); Pt(p[0], p[3]); break;
@@ -249,10 +250,8 @@ sealed class Item
                 return;
         }
         if (n < 3) return;
-        r.FillPolygon(pts.AsSpan(0, n), Col(sh.Col));
-        if (sh.NoOutline) return;
-        float ow = 1.1f * sc;
-        for (int i = 0; i < n; i++) r.Line(pts[i], pts[(i + 1) % n], Ink, ow);
+        var world = Matrix3x2.CreateScale(Flip ? -sc : sc, -sc) * Matrix3x2.CreateRotation(Angle) * Matrix3x2.CreateTranslation(Pos);
+        r.CachedShape(sh, (int)MathF.Round(k * 100), pts.AsSpan(0, n), world, Col(sh.Col), Ink, sh.NoOutline ? 0 : 1.1f);
     }
 
     void DrawHammock(Renderer r)

@@ -41,6 +41,7 @@ sealed partial class Brain
     /// <summary>Navigation gave up: remember not to try for the same thing again right away.</summary>
     void NoRoute()
     {
+        World.Audit($"noroute\t{f.Name}\t{LastDecision}\t{_navAbout}");
         if (_navAbout != null) _unreachable[_navAbout] = _t0 + 60;
         if (_unreachable.Count > 64) foreach (var k in _unreachable.Where(kv => kv.Value < _t0).Select(kv => kv.Key).ToList()) _unreachable.Remove(k);
     }
@@ -65,6 +66,7 @@ sealed partial class Brain
         var pick = scored[^1];
         foreach (var x in scored) { roll -= x.s; if (roll <= 0) { pick = x; break; } }
         LastDecision = pick.label;
+        World.Audit($"decide\t{f.Name}\t{pick.label}\t{pick.s / total:F2}\t{string.Join("|", Thoughts.Take(4).Select(t => $"{t.label}:{t.share:F2}"))}");
         _decidedAt = _t0;
         _recent.Add((pick.label, _t0));
         if (_recent.Count > 30) _recent.RemoveAt(0);

@@ -60,6 +60,8 @@ sealed class Settings
 
     /// <summary>Frame-rate cap in fps, or <see cref="MatchMonitor"/> / <see cref="Unlimited"/>.</summary>
     public int FpsCap { get; set; } = 60;
+    /// <summary>Drop to half the monitor's rate while nothing's moving fast (saves power).</summary>
+    public bool SmartFps { get; set; } = true;
     /// <summary>Bring back the same figures and balls next launch.</summary>
     public bool RememberCast { get; set; } = true;
     /// <summary>Studio look: "auto" (follow Windows), "paper" or "chalk".</summary>

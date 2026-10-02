@@ -140,6 +140,7 @@ sealed partial class Brain
 
     void Failed(NavEdge e)
     {
+        World.Audit($"movefail\t{f.Name}\t{e.Kind}\t{e}");
         _badMoves[(e.From, e.To, e.Kind)] = _t0 + rng.Range(25, 45);
         if (_badMoves.Count > 200) _badMoves.Clear();
         if (World.TraceJumps) World.Log($"route {f.Name}: {e} failed");

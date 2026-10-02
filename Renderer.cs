@@ -113,6 +113,7 @@ sealed class Renderer : IDisposable
         }
         if (rects.Count == 0) return;
 
+        long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         _ctx.BeginDraw();
         _ctx.Transform = Matrix3x2.Identity;
         foreach (var r in rects)
@@ -125,9 +126,16 @@ sealed class Renderer : IDisposable
             _ctx.PopAxisAlignedClip();
         }
         _ctx.EndDraw();
+        long tp = System.Diagnostics.Stopwatch.GetTimestamp();
+        DrawMs += System.Diagnostics.Stopwatch.GetElapsedTime(t0, tp).TotalMilliseconds;
+        Regions += rects.Count;
 
         _swap.Present1(SyncInterval, PresentFlags.None, new PresentParameters { DirtyRectangles = rects.ToArray() });
     }
+
+    /// <summary>Profiling: time spent drawing (not presenting) and regions drawn, since last reset.</summary>
+    public double DrawMs;
+    public int Regions;
 
     public Rectangle Bounds => _bounds;
 
@@ -149,6 +157,48 @@ sealed class Renderer : IDisposable
     {
         _brush.Color = c;
         _ctx.DrawEllipse(new Ellipse(center, r, r), _brush, width);
+    }
+
+    // Shapes that never change (an object's parts in its own units) are built once and drawn with a transform.
+    readonly Dictionary<(object, int), ID2D1PathGeometry> _shapes = new();
+
+    ID2D1PathGeometry BuildGeometry(ReadOnlySpan<Vector2> pts)
+    {
+        var geo = _factory.CreatePathGeometry();
+        using var sink = geo.Open();
+        sink.BeginFigure(pts[0], FigureBegin.Filled);
+        sink.AddLines(pts[1..].ToArray());
+        sink.EndFigure(FigureEnd.Closed);
+        sink.Close();
+        return geo;
+    }
+
+    /// <summary>Fill and outline a polygon given in local units, cached under (key, variant); <paramref name="world"/>
+    /// places it on screen. <paramref name="strokeLocal"/> is the outline width in local units (0: none).</summary>
+    public void CachedShape(object key, int variant, ReadOnlySpan<Vector2> localPts, Matrix3x2 world, Color4 fill, Color4 stroke, float strokeLocal)
+    {
+        if (localPts.Length < 3) return;
+        if (!_shapes.TryGetValue((key, variant), out var geo))
+        {
+            if (_shapes.Count > 4000) { foreach (var g in _shapes.Values) g.Dispose(); _shapes.Clear(); }
+            _shapes[(key, variant)] = geo = BuildGeometry(localPts);
+        }
+        var old = _ctx.Transform;
+        _ctx.Transform = world * old;
+        _brush.Color = fill;
+        _ctx.FillGeometry(geo, _brush, null);
+        if (strokeLocal > 0 && stroke.A > 0) { _brush.Color = stroke; _ctx.DrawGeometry(geo, _brush, strokeLocal, _round); }
+        _ctx.Transform = old;
+    }
+
+    /// <summary>Fill a polygon and draw its outline in one go (one geometry instead of a line per edge).</summary>
+    public void Polygon(ReadOnlySpan<Vector2> pts, Color4 fill, Color4 stroke, float strokeW)
+    {
+        if (pts.Length < 3) return;
+        using var geo = BuildGeometry(pts);
+        _brush.Color = fill;
+        _ctx.FillGeometry(geo, _brush, null);
+        if (strokeW > 0 && stroke.A > 0) { _brush.Color = stroke; _ctx.DrawGeometry(geo, _brush, strokeW, _round); }
     }
 
     public void FillPolygon(ReadOnlySpan<Vector2> pts, Color4 c)
@@ -176,6 +226,7 @@ sealed class Renderer : IDisposable
     }
 
     readonly Dictionary<int, IDWriteTextFormat> _fonts = new();
+    readonly Dictionary<(string, int), IDWriteTextLayout> _layouts = new();
     IDWriteFactory? _dwrite;
 
     /// <summary>Centered bold text; <paramref name="hand"/>: the Studio's handwriting font (Ink Free).</summary>
@@ -192,13 +243,22 @@ sealed class Renderer : IDisposable
             fmt.WordWrapping = WordWrapping.NoWrap;   // centred; longer phrases simply spill wider than the layout box
             _fonts[key * 2 + (hand ? 1 : 0)] = fmt;
         }
+        // Laying out text is the slow part; the same few strings ("!", "♪", a name) are drawn again and again.
+        var lk = (text, key * 2 + (hand ? 1 : 0));
+        if (!_layouts.TryGetValue(lk, out var layout))
+        {
+            if (_layouts.Count > 300) { foreach (var l in _layouts.Values) l.Dispose(); _layouts.Clear(); }
+            _layouts[lk] = layout = _dwrite.CreateTextLayout(text, fmt, key * 8, key * 2);
+        }
         _brush.Color = c;
-        _ctx.DrawText(text, fmt, new Rect(center.X - key * 4, center.Y - key, key * 8, key * 2), _brush);
+        _ctx.DrawTextLayout(new Vector2(center.X - key * 4, center.Y - key), layout, _brush, DrawTextOptions.None);
     }
 
     public void Dispose()
     {
         foreach (var f in _fonts.Values) f.Dispose();
+        foreach (var l in _layouts.Values) l.Dispose();
+        foreach (var g in _shapes.Values) g.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

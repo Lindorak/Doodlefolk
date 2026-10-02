@@ -1082,6 +1082,7 @@ PAGES.settings = {
       c.key = k;
       return c;
     });
+    const smartFps = check("Save power when calm", "At \"Match monitor\", draws at half speed while nothing's moving fast. Looks the same, uses about half the CPU.", () => st().smartFps !== false, v => setS("smartFps", v));
     const vv = h("span", { class: "val" });
     const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
     const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
@@ -1110,6 +1111,7 @@ PAGES.settings = {
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
       h("div", { class: "row" }, chips),
       h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
+      smartFps,
       h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
@@ -1131,6 +1133,7 @@ PAGES.settings = {
       setRange(custom, st().fps > 0 ? st().fps : 60);
       if (idle(custom)) cv.textContent = st().fps > 0 ? st().fps : "–";
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
+      smartFps.update();
       soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());

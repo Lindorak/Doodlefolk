@@ -62,9 +62,7 @@ sealed partial class Figure
                 case 'c': for (int i = 0; i + 3 < p.Length; i += 2) r.Line(map(p[i], p[i + 1]), map(p[i + 2], p[i + 3]), col, sh.W * unit); continue;
             }
             if (n < 3) continue;
-            r.FillPolygon(_lookBuf.AsSpan(0, n), col);
-            float ow = MathF.Max(0.8f, 0.9f * S);
-            for (int i = 0; i < n; i++) r.Line(_lookBuf[i], _lookBuf[(i + 1) % n], ink, ow);
+            r.Polygon(_lookBuf.AsSpan(0, n), col, ink, MathF.Max(0.8f, 0.9f * S));
         }
     }
 

@@ -159,7 +159,7 @@ sealed partial class App
         settings = new
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
-            sound = _settings.SoundOn, volume = _settings.SoundVolume,
+            sound = _settings.SoundOn, volume = _settings.SoundVolume, smartFps = _settings.SmartFps,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
@@ -528,6 +528,7 @@ sealed partial class App
             case "platforms": _showPlatforms = v.GetBoolean(); break;
             case "hidden": _paused = v.GetBoolean(); break;
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
+            case "smartFps": _settings.SmartFps = v.GetBoolean(); if (!_settings.SmartFps) ApplyFps(); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;

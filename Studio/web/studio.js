@@ -491,14 +491,25 @@ const SUBPANELS = {
     });
     function paintFor() { forChips.forEach(c => c.classList.toggle("on", attr.includes(c.key))); }
     const heart = h("p", { class: "hint" });
+    const JOBS = [["None", "No job"], ["Shopkeeper", "🛒 Shopkeeper"], ["Chef", "🍳 Chef"], ["Builder", "🔨 Builder"], ["Entertainer", "🎭 Entertainer"], ["Teacher", "📚 Teacher"]];
+    const jobChips = JOBS.map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); send({ t: "fig", id, op: "job", v: k }); } }, l); c.key = k; return c; });
+    const coins = h("span", { class: "hint" });
+    const lifeLine = h("p", { class: "hint" });
     add(panel, h("div", { class: "split" }, svg, h("div", null,
       h("h2", { style: { marginTop: 0 } }, "Who they are"), blurb, sliders.map(x => x.el),
       h("h3", null, "Start from a type"), presets, h("div", { style: { marginTop: "12px" } }, hunter),
       h("h3", null, "Heart"),
       h("div", { class: "field" }, h("label", null, "They're a"), h("div", { class: "row tight" }, genderChips)),
       h("div", { class: "field" }, h("label", null, "Can fall for"), h("div", { class: "row tight" }, forChips)),
-      heart)));
+      heart,
+      h("h3", null, "Work and life"),
+      h("div", { class: "row tight" }, jobChips),
+      h("div", { class: "row", style: { marginTop: "6px" } }, coins, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "coins", v: 5 }) }, "🪙 Give 5 coins")),
+      lifeLine)));
     return f => {
+      jobChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (f.job || "None")); });
+      coins.textContent = `🪙 ${f.coins ?? 0} coins`;
+      lifeLine.textContent = [f.stage, f.ageYears ? `${f.ageYears} years old` : "", f.retired ? "Retired" : ""].filter(Boolean).join(" · ");
       genderChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === f.gender); });
       if (forChips.every(idle)) { attr = [...(f.attraction || [])]; paintFor(); }
       heart.textContent = f.sweetheart ? `Dating ${f.sweetheart} ♥` : f.crush ? `Has a crush on ${f.crush}…` : `Single. ${f.name} ${f.attractionText || ""}.`;
@@ -1137,11 +1148,16 @@ PAGES.toys = {
         S.props.length ? armed("Clear all balls", "Sure?", () => send({ t: "clear", what: "balls" }), "btn small danger") : null));
 
     add(root, h("h2", null, "Everything they know how to use"));
-    for (const [title, verbs] of GROUPS) {
-      const defs = INIT.catalog.filter(c => c.verbs.some(v => verbs.includes(v)) && !GROUPS.slice(0, GROUPS.findIndex(g => g[0] === title)).some(g => c.verbs.some(v => g[1].includes(v))));
+    const TOWN = ["shopstall", "foodcart", "stage", "schoolboard", "fort", "treehouse"];
+    const HIDDEN = ["buildsite", "dropping", "poop", "puddle", "seedpatch"];
+    const inGroup = c => GROUPS.some(g => c.verbs.some(v => g[1].includes(v)));
+    const sections = [["Town", INIT.catalog.filter(c => TOWN.includes(c.key))],
+      ...GROUPS.map(([title, verbs]) => [title, INIT.catalog.filter(c => !TOWN.includes(c.key) && c.verbs.some(v => verbs.includes(v)) && !GROUPS.slice(0, GROUPS.findIndex(g => g[0] === title)).some(g => c.verbs.some(v => g[1].includes(v))))]),
+      ["Everything else", INIT.catalog.filter(c => !TOWN.includes(c.key) && !HIDDEN.includes(c.key) && !inGroup(c))]];
+    for (const [title, defs] of sections) {
       if (!defs.length) continue;
       add(root, h("h3", null, title), h("div", { class: "catalog" }, defs.map(c =>
-        h("button", { class: "cat-card", title: `${c.name}: they'll ${c.verbs.map(v => VERB_WORDS[v]).join(", ")}. Also: ${c.words.join(", ")}`, onclick: () => { send({ t: "item", op: "add", key: c.key }); toast(`${c.name}!`); } },
+        h("button", { class: "cat-card", title: `${c.name}${c.verbs.some(v => VERB_WORDS[v]) ? `: they'll ${c.verbs.map(v => VERB_WORDS[v]).filter(Boolean).join(", ")}` : ""}. Also: ${c.words.join(", ")}`, onclick: () => { send({ t: "item", op: "add", key: c.key }); toast(`${c.name}!`); } },
           itemSvg(c, c.hex), h("span", null, c.name)))));
     }
     return () => {
@@ -1230,6 +1246,8 @@ PAGES.settings = {
     const lassoC = check("Figures can lasso your cursor", "A figure with a lasso may rope your cursor, spin it round and fling it. Only when you've left the mouse alone for a few seconds; move it yourself and it breaks free.", () => st().lassoCursor !== false, v => setS("lassoCursor", v));
     const breedC = check("Pet litters", "Bonded pairs of animals can have kittens, puppies, bunnies and so on.", () => st().petBreeding !== false, v => setS("petBreeding", v));
     const petHelpC = check("Figures help with the pets", "Your figures fill empty bowls and scoop the litter box now and then.", () => st().petHelp !== false, v => setS("petHelp", v));
+    const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
+    const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
     const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
@@ -1265,6 +1283,10 @@ PAGES.settings = {
       h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
       staminaC, weightC, petHelpC, breedC, lassoC,
+      h("h2", null, "Town"),
+      jobsC,
+      h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
+      h("p", { class: "hint" }, "With ageing on, figures count their years: kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1286,7 +1308,8 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update();
+      paceChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().lifePace || "off")); });
       careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
     };
   },

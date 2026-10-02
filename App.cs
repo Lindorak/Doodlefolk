@@ -811,6 +811,8 @@ sealed partial class App : ApplicationContext
         f.Brain.Gifts.AddRange(s.Gifts);
         f.Brain.Collection.AddRange(s.Collection);
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
+        if (Enum.TryParse<Job>(s.Job, out var job)) f.Brain.Job = job;
+        if (s.Coins is int coins) f.Brain.Coins = Math.Max(0, coins);
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -870,6 +872,7 @@ sealed partial class App : ApplicationContext
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
+            Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins,
         }).ToList();
         _settings.Items = SaveItems();
         SaveSocial();
@@ -1185,6 +1188,14 @@ sealed partial class App : ApplicationContext
                         foreach (var wn in p.Skip(1)) if (_w.Figures.FirstOrDefault(x => x.Name == wn) is { } wf2) wf2.Brain.DebugWarm(_w, fire);
                     break;
                 case "story": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } storyF) World.Log("story: " + storyF.Brain.DebugStory(_w)); break;
+                case "items": World.Log("items: " + string.Join("; ", _w.Items.Select(i => $"{i.Def.Key}@({i.Pos.X:0},{i.Pos.Y:0}){(i.Growth > 0 ? $" g={i.Growth:0.00}" : "")}"))); break;
+                case "snaparea":
+                {
+                    // snaparea x y w h [zoom]: the live scene in that area, offscreen, to %TEMP%\stickfight_snap.png.
+                    var ar = new RectangleF(float.Parse(p[1], inv), float.Parse(p[2], inv), float.Parse(p[3], inv), float.Parse(p[4], inv));
+                    _r.Snapshot(ar, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 5 ? float.Parse(p[5], inv) : 1);
+                    break;
+                }
                 case "snap" when p.Length > 1 && p[1] == "pets":
                 {
                     var pets = _w.Pets.ToList();
@@ -1246,6 +1257,7 @@ sealed partial class App : ApplicationContext
                 case "props":
                     World.Log($"props ({_w.Props.Count}, saved {_settings.Props.Count}): " + string.Join("; ", _w.Props.Select(pr => $"{pr.Kind}#{pr.Id}@({pr.Pos.X:0},{pr.Pos.Y:0}) v=({pr.Vel.X:0},{pr.Vel.Y:0}) holder={pr.Holder?.Name}")) + $" | virtual {_w.Env.Virtual}");
                     break;
+                case "town": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } tnf) World.Log("town: " + tnf.Brain.DebugTown(_w, p.Length > 2 ? p[2] : "", p.Length > 3 ? p[3] : "")); break;
                 case "state":
                     World.Log("state: " + string.Join("; ", _w.Figures.Select(f => $"{f.Name}@({f.Base.X:0},{f.Base.Y:0}) {f.Brain.Activity} [{f.CurrentEmote}]{(f.Weapon != null ? " holding " + f.Weapon.Def.Key : "")}")));
                     break;

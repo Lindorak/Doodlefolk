@@ -26,6 +26,8 @@ sealed partial class Figure
         return (h, up, fwd);
     }
 
+    /// <summary>Hair colour (greying with age).</summary>
+    Color4 HairCol(Look look) { var c = Hex(look.HairColour, Color); return Elder ? Color4.Lerp(c, Lit(new Color4(0.86f, 0.86f, 0.88f, c.A)), 0.75f) : c; }
     Color4 Hex(string s, Color4 fallback) => Lit(s.Length == 7 ? Settings.ParseHex(s) : fallback);
 
     Color4 PartCol(int c, Color4 main) => c switch
@@ -78,12 +80,12 @@ sealed partial class Figure
         float hr = HeadR;
         Vector2 Map(float x, float y) => h + fwd * x * hr + up * y * hr;
         if (Look.Find(Look.Hairs, look.Hair) is { Back: { } hb } && !(FrontView && Action == Act.SitFront && look.Hair == "long"))
-            DrawShapes(r, hb, Map, hr, Hex(look.HairColour, Color), alpha);
+            DrawShapes(r, hb, Map, hr, HairCol(look), alpha);
         if (look.Top == "hoodie") DrawShapes(r, new[] { new Shape('e', new[] { -0.7f, -0.2f, 0.75f, 0.9f }, 1) }, Map, hr, Hex(look.TopColour, Color), alpha);
         if (Look.Find(Look.Hats, HatOverride ?? look.Hat) is { Back: { } tb }) DrawShapes(r, tb, Map, hr, Hex(HatColourOverride ?? look.HatColour, Color), alpha);
         if (look.Hair == "ponytail" && _clothInit)
         {
-            var hc = Hex(look.HairColour, Color);
+            var hc = HairCol(look);
             hc = new Color4(hc.R, hc.G, hc.B, alpha);
             for (int i = 0; i < _pony.Length - 1; i++) r.Line(_pony[i], _pony[i + 1], hc, (2.6f - i * 0.5f) * S);
         }
@@ -190,8 +192,8 @@ sealed partial class Figure
         Vector2 Map(float x, float y) => h + fwd * x * hr + up * y * hr;
         // Seen from the front, face pieces sit in the middle of the face.
         Vector2 Face(float x, float y) => front ? h + fwd * (x - 0.62f) * hr + up * y * hr : Map(x, y);
-        if (Look.Find(Look.Hairs, look.Hair) is { } hair) DrawShapes(r, hair.Front, Map, hr, Hex(look.HairColour, Color), alpha);
-        if (!back && Look.Find(Look.Beards, look.Beard) is { } beard) DrawShapes(r, beard.Front, Face, hr, Hex(look.HairColour, Color), alpha);
+        if (Look.Find(Look.Hairs, look.Hair) is { } hair) DrawShapes(r, hair.Front, Map, hr, HairCol(look), alpha);
+        if (!back && Look.Find(Look.Beards, look.Beard) is { } beard) DrawShapes(r, beard.Front, Face, hr, HairCol(look), alpha);
         if (!back && Look.Find(Look.GlassesParts, look.Glasses) is { } gl)
         {
             if (front)

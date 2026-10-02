@@ -103,6 +103,12 @@ sealed partial class Figure
     public string Team => FightSettings.Team(Color);
     /// <summary>Hunts your cursor relentlessly and never forgives you.</summary>
     public bool Hunter;
+    /// <summary>One of the town's elders: grey hair, a cane, a slower step.</summary>
+    public bool Elder;
+    /// <summary>What it's dreaming about (shown in a cloud while asleep), and whether it's a bad one.</summary>
+    public string? Dream;
+    public float DreamUntil;
+    public bool Nightmare;
     /// <summary>An object in hand (food, a book).</summary>
     public Item? CarryingItem;
 

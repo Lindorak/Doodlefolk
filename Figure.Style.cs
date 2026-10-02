@@ -44,7 +44,7 @@ sealed partial class Figure
         SetAction(Act.Fidget);
     }
 
-    float MoodSpeed => (1 - Mood.Hurt * 0.35f) * (1 - Mood.Tired * 0.2f) * (1 + Mood.Happy * 0.06f) * (1 - Fat * 0.4f);
+    float MoodSpeed => (1 - Mood.Hurt * 0.35f) * (1 - Mood.Tired * 0.2f) * (1 + Mood.Happy * 0.06f) * (1 - Fat * 0.4f) * (Elder ? 0.8f : 1);
 
     // ---------------- walking & running ----------------
 

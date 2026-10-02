@@ -286,6 +286,56 @@ static class ItemCatalog
             Mass = 1,
         });
 
+        // ---------------- town: work, school and building ----------------
+        Add(new ItemDef
+        {
+            Key = "shopstall", Name = "Shop stall", Words = new[] { "shop", "shop stall", "store", "market stall", "stall", "kiosk" }, W = 50, H = 44, Color = M.Hex(0xE53935),
+            Shapes = new[] { L(-22, 0, -22, 40, 4, 2), L(22, 0, 22, 40, 4, 2), R(-25, 18, 25, 22, 3, true), R(-24, 0, 24, 18, 13, true),
+                             P(0, -27, 38, 27, 38, 23, 46, -23, 46), L(-20, 38, -17, 34, 7, 2), L(-10, 38, -7, 34, 7, 2), L(0, 38, 3, 34, 7, 2), L(10, 38, 13, 34, 7, 2), L(20, 38, 23, 34, 7, 2),
+                             R(-18, 22, -12, 27, 16, true), R(-8, 22, -1, 29, 11, true), R(4, 22, 9, 26, 10, true) },
+            Mass = 3, Likes = new[] { Thing.Chatting },
+        });
+        Add(new ItemDef
+        {
+            Key = "foodcart", Name = "Food cart", Words = new[] { "food cart", "food truck", "hot dog stand", "cafe", "café", "restaurant", "kitchen" }, W = 44, H = 40, Color = M.Hex(0xFDD835),
+            Shapes = new[] { E(-14, 4, 4.5f, 4.5f, 8), E(14, 4, 4.5f, 4.5f, 8), E(-14, 4, 1.6f, 1.6f, 5), E(14, 4, 1.6f, 1.6f, 5), O(-22, 6, 22, 26, 2, 0), R(-22, 24, 22, 27, 7),
+                             L(-18, 27, -18, 38, 5, 1.4f), L(18, 27, 18, 38, 5, 1.4f), P(9, -22, 36, 22, 36, 18, 41, -18, 41), R(-8, 12, 8, 20, 7), L(-6, 16, 6, 16, 9, 1.4f) },
+            Verbs = new[] { Verb.Stand }, Surface = 27, SurfX1 = -21, SurfX2 = 21, Mass = 3, Likes = new[] { Thing.Eating },
+        });
+        Add(new ItemDef
+        {
+            Key = "stage", Name = "Stage", Words = new[] { "stage", "bandstand", "theatre", "theater", "performance stage" }, W = 80, H = 14, Color = M.Hex(0x8E24AA),
+            Shapes = new[] { R(-40, 0, 40, 10, 3), R(-40, 10, 40, 14, 4), L(-38, 14, -38, 46, 0, 2.6f), L(38, 14, 38, 46, 0, 2.6f), P(0, -40, 46, 40, 46, 30, 40, 0, 43, -30, 40),
+                             E(-24, 6, 2, 2, 11), E(0, 6, 2, 2, 11), E(24, 6, 2, 2, 11) },
+            Verbs = new[] { Verb.Stand }, Surface = 14, SurfX1 = -39, SurfX2 = 39, Mass = 4, Likes = new[] { Thing.Dancing },
+        });
+        Add(new ItemDef
+        {
+            Key = "schoolboard", Name = "School chalkboard", Words = new[] { "school", "chalkboard", "blackboard", "classroom", "whiteboard" }, W = 46, H = 40, Color = M.Hex(0x2E5D4B),
+            Shapes = new[] { L(-18, 0, -14, 14, 3, 2), L(18, 0, 14, 14, 3, 2), R(-23, 12, 23, 40, 3), R(-21, 14, 21, 38, 0), L(-15, 31, -2, 31, 7, 0.8f), L(-15, 26, 8, 26, 7, 0.8f), L(-15, 21, 4, 21, 7, 0.8f), R(-8, 12.5f, 8, 14, 7) },
+            Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "buildsite", Name = "Building site", Words = new[] { "building site", "construction site", "scaffolding" }, W = 60, H = 50, Color = M.Hex(0xA0703C),
+            Shapes = new[] { R(-30, 0, 30, 2.5f, 13) }, Mass = 3,
+        });
+        Add(new ItemDef
+        {
+            Key = "fort", Name = "Blanket fort", Words = new[] { "fort", "blanket fort", "pillow fort", "den" }, W = 64, H = 40, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { L(-28, 0, -28, 30, 3, 2.4f), L(28, 0, 28, 30, 3, 2.4f), P(0, -32, 30, 0, 40, 32, 30, 30, 4, 18, 0, -18, 0, -30, 4), POver(1, -10, 0, -12, 18, 12, 18, 10, 0),
+                             L(-30, 30, -30, 26, 2, 3), L(0, 40, 0, 50, 4, 1.2f), P(9, 0, 50, 9, 47, 0, 44) },
+            Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.8f, Mass = 2, Likes = new[] { Thing.Napping, Thing.Exploring }, Material = Material.Fabric,
+        });
+        Add(new ItemDef
+        {
+            Key = "treehouse", Name = "Treehouse", Words = new[] { "treehouse", "tree house", "tree fort" }, W = 76, H = 110, Color = M.Hex(0xA0703C),
+            Shapes = new[] { R(-7, 0, 7, 62, 4), L(-6, 30, -24, 50, 4, 4), E(-18, 92, 22, 18, 18), E(18, 96, 22, 16, 18), E(0, 104, 24, 14, 18), R(-30, 60, 30, 64, 4),
+                             R(-26, 64, 26, 86, 0), P(13, -30, 86, 0, 100, 30, 86), R(-6, 64, 6, 78, 4), R(14, 72, 22, 80, 7), L(26, 0, 26, 62, 3, 1.4f), L(31, 0, 31, 62, 3, 1.4f),
+                             L(26, 12, 31, 12, 3, 1.2f), L(26, 24, 31, 24, 3, 1.2f), L(26, 36, 31, 36, 3, 1.2f), L(26, 48, 31, 48, 3, 1.2f) },
+            Verbs = new[] { Verb.Stand, Verb.Hide }, Surface = 64, SurfX1 = -28, SurfX2 = 28, Mass = 6, Likes = new[] { Thing.HighPlaces, Thing.Climbing }, Material = Material.Wood,
+        });
+
         // ---------------- pet care ----------------
         Add(new ItemDef
         {
@@ -376,7 +426,7 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
-            Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi", "fort", "blanket fort" }, W = 64, H = 42, Color = M.Hex(0x43A047),
+            Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi" }, W = 64, H = 42, Color = M.Hex(0x43A047),
             Shapes = new[] { P(1, -30, 0, 0, 42, 30, 0), POver(0, -32, 0, -6, 0, 0, 40, -2, 40), POver(2, 6, 0, 32, 0, 2, 40, 0, 40), L(0, 40, 0, 46, 6, 1.4f) },
             Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.6f, Likes = new[] { Thing.Napping, Thing.Exploring }, Mass = 2,
         });

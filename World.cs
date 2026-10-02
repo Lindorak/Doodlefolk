@@ -42,6 +42,9 @@ sealed partial class World
     public Figure? CursorLasso;
     public float CursorStill;
     public static bool LassoCursor = true;
+    /// <summary>Figures have jobs and earn coins (setting); how many years they age per real day (0: they don't).</summary>
+    public static bool Jobs = true;
+    public static float LifePace;
     /// <summary>Couples can have little ones (setting), up to a cap on how many figures there are in all.</summary>
     public bool Babies = true;
     public static int MaxFigures = 14;

@@ -165,7 +165,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -190,6 +190,7 @@ sealed partial class App
             fond = R(b.UserFondness),
             hunter = f.Hunter,
             family = FamilyLine(f), weightWord = f.WeightWord,
+            job = (int)b.Job >= 0 ? b.Job.ToString() : "None", coins = b.Coins, stage = b.LifeStage, ageYears = World.LifePace > 0 || b.ParentIds.Count > 0 ? (int)b.AgeYears : 0, retired = b.IsElder,
             skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
@@ -275,6 +276,7 @@ sealed partial class App
         if (kids.Count > 0) bits.Add($"Parent of {string.Join(" & ", kids)}");
         if (b.Baby) bits.Add($"{b.Grown * 100:0}% grown up");
         if (_w.ClubOf(f) is { } club) bits.Add($"Member of {club.Name}");
+        if ((int)b.Job > 0) bits.Add($"Works as a {Brain.JobName(b.Job)}");
         if (b.Hobby != Hobby.None) bits.Add($"Loves {Brain.HobbyName(b.Hobby)}");
         if (b.Collection.Count > 0) bits.Add($"Collection: {b.Collection.Count} treasure{(b.Collection.Count == 1 ? "" : "s")}");
         if (b.Gifts.Count > 0) bits.Add($"Your gifts: {string.Join(", ", b.Gifts.AsEnumerable().Reverse().Select(g => g.Name.ToLowerInvariant()).Distinct().Take(4))}");
@@ -465,6 +467,8 @@ sealed partial class App
                 break;
             case "plainLook": f.Look = new Look(); break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
+            case "job": if (Enum.TryParse<Job>(Str(m, "v"), out var job)) { f.Brain.Job = job; f.Brain.JobChanged(); } break;
+            case "coins": f.Brain.Coins += (int)Num(m, "v"); f.Brain.GotCoins((int)Num(m, "v")); break;
             case "call": PostAll(new { t = "toast", text = f.Brain.CalledByUser(_w) }); break;
             case "talk": PostAll(new { t = "said", id = f.Id, text = f.Brain.Talk(Str(m, "v"), _w) }); break;
             case "dance": if (f.Mode == Mode.Control && f.Grounded) f.StartFidget(Fidget.Groove); break;
@@ -612,6 +616,8 @@ sealed partial class App
             case "petHelp": _settings.PetHelp = v.GetBoolean(); break;
             case "petBreeding": _settings.PetBreeding = v.GetBoolean(); break;
             case "lassoCursor": _settings.LassoCursor = v.GetBoolean(); break;
+            case "jobs": _settings.Jobs = v.GetBoolean(); break;
+            case "lifePace": _settings.LifePace = v.GetString() ?? "off"; break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

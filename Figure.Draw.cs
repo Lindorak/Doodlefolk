@@ -57,8 +57,10 @@ sealed partial class Figure
         DrawLookBody(r, fade);
         DrawLookFront(r, fade);
         DrawGear(r, J.ElbowN, J.HandN, 1);
+        DrawCane(r, fade);
         DrawHealthBar(r);
         if (fade > 0.5f) DrawEmote(r);
+        if (fade > 0.5f) DrawDream(r);
     }
 
     void DrawSketch(Renderer r)

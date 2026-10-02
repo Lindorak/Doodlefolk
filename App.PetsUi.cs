@@ -14,6 +14,8 @@ sealed partial class App
         Pet.WeightOn = World.WeightOn = _settings.WeightOn;
         World.PetHelp = _settings.PetHelp;
         Pet.Breeding = _settings.PetBreeding;
+        World.Jobs = _settings.Jobs;
+        World.LifePace = _settings.LifePace switch { "slow" => 1, "fast" => 24, _ => 0 };
         if (_sprayTool && now > _sprayIdleUntil) PickUpSpray(false);
     }
 

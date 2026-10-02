@@ -33,6 +33,8 @@ sealed class SavedFigure
     public Dictionary<string, int[]> Record { get; set; } = new();
     public List<Gift> Gifts { get; set; } = new();
     public string Hobby { get; set; } = "";
+    public string Job { get; set; } = "";
+    public int? Coins { get; set; }
     public List<string> Collection { get; set; } = new();
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
@@ -162,6 +164,10 @@ sealed class Settings
     public bool PetBreeding { get; set; } = true;
     /// <summary>Figures with a lasso may rope your cursor (only when you've left the mouse alone; moving it breaks free).</summary>
     public bool LassoCursor { get; set; } = true;
+    /// <summary>Figures have jobs, earn coins and spend them.</summary>
+    public bool Jobs { get; set; } = true;
+    /// <summary>How fast figures age: off, slow (a year a day), fast (a year an hour).</summary>
+    public string LifePace { get; set; } = "off";
     public DateTime? LastSeen { get; set; }
     public int WishesGranted { get; set; }
     public List<SavedClub> Clubs { get; set; } = new();

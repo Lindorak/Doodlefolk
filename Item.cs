@@ -418,6 +418,19 @@ sealed class Item
                 break;
             case "puddle": Smell(r, t, 1); break;
             case "fishtank": DrawTank(r, t); break;
+            case "buildsite":
+            {
+                // Scaffolding going up: posts, then floor and walls, then the roof's outline.
+                float g = M.Clamp01(Growth);
+                var wood = M.Hex(0xA0703C);
+                float hgt = 46 * MathF.Min(1, g * 2.2f);
+                r.Line(Local(-26, 2), Local(-26, 2 + hgt), Ink, 2.6f * sc); r.Line(Local(-26, 2), Local(-26, 2 + hgt), wood, 1.8f * sc);
+                r.Line(Local(26, 2), Local(26, 2 + hgt), Ink, 2.6f * sc); r.Line(Local(26, 2), Local(26, 2 + hgt), wood, 1.8f * sc);
+                if (g > 0.3f) for (int i = 0; i < (int)((g - 0.3f) * 14); i++) r.Line(Local(-26, 6 + i * 4), Local(26, 6 + i * 4), wood.A(0.9f), 1.6f * sc);
+                if (g > 0.75f) { r.Line(Local(-28, 48), Local(0, 58), wood, 1.6f * sc); r.Line(Local(0, 58), Local(28, 48), wood, 1.6f * sc); }
+                r.Line(Local(-30, 30), Local(30, 30), new Color4(0.98f, 0.8f, 0.2f, 0.9f), 1.2f * sc);   // a hazard tape
+                break;
+            }
             case "hamsterwheel":
             {
                 WheelAngle += SpinV * 0.016f;
@@ -647,7 +660,7 @@ sealed class Item
     /// <summary>Does this object need redrawing this frame (it moved, changed, animates, or someone's using it)?</summary>
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
     public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
-                     || Def.Key is "puddle" or "poop" or "fishtank" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
+                     || Def.Key is "puddle" or "poop" or "fishtank" or "buildsite" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>

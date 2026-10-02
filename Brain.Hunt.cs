@@ -10,10 +10,14 @@ sealed partial class Brain
     float _huntPlanT;
 
     /// <summary>Hunting is on the menu (and usually wins).</summary>
+    float _huntFails;
+
     (float, Action)? HuntOption(World w)
     {
         if (!f.Hunter || Stamina < 0.25f) return null;
-        return (6f + P.Aggression * 4, () => BeginHunt(w));
+        // Keeps trying, but not blindly: every failed chase takes the edge off for a while.
+        _huntFails = MathF.Max(0, _huntFails - 0.02f);
+        return ((6f + P.Aggression * 4) / (1 + _huntFails), () => BeginHunt(w));
     }
 
     void BeginHunt(World w)
@@ -87,9 +91,38 @@ sealed partial class Brain
             }
             return;
         }
-        // Another window: go there (jumping, climbing or grappling), then pick up the hunt again.
-        var a = Anchor.On(env, target, tx);
+        // Another window: go there (jumping, climbing or grappling), then pick up the hunt again. If there's no way
+        // to the spot under the cursor, settle for the closest place it can get to, or stand underneath and glare.
+        if (seg == null) return;
+        var goal = target;
+        float gx = tx;
+        if (Unreachable(NavGraph.Key(target)) || w.Nav.FindPath(seg, f.Base.X, target, tx, MyMover, MoveCost, 400) == null)
+        {
+            _unreachable[NavGraph.Key(target)] = _t0 + 15;
+            goal = null!;
+            foreach (var p in env.Platforms.Where(p => p != seg && p.Y >= cur.Y - 2 && !Unreachable(NavGraph.Key(p)))
+                                          .OrderBy(p => MathF.Abs(M.ClampIn(cur.X, p.X1, p.X2) - cur.X) + (p.Y - cur.Y) * 0.6f).Take(5))
+            {
+                float px = M.ClampIn(cur.X, p.X1 + 8 * S, p.X2 - 8 * S);
+                if (SameSegment(p, seg) || w.Nav.FindPath(seg, f.Base.X, p, px, MyMover, MoveCost, 300) != null) { goal = p; gx = px; break; }
+                _unreachable[NavGraph.Key(p)] = _t0 + 15;
+            }
+            if (goal == null || SameSegment(goal, seg))
+            {
+                // Nowhere better to be: get as close as this ledge allows and glare up at it.
+                _huntFails += 1;
+                _run = true;
+                if (MoveToward(M.ClampIn(cur.X, seg.X1 + 8 * S, seg.X2 - 8 * S), 20 * S))
+                {
+                    FaceTo(cur.X);
+                    if (rng.NextDouble() < 0.02) f.Emote(rng.NextDouble() < 0.5 ? "#@!" : "get down here!", 1.2f);
+                }
+                return;
+            }
+        }
+        var a = Anchor.On(env, goal, gx);
         Navigate(() => a.Resolve(env), 30 * S, true, () => BeginHunt(w), WalkPurpose.Other);
+        _navAbout = NavGraph.Key(goal);
         _dur = 25;
     }
 

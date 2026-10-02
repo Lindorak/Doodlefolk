@@ -43,6 +43,7 @@ sealed partial class Brain
     {
         World.Audit($"noroute\t{f.Name}\t{LastDecision}\t{_navAbout}");
         if (_navAbout != null) _unreachable[_navAbout] = _t0 + 60;
+        if (f.Hunter) _huntFails += 1;
         if (_unreachable.Count > 64) foreach (var k in _unreachable.Where(kv => kv.Value < _t0).Select(kv => kv.Key).ToList()) _unreachable.Remove(k);
     }
 

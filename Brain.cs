@@ -364,12 +364,29 @@ sealed partial class Brain
         if (_g != G.Sleep) cost += World.Current.Night * 0.004f;   // late at night everyone flags
         Stamina = M.Clamp01(Stamina - cost * dt);
 
-        bool stimulating = _g is G.Walk or G.Chat or G.HighFive or G.Juggle or G.Dribble or G.Kick or G.Catch or G.Throw or G.Carry or G.Trick or G.Watch or G.Fight or G.CursorFight;
-        Boredom = M.Clamp01(Boredom + dt * (stimulating ? -0.06f : 0.012f * (0.5f + P.Curiosity)));
-        bool social = _g is G.Chat or G.HighFive or G.Follow or G.SitWith or G.DanceWith || _partner != null;
-        Loneliness = M.Clamp01(Loneliness + dt * (social ? -0.08f : 0.01f * P.Sociability * (w.Figures.Count > 1 ? 1 : 0.3f)));
+        // How much the current activity keeps boredom away (games, play, music and new things most; sitting about least).
+        float fun = _g switch
+        {
+            G.Sport or G.Snowball or G.DanceWith or G.Groove or G.Hunt or G.CursorFight or G.Fight or G.Create => 1,
+            G.Juggle or G.Dribble or G.Kick or G.Catch or G.Throw or G.Carry or G.Trick or G.Snowman or G.Confess => 0.9f,
+            G.Chat or G.HighFive or G.PetAnimal or G.LookAtScreen or G.WatchScreen or G.Watch or G.Follow => 0.7f,
+            G.UseItem => _verb is Verb.Bounce or Verb.Dance or Verb.Read or Verb.Eat or Verb.Warm or Verb.Hammock ? 0.7f : 0.15f,
+            G.Walk => _purpose is WalkPurpose.Explore or WalkPurpose.Look ? 0.6f : 0.3f,
+            G.SitWith => 0.4f,
+            _ => 0,
+        };
+        Boredom = M.Clamp01(Boredom + dt * (fun > 0 ? -0.07f * fun : 0.012f * (0.5f + P.Curiosity)));
+        // Company: anything done together, a game with others, or just being near friends.
+        bool social = _g is G.Chat or G.HighFive or G.Follow or G.SitWith or G.DanceWith or G.Confess || _partner != null
+                      || (_g == G.Sport && Match != null && Match.Players.Count > 1) || (_g == G.Snowball && _snowTarget != null)
+                      || (_g == G.WatchScreen && w.Figures.Any(o => o != f && o.Brain._g == G.WatchScreen));
+        bool company = !social && w.Figures.Any(o => o != f && !o.Dead && AffinityWith(o) > 0.3f && Vector2.Distance(o.Base, f.Base) < 250 * S);
+        if (_g == G.PetAnimal) company = true;
+        Loneliness = M.Clamp01(Loneliness + dt * (social ? -0.08f : company ? -0.015f : 0.01f * P.Sociability * (w.Figures.Count > 1 ? 1 : 0.3f)));
         Annoyance = M.Clamp01(Annoyance - dt * 0.04f);
-        Joy = M.Clamp01(Joy - dt * 0.04f);
+        // Joy: quick lifts from good moments, settling toward how content it is overall (rested, busy, not lonely).
+        float content = M.Clamp01((1 - Boredom) * 0.45f + (1 - Loneliness) * 0.3f + MathF.Min(Stamina, 0.5f) * 0.5f - Sadness * 0.5f - Annoyance * 0.3f) * (0.6f + P.Playfulness * 0.5f);
+        Joy = Joy > content ? M.Clamp01(Joy - dt * 0.03f) : M.MoveTowards(Joy, content, dt * 0.01f);
         Sadness = M.Clamp01(Sadness - dt * 0.015f);
         Fear = M.Clamp01(Fear - dt * 0.25f);
 

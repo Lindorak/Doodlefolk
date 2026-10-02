@@ -173,7 +173,7 @@ sealed partial class Item
                 float x = ((t * (4 + i) + i * 37) % (half * 1.6f)) - half * 0.8f;
                 r.Line(Local(x - 4, top - 1.6f), Local(x + 4, top - 1.6f), new Color4(1, 1, 1, 0.45f), 0.6f * sc);
             }
-            if (pond) DrawDucks(r, t);
+            if (pond) { DrawPondFish(r, t); DrawDucks(r, t); }
             return;
         }
         // The front of the water, in front of anyone in it.
@@ -189,6 +189,24 @@ sealed partial class Item
         }
         r.FillPolygon(band, water);
         for (int i = 0; i < 9; i++) r.Line(band[i], band[i + 1], new Color4(1, 1, 1, 0.55f), 0.7f * sc);
+    }
+
+    /// <summary>Shapes under the surface, in the colours of whatever's biting this season.</summary>
+    void DrawPondFish(Renderer r, float t)
+    {
+        var cols = Fishes.PondColours;
+        if (cols.Length == 0) return;
+        for (int i = 0; i < 3; i++)
+        {
+            float ph = Id * 1.3f + i * 2.1f, sp = 0.08f + i * 0.025f;
+            float x = MathF.Sin(t * sp + ph) * 48;
+            float dir = MathF.Cos(t * sp + ph) >= 0 ? 1 : -1;
+            if (Flip) dir = -dir;
+            var c = cols[(Id + i) % cols.Length].A(0.33f);
+            var at = Local(x, 2.4f + i * 0.9f);
+            r.Oval(at, 3.4f * Sc, 1.1f * Sc, c);
+            r.FillPolygon(stackalloc Vector2[] { at + new Vector2(-dir * 3f * Sc, 0), at + new Vector2(-dir * 5.2f * Sc, -1.2f * Sc), at + new Vector2(-dir * 5.2f * Sc, 1.2f * Sc) }, c);
+        }
     }
 
     void DrawDucks(Renderer r, float t)

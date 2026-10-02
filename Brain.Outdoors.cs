@@ -234,18 +234,29 @@ sealed partial class Brain
             {
                 _caught++;
                 w.Fx.Splash(f.Bobber, S, rng, 1.2f);
-                string size = new[] { "tiny", "little", "decent", "big", "HUGE" }[Math.Min(4, (int)(rng.NextDouble() * rng.NextDouble() * 5.5))];
-                bool keep = rng.NextDouble() < 0.4 && w.Items.Count < 55;
-                if (keep && w.MakeItem?.Invoke("fish") is { } fish)
+                var (kind, cm) = Fishes.Catch(rng, DateTime.Now, w.Weather.Raining, Hobby == Hobby.Collecting ? 0.5f : 0);
+                string what = kind.Name.ToLowerInvariant(), size = Fishes.Size(kind, cm);
+                var note = w.FishCaught?.Invoke(f, kind, cm) ?? "";
+                if (kind.Junk)
                 {
-                    fish.Pos = f.Base + new Vector2(-f.Facing * 14 * S, -6 * S); fish.Vel = new Vector2(-f.Facing * 60 * S, -220 * S); fish.OnGround = false;
-                    fish.SizeMul = size switch { "tiny" => 0.6f, "little" => 0.8f, "big" => 1.3f, "HUGE" => 1.7f, _ => 1 };
+                    // Junk: a laugh, and (a bottle) a little message.
+                    f.Emote(V($"an {what}?!", $"AN {what.ToUpperInvariant()}?!", $"…an {what}. great.", $"oh… an {what}…", $"the pond offers: an {what}"), 1.8f);
+                    Write("fish:junk", kind.Key == "bottle" ? $"Fished a message in a bottle out of the pond! It said: \"{V("hello from the other side of the screen", "WHOEVER FINDS THIS: HI!!!", "help, I'm stuck in a pond", "keep fishing. it gets better.", "the sea remembers")}\"" : $"Fished an {what} out of the pond. Tidied it away.", "…", 300);
                 }
-                f.Emote(V($"a {size} fish!", $"A {size.ToUpperInvariant()} FISH!!!", $"{size} fish. whatever.", $"I c-caught one!", $"a {size} fish rises"), 1.6f);
-                Cheered(0.25f);
-                Write("fish:caught", V($"Caught a {size} fish{(keep ? " and kept it for supper" : " and let it go")}.", $"CAUGHT A {size.ToUpperInvariant()} FISH!!!", $"Caught a {size} fish. {(keep ? "Kept it." : "Threw it back.")}", $"I caught a {size} fish… {(keep ? "I'll cook it." : "I let it swim away.")}", $"A {size} fish, {(keep ? "kept" : "returned to the deep")}."), "★", 300);
+                else
+                {
+                    bool keep = rng.NextDouble() < 0.4 && w.Items.Count < 55 && kind.Rarity < FishRarity.Rare;
+                    if (keep && w.MakeItem?.Invoke("fish") is { } fish)
+                    {
+                        fish.Pos = f.Base + new Vector2(-f.Facing * 14 * S, -6 * S); fish.Vel = new Vector2(-f.Facing * 60 * S, -220 * S); fish.OnGround = false;
+                        fish.SizeMul = Math.Clamp(cm / 30f, 0.5f, 1.9f);
+                        fish.Color = kind.Col;
+                    }
+                    f.Emote(Gestures ? "🐟" : V($"a {size} {what}!", $"A {size.ToUpperInvariant()} {what.ToUpperInvariant()}!!!", $"{size} {what}. whatever.", $"a {what}! I c-caught one!", $"a {size} {what} rises"), 1.6f);
+                    Cheered(kind.Rarity >= FishRarity.Rare ? 0.6f : 0.25f);
+                    Write("fish:caught", V($"Caught a {size} {what} ({cm:0.#} cm){(keep ? " and kept it for supper" : " and let it go")}.{note}", $"CAUGHT A {size.ToUpperInvariant()} {what.ToUpperInvariant()}!!! {cm:0.#} CM!!!{note}", $"Caught a {what}. {cm:0.#} cm. {(keep ? "Kept it." : "Threw it back.")}{note}", $"I caught a {what}… {cm:0.#} cm… {(keep ? "I'll cook it." : "I let it swim away.")}{note}", $"A {what}, {cm:0.#} cm, {(keep ? "kept" : "returned to the deep")}.{note}"), "★", 300);
+                }
                 w.Sticker("fish");
-                if (size == "HUGE") w.News("town", $"{f.Name} lands a huge fish at the pond!", 2, f);
             }
             else f.Emote(V("it got away…", "NOOO, IT GOT AWAY!", "missed.", "oh… it got away…", "it slipped the hook"), 1.3f);
         }

@@ -1079,9 +1079,10 @@ PAGES.stickers = {
     for (const s of all)
       grid.append(h("div", { class: "sticker" + (s.got ? " got" : "") }, h("div", { class: "art" }, s.got ? s.art : "?"), h("div", { class: "st-title" }, s.got ? s.title : "???"), h("div", { class: "hint" }, s.got ? `Got it ${s.got}` : s.hint)));
     add(root, grid);
-    const met = dex.visitors.filter(v => v.met).length, found = dex.hats.filter(x => x.found).length, coats = dex.pets.filter(x => x.seen).length;
+    const fish = dex.fish || [];
+    const met = dex.visitors.filter(v => v.met).length, found = dex.hats.filter(x => x.found).length, coats = dex.pets.filter(x => x.seen).length, caught = fish.filter(x => x.count).length;
     add(root, h("h2", null, "Doodledex"),
-      h("p", { class: "sub" }, `Who's dropped by, rare hats from gift crates (the mail carrier brings one every couple of hours you spend together), and rare animal coats (about one in forty). ${met + found + coats} of ${dex.visitors.length + dex.hats.length + dex.pets.length} found.`),
+      h("p", { class: "sub" }, `Who's dropped by, rare hats from gift crates (the mail carrier brings one every couple of hours you spend together), and rare animal coats (about one in forty), and everything that comes out of the pond. ${met + found + coats + caught} of ${dex.visitors.length + dex.hats.length + dex.pets.length + fish.length} found.`),
       h("h3", null, "Visitors"),
       h("div", { class: "stickers" }, dex.visitors.map(v => h("div", { class: "sticker" + (v.met ? " got" : "") },
         h("div", { class: "art" }, v.met ? "🧳" : "?"), h("div", { class: "st-title" }, v.met ? `${v.name}, ${v.title}` : "???"),
@@ -1091,7 +1092,15 @@ PAGES.stickers = {
         h("div", { class: "art" }, x.found ? "🎩" : "🎁"), h("div", { class: "st-title" }, x.found ? x.name : "???"), h("div", { class: "hint" }, x.found ? "Yours to wear (Look tab)." : "In a gift crate somewhere.")))),
       h("h3", null, "Rare coats"),
       h("div", { class: "stickers" }, dex.pets.map(x => h("div", { class: "sticker" + (x.seen ? " got" : "") },
-        h("div", { class: "art" }, x.seen ? { golden: "✨", rainbow: "🌈", starry: "🌌", silver: "🥈" }[x.coat] : "?"), h("div", { class: "st-title" }, x.seen ? x.coat[0].toUpperCase() + x.coat.slice(1) : "???"), h("div", { class: "hint" }, x.seen ? "Spotted!" : "Keep adopting…")))));
+        h("div", { class: "art" }, x.seen ? { golden: "✨", rainbow: "🌈", starry: "🌌", silver: "🥈" }[x.coat] : "?"), h("div", { class: "st-title" }, x.seen ? x.coat[0].toUpperCase() + x.coat.slice(1) : "???"), h("div", { class: "hint" }, x.seen ? "Spotted!" : "Keep adopting…")))),
+      h("h3", null, `The pond (${caught} of ${fish.length})`),
+      h("p", { class: "hint" }, "What's in the pond changes with the month, the time of day and the weather. Put a pond out and someone will go fishing. ✦ marks what's biting right now."),
+      h("div", { class: "stickers" }, fish.map(x => h("div", { class: "sticker" + (x.count ? " got" : "") + (x.now ? " biting" : "") },
+        h("div", { class: "art" }, x.count ? h("span", { class: "fish-dot", style: `background:${x.colour}` }) : "?"),
+        h("div", { class: "st-title" }, (x.now ? "✦ " : "") + (x.count ? x.name : "???"), x.count && x.rarity !== "Common" ? h("span", { class: "hint" }, ` · ${x.rarity.toLowerCase()}`) : null),
+        h("div", { class: "hint" }, x.count
+          ? (x.junk ? `${x.count} fished out. ${x.hint}` : `${x.count} caught · best ${x.best} cm${x.bestBy ? ` (${x.bestBy})` : ""} · ${x.months}`)
+          : x.hint)))));
   },
 };
 
@@ -1464,6 +1473,7 @@ PAGES.settings = {
     let workshopSig = null;
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
+    const hemiChips = [["auto", "Automatic"], ["north", "Northern"], ["south", "Southern"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("hemisphere", k); } }, l); c.key = k; return c; });
     const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
     const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
@@ -1499,6 +1509,8 @@ PAGES.settings = {
       realBox, wxStatus,
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
       dayNight, celebrations, babies,
+      h("div", { class: "field" }, h("label", null, "Hemisphere"), h("div", { class: "row tight" }, hemiChips)),
+      h("p", { class: "hint" }, "Which way round the seasons (and the pond's fish) go. Automatic uses your real-weather town if you've set one, otherwise northern."),
       h("h2", null, "Pets and bodies"),
       petMode,
       h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
@@ -1559,7 +1571,8 @@ PAGES.settings = {
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
       dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update();
-      moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
+      moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
+      hemiChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().hemisphere || "auto")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";
       if (idle(aiModel)) aiModel.value = st().aiModel || "gpt-5-mini";
       aiLine.textContent = (st().aiHasKey ? (st().aiEnvKey ? "Using the key from the OPENAI_API_KEY environment variable (or the one you saved). " : "A key is saved. ") : "No key yet. ") + (st().aiStatus || "");
@@ -1834,6 +1847,11 @@ const Mock = {
     }
     if (m.t === "setting") this.state.settings[m.key] = m.v;
     if (m.t === "fight") this.state.fight[m.key] = m.v;
+    if (m.t === "album") setTimeout(() => receive({ t: "album", auto: true, items: [
+      { file: "sample.png", when: "2 Oct 2026, 13:24", month: "October 2026", kind: "romance", caption: "Mo and Bea are dating!", who: ["Mo", "Bea"], starred: true },
+      { file: "sample.png", when: "1 Oct 2026, 20:10", month: "October 2026", kind: "town", caption: "Rex wins the race!", who: ["Rex"], starred: false },
+      { file: "sample.png", when: "28 Sep 2026, 09:02", month: "September 2026", kind: "pets", caption: "A new kitten arrives: welcome, Pudding!", who: [], starred: false },
+    ] }), 50);
   },
   async start() {
     try {
@@ -1843,6 +1861,15 @@ const Mock = {
         this.state = st;
         const q = new URLSearchParams(location.search);
         if (q.get("theme")) st.settings.theme = q.get("theme");
+        // Newer parts of the state an older mock dump may not have.
+        st.albumCount = st.albumCount || 3;
+        st.settings.dex = st.settings.dex || { visitors: [], hats: [], pets: [] };
+        st.settings.dex.fish = st.settings.dex.fish || [
+          { key: "perch", name: "Perch", hint: "Spring to autumn, in daylight.", months: "Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov", rarity: "Common", junk: false, colour: "#9CCC65", now: true, count: 4, best: 31.5, bestBy: "Mo", first: "1 Oct 2026" },
+          { key: "catfish", name: "Catfish", hint: "Warm nights.", months: "May, Jun, Jul, Aug, Sep", rarity: "Uncommon", junk: false, colour: "#6D5D4B", now: false, count: 1, best: 64, bestBy: "Rex", first: "2 Oct 2026" },
+          { key: "goldenkoi", name: "Golden koi", hint: "Very rare. Lucky days.", months: "all year", rarity: "Legendary", junk: false, colour: "#FFD54F", now: true, count: 0, best: 0, bestBy: "", first: "" },
+          { key: "boot", name: "Old boot", hint: "Someone lost it.", months: "all year", rarity: "Common", junk: true, colour: "#5D4037", now: true, count: 2, best: 30, bestBy: "Bea", first: "1 Oct 2026" },
+        ];
         if (q.get("page")) { route.page = q.get("page"); route.id = +(q.get("id") || (st.figures[0] && st.figures[0].id) || 0); route.sub = q.get("sub") || "personality"; }
         setInterval(() => receive(JSON.parse(JSON.stringify(this.state))), 300);
         if (q.get("pop")) setTimeout(() => receive({ t: "pop", kind: q.get("pop"), id: +q.get("id") }), 80);

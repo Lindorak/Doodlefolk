@@ -39,6 +39,7 @@ static class SteamHub
         try
         {
             SteamAPI.RunCallbacks();
+            if (_statsDirty && now > _storeAt) { _statsDirty = false; _storeAt = now + 60; SteamUserStats.StoreStats(); }
             if (now > _presenceAt)
             {
                 _presenceAt = now + 60;
@@ -51,6 +52,7 @@ static class SteamHub
     public static void Shutdown()
     {
         if (!Ready) return;
+        try { if (_statsDirty) SteamUserStats.StoreStats(); } catch { }
         Ready = false;
         try { SteamAPI.Shutdown(); } catch { }
     }
@@ -71,6 +73,34 @@ static class SteamHub
             }
         }
         catch (Exception e) { World.Log("steam achievement: " + e.Message); }
+    }
+
+    // ---------------- stats ----------------
+
+    static bool _statsDirty;
+    static double _storeAt;
+
+    /// <summary>Add to one of your Steam stats (set up on the Steamworks site; see docs/STEAM.md). Stored once a minute.
+    /// Global totals of these drive the community goals.</summary>
+    public static void AddStat(string name, int by)
+    {
+        if (!Ready || by == 0) return;
+        try
+        {
+            if (SteamUserStats.GetStat(name, out int v) && SteamUserStats.SetStat(name, v + by)) _statsDirty = true;
+        }
+        catch (Exception e) { World.Log("steam stat: " + e.Message); }
+    }
+
+    /// <summary>Raise a "biggest/longest" stat if this beats it.</summary>
+    public static void MaxStat(string name, float value)
+    {
+        if (!Ready) return;
+        try
+        {
+            if (SteamUserStats.GetStat(name, out float v) && value > v && SteamUserStats.SetStat(name, value)) _statsDirty = true;
+        }
+        catch (Exception e) { World.Log("steam stat: " + e.Message); }
     }
 
     // ---------------- workshop ----------------

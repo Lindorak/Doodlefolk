@@ -112,6 +112,7 @@ sealed partial class App : ApplicationContext
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
         _w.RareSeen = RareSeen;
         _w.OnMilestone = OnMilestone;
+        _w.FishCaught = OnFishCaught;
         _w.CrateDelivered = _ => { _settings.CratesWaiting = Math.Max(0, _settings.CratesWaiting - 1); };
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
@@ -237,7 +238,12 @@ sealed partial class App : ApplicationContext
             _overlay.Place(_w.Env.Virtual);
             _r.Resize(_w.Env.Virtual);
         }
-        if (now > _nextTopmost) { _nextTopmost = now + 2; _overlay.KeepOnTop(); Ui.Update(_settings.Theme); }
+        if (now > _nextTopmost)
+        {
+            _nextTopmost = now + 2; _overlay.KeepOnTop(); Ui.Update(_settings.Theme);
+            Seasons.South = _settings.Hemisphere == "south" || (_settings.Hemisphere == "auto" && _settings.WeatherLat is < 0);
+            Fishes.RefreshPond(_w.Weather.Raining);
+        }
         // Save every couple of minutes, so a crash or a forced shutdown loses little.
         if (now > _nextAutosave) { _nextAutosave = now + 120; if (_settings.RememberCast && _w.Figures.Count > 0) SaveCast(); }
         long tr0 = Stopwatch.GetTimestamp();

@@ -19,7 +19,9 @@ sealed class Seasons
     double _gustUntil = -1, _nextGust = 25;
     public readonly List<RectangleF> Dirty = new();
 
-    static Season FromDate(DateTime d) => d.Month switch { 3 or 4 or 5 => Season.Spring, 6 or 7 or 8 => Season.Summer, 9 or 10 or 11 => Season.Autumn, _ => Season.Winter };
+    /// <summary>Southern hemisphere: the seasons (and the fish) turn round.</summary>
+    public static bool South;
+    static Season FromDate(DateTime d) => (South ? (d.Month + 5) % 12 + 1 : d.Month) switch { 3 or 4 or 5 => Season.Spring, 6 or 7 or 8 => Season.Summer, 9 or 10 or 11 => Season.Autumn, _ => Season.Winter };
 
     public void Gust(double now) { _gustUntil = now + 22; _nextGust = now + 400; }
 

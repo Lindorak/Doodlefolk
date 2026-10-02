@@ -202,6 +202,11 @@ sealed class Settings
     public int CratesWaiting { get; set; }
     public List<string> UnlockedHats { get; set; } = new();
     public Dictionary<string, DexEntry> Dex { get; set; } = new();
+    /// <summary>Everything caught in the pond, by kind (see Fishes).</summary>
+    public Dictionary<string, FishRecord> FishLog { get; set; } = new();
+    public int FishTotal { get; set; }
+    /// <summary>"auto" (from the weather location, else north), "north" or "south": which way round the seasons go.</summary>
+    public string Hemisphere { get; set; } = "auto";
     /// <summary>Focus sessions: start the next one by itself after the break; how many so far; your to-dos.</summary>
     public bool FocusAutoNext { get; set; }
     public int FocusSessions { get; set; }

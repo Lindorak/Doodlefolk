@@ -467,3 +467,8 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .photo .photo-tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
 .photo:hover .photo-tools, .photo.starred .photo-tools { opacity: 1; }
 .starred-only .photo:not(.starred) { display: none; }
+
+/* Doodledex: fish */
+.fish-dot { display: inline-block; width: 34px; height: 14px; border-radius: 50% 40% 40% 50%; border: 1.5px solid var(--ink); position: relative; }
+.fish-dot::after { content: ""; position: absolute; right: -9px; top: 1px; border: 5px solid transparent; border-left: 8px solid var(--ink); }
+.sticker.biting { border-color: var(--accent); }

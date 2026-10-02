@@ -1083,6 +1083,21 @@ PAGES.settings = {
       return c;
     });
     const smartFps = check("Save power when calm", "At \"Match monitor\", draws at half speed while nothing's moving fast. Looks the same, uses about half the CPU.", () => st().smartFps !== false, v => setS("smartFps", v));
+    const g = () => st().gfx || {};
+    const gfxChips = [["low", "Low"], ["medium", "Medium"], ["high", "High"], ["ultra", "Ultra"]].map(([k, l]) => {
+      const c = h("button", { class: "chip", onclick: () => { touched(c); setS("gfxPreset", k); } }, l);
+      c.key = k;
+      return c;
+    });
+    const gfxPart = (part, v) => send({ t: "setting", key: "gfx", part, v });
+    const shadowSel = select([{ value: 0, label: "Off" }, { value: 1, label: "Simple" }, { value: 2, label: "Soft" }], g().shadows ?? 2, v => gfxPart("shadows", +v));
+    const faceSel = select([{ value: 0, label: "None (classic stick figures)" }, { value: 1, label: "Eyes" }, { value: 2, label: "Eyes and mouth" }], g().faces ?? 2, v => gfxPart("faces", +v));
+    const gfxChecks = [
+      check("Detailed art", "Wood grain, stitching, shine and extra parts on things, plus details on balls and pets. Off: the simple flat look.", () => g().detailedArt !== false, v => gfxPart("detail", v)),
+      check("Shading", "Light and shade on figures, heads, things, balls and pets.", () => g().shading !== false, v => gfxPart("shading", v)),
+      check("Drop shadows", "A faint shadow on the window behind them, so they stand out from your desktop.", () => g().dropShadows !== false, v => gfxPart("drop", v)),
+      check("Motion trails", "Cartoon smears behind fast punches, kicks and flips.", () => !!g().trails, v => gfxPart("trails", v)),
+    ];
     const vv = h("span", { class: "val" });
     const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
     const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
@@ -1112,6 +1127,12 @@ PAGES.settings = {
       h("div", { class: "row" }, chips),
       h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
       smartFps,
+      h("h2", null, "Graphics"),
+      h("p", { class: "sub" }, "Presets set everything at once; change any part below to make your own."),
+      h("div", { class: "row" }, gfxChips),
+      h("div", { class: "field" }, h("label", null, "Shadows"), shadowSel),
+      h("div", { class: "field" }, h("label", null, "Faces"), faceSel),
+      gfxChecks,
       h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
@@ -1134,6 +1155,9 @@ PAGES.settings = {
       if (idle(custom)) cv.textContent = st().fps > 0 ? st().fps : "–";
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
       smartFps.update();
+      gfxChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === g().preset); });
+      shadowSel.set(g().shadows ?? 2); faceSel.set(g().faces ?? 2);
+      gfxChecks.forEach(c => c.update());
       soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());

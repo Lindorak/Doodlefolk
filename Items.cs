@@ -34,7 +34,7 @@ enum SeatFacing { Side, Out, In }
 /// Kind: 'r' rect x0 y0 x1 y1, 'o' rounded rect x0 y0 x1 y1 radius, 'e' ellipse cx cy rx ry, 'p' polygon x y ...,
 /// 'l' line x0 y0 x1 y1 (width W), 'c' open polyline x y ... (width W). Col: 0 main colour, 1 darker, 2 lighter,
 /// 3+ a fixed colour (see ItemDef.Fixed). Over: drawn in front of figures using the object (chair backs, blankets).</summary>
-readonly record struct Shape(char Kind, float[] P, int Col, float W = 1.4f, bool Over = false, bool NoOutline = false, bool WhenUsed = false);
+readonly record struct Shape(char Kind, float[] P, int Col, float W = 1.4f, bool Over = false, bool NoOutline = false, bool WhenUsed = false, bool Detail = false);
 
 sealed class ItemDef
 {
@@ -46,6 +46,7 @@ sealed class ItemDef
     public Verb[] Verbs = Array.Empty<Verb>();
     public float Surface = -1, SurfX1, SurfX2; // a standable top (height, x range); -1: none
     public float SeatY, Comfort = 0.5f, Bounce, Mass = 1;
+    public Material Material;
     public float[] Seats = Array.Empty<float>();// seat x positions
     public SeatFacing Facing;
     public bool Carry;                         // small enough to carry around (food, books)
@@ -84,7 +85,18 @@ static class ItemCatalog
     static Shape L(float x0, float y0, float x1, float y1, int c, float w = 1.6f) => new('l', new[] { x0, y0, x1, y1 }, c, w);
     static Shape C(int c, float w, params float[] xy) => new('c', xy, c, w);
 
-    public static readonly ItemDef[] All = Build();
+    public static readonly ItemDef[] All = WithDetails(Build());
+
+    /// <summary>Adds each object's detailed-art extras and its material.</summary>
+    static ItemDef[] WithDetails(ItemDef[] defs)
+    {
+        foreach (var d in defs)
+        {
+            d.Material = ItemDetails.MaterialOf(d);
+            if (ItemDetails.Extra.TryGetValue(d.Key, out var extra)) d.Shapes = d.Shapes.Concat(extra).ToArray();
+        }
+        return defs;
+    }
 
     static ItemDef[] Build()
     {

@@ -239,7 +239,7 @@ sealed partial class Figure
         }
 
         Vector2 pelvis = new(Base.X + _pdx, Base.Y - hip - bob);
-        Vector2 neck = pelvis + M.Dir(_lean) * Torso;
+        Vector2 neck = pelvis + M.Dir(_lean) * Torso * (1 + StretchNow());
         Vector2 head = neck + M.Dir(_lean + _tilt) * (HeadR + NeckGap);
 
         var (elN, handN) = M.IK(neck, neck + M.ClampLength(_hN, Arm * 0.995f), UpperArm, ForeArm, W(eN));
@@ -272,6 +272,7 @@ sealed partial class Figure
         Jt[J.ElbowN] = elN; Jt[J.HandN] = handN; Jt[J.ElbowF] = elF; Jt[J.HandF] = handF;
         Jt[J.KneeN] = knN; Jt[J.FootN] = fNEnd; Jt[J.KneeF] = knF; Jt[J.FootF] = fFEnd;
         UpdateHoldPoint(neck, handN, handF, dt);
+        TurnBlend(dt);
         ApplyFlip();
     }
 

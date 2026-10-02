@@ -74,6 +74,7 @@ sealed partial class Figure
     void TickMoves(float dt)
     {
         _landPoseT = MathF.Max(0, _landPoseT - dt);
+        TickFace(dt);
         if (_emote is Emote e)
         {
             e.T += dt;

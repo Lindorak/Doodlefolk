@@ -446,6 +446,13 @@ sealed class Pet
         float tilt = sit ? -0.35f : 0;
         r.Oval(bc, L * 0.42f + 1.2f * s, H * (cat ? 0.24f : 0.3f) + 1.2f * s, ink);
         r.Oval(bc, L * 0.42f, H * (cat ? 0.24f : 0.3f), Color);
+        if (Gfx.Q.Shading)
+        {
+            r.Oval(bc + new Vector2(0, H * 0.12f), L * 0.36f, H * 0.12f, new Color4(0, 0, 0, 0.14f));          // belly shade
+            r.Oval(bc - new Vector2(L * 0.08f, H * 0.1f), L * 0.24f, H * 0.07f, new Color4(1, 1, 1, 0.22f));   // back highlight
+        }
+        if (Gfx.Q.DetailedArt && cat && Color.R > 0.6f && Color.G < 0.8f)
+            for (int i = 0; i < 3; i++) r.Line(P(-L * 0.1f + i * L * 0.12f, bodyY - H * 0.22f), P(-L * 0.06f + i * L * 0.12f, bodyY - H * 0.05f), dark, 1.6f * s);   // tabby stripes
         if (sit) r.Oval(P(hip + 3 * s, bodyY + H * 0.12f), L * 0.18f, H * 0.2f, Color);
         Leg(hip, _walk, false, true);
         Leg(chest, _walk + MathF.PI, false, false);
@@ -458,7 +465,7 @@ sealed class Pet
             r.FillPolygon(stackalloc Vector2[] { head + new Vector2(f * hr * 0.05f, -hr * 0.8f), head + new Vector2(f * hr * 0.55f, -hr * 1.55f), head + new Vector2(f * hr * 0.75f, -hr * 0.4f) }, ink);
         }
         r.Disc(head, hr + 1.2f * s, ink);
-        r.Disc(head, hr, Color);
+        r.ShadedDisc(head, hr, Color);
         if (!cat)
         {
             // Snout and a floppy ear.

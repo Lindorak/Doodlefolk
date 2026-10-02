@@ -75,6 +75,7 @@ sealed partial class App : ApplicationContext
             _w.Sound.SetScreen(_w.Env.Virtual.Left, _w.Env.Virtual.Width);
         }
         catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
+        Gfx.Q = _settings.Gfx;
         InitScreen();
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
@@ -454,15 +455,15 @@ sealed partial class App : ApplicationContext
             _regNow.Add(FigureRect(f));
             if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
         }
-        foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
-        foreach (var pet in _w.Pets) _regNow.Add(ToRect(pet.Bounds()));
+        foreach (var p in _w.Props) _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(p.Bounds(_w.Env), _w.Scale) : p.Bounds(_w.Env)));
+        foreach (var pet in _w.Pets) _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(pet.Bounds(), _w.Scale) : pet.Bounds()));
         foreach (var pr in _w.Projectiles) _regNow.Add(ToRect(pr.Bounds()));
         foreach (var m in _w.Matches) _regNow.Add(ToRect(m.Bounds()));
         foreach (var it in _w.Items)
         {
             // Still objects stay on screen as they are; only moving/animated/changed ones are redrawn.
             if (!it.Changed()) continue;
-            _regNow.Add(ToRect(it.Bounds()));
+            _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(it.Bounds(), _w.Scale) : it.Bounds()));
             it.Shadow(_w.Env, out var sc, out float srx, out float sry, out _);
             if (srx > 0) _regNow.Add(ToRect(RectangleF.FromLTRB(sc.X - srx, sc.Y - sry, sc.X + srx, sc.Y + sry)));
         }
@@ -503,18 +504,25 @@ sealed partial class App : ApplicationContext
         {
             if (!Dirty(it.Bounds())) continue;
             it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
-            if (ia > 0) _r.Oval(ic, irx, iry, new Color4(0, 0, 0, ia));
+            if (ia > 0) Gfx.GroundShadow(_r, ic, irx, iry, ia);
         }
         _w.Weather.DrawCover(_r, _w.Env, _w.Scale);
+        if (Gfx.Q.DropShadows)
+        {
+            var drop = new Color4(0, 0, 0, 0.12f);
+            foreach (var it in _w.Items) if (Dirty(it.Bounds())) it.DrawDropShadow(_r);
+            foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop);
+            foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop);
+        }
         DrawItems(false);
         var figVisible = new bool[_w.Figures.Count];
         for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
         for (int i = 0; i < _w.Figures.Count; i++)
             if (figVisible[i] && Shadow(_w.Figures[i], out var c, out float rx, out float ry, out float a))
-                _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
+                Gfx.GroundShadow(_r, c, rx, ry, a);
         foreach (var p in _w.Props)
             if (Dirty(p.Bounds(_w.Env)) && p.Shadow(_w.Env, out var c, out float rx, out float ry, out float a))
-                _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
+                Gfx.GroundShadow(_r, c, rx, ry, a);
         if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
         foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) pet.Draw(_r);
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].Draw(_r);
@@ -554,7 +562,7 @@ sealed partial class App : ApplicationContext
     {
         float x1 = float.MaxValue, y1 = float.MaxValue, x2 = float.MinValue, y2 = float.MinValue;
         foreach (var j in f.Jt) { x1 = MathF.Min(x1, j.X); y1 = MathF.Min(y1, j.Y); x2 = MathF.Max(x2, j.X); y2 = MathF.Max(y2, j.Y); }
-        float pad = f.HeadR + f.LineW * 2 + 2 * f.S;
+        float pad = f.HeadR + f.LineW * 2 + 2 * f.S + (Gfx.Q.DropShadows ? 8 * f.S : 0);
         var r = RectangleF.FromLTRB(x1 - pad, y1 - pad, x2 + pad, y2 + pad);
         if (f.CurrentEmote != null)
         {
@@ -567,6 +575,11 @@ sealed partial class App : ApplicationContext
             r = RectangleF.Union(r, RectangleF.FromLTRB(c.X - rx, c.Y - ry, c.X + rx, c.Y + ry));
         return ToRect(r);
     }
+
+    /// <summary>Repaint everything (after a graphics change, so nothing drawn the old way lingers).</summary>
+    void ForceFullRedraw() { _regPrev.Add(_r.Bounds); _regPrev2.Add(_r.Bounds); }
+
+    static RectangleF GrowForDrop(RectangleF b, float s) => RectangleF.FromLTRB(b.Left, b.Top, b.Right + 8 * s, b.Bottom + 9 * s);
 
     static Rectangle ToRect(RectangleF r) =>
         Rectangle.FromLTRB((int)MathF.Floor(r.Left) - 2, (int)MathF.Floor(r.Top) - 2, (int)MathF.Ceiling(r.Right) + 2, (int)MathF.Ceiling(r.Bottom) + 2);

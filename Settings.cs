@@ -62,6 +62,8 @@ sealed class Settings
     public int FpsCap { get; set; } = 60;
     /// <summary>Drop to half the monitor's rate while nothing's moving fast (saves power).</summary>
     public bool SmartFps { get; set; } = true;
+    /// <summary>Graphics quality (preset and its parts).</summary>
+    public GfxSettings Gfx { get; set; } = new();
     /// <summary>Bring back the same figures and balls next launch.</summary>
     public bool RememberCast { get; set; } = true;
     /// <summary>Studio look: "auto" (follow Windows), "paper" or "chalk".</summary>

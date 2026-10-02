@@ -427,6 +427,7 @@ sealed partial class Figure
         if (impact > 3000 * S) { World.Log($"{Name} knocked down by landing {impact / S:F0}S/s"); GoRagdoll(Vector2.Zero); return; }
         _hipV -= impact * 0.06f;
         if (Style.Jump == JumpStyle.Superhero && impact > 1100 * S && !Flailing) _landPoseT = 0.5f;
+        Squash(impact);
         Brain.OnLanded(impact);
     }
 

@@ -29,6 +29,8 @@ sealed partial class Figure
         Color4 outline = new(0, 0, 0, Outline.A * fade);
         float w = LineW, ow = LineW + 1.6f * S;
 
+        DrawDropShadow(r, fade);
+        DrawTrails(r, near);
         DrawLookBack(r, fade);
         foreach (var (a, b) in Bones) r.Line(Jt[a], Jt[b], outline, ow);
         r.Disc(Jt[J.Head], HeadR + 0.8f * S, outline);
@@ -36,8 +38,8 @@ sealed partial class Figure
         r.Line(Jt[J.Neck], Jt[J.ElbowF], far, w); r.Line(Jt[J.ElbowF], Jt[J.HandF], far, w);
         DrawGear(r, J.ElbowF, J.HandF, 0.75f);
         r.Line(Jt[J.Pelvis], Jt[J.KneeF], far, w); r.Line(Jt[J.KneeF], Jt[J.FootF], far, w);
-        r.Line(Jt[J.Neck], Jt[J.Pelvis], near, w);
-        r.Disc(Jt[J.Head], HeadR, near);
+        r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], near, w);
+        r.ShadedDisc(Jt[J.Head], HeadR, near);
         if (Blush > 0.04f && !(Action == Act.SitBack && FrontView))
         {
             // Rosy cheeks on the side of the face it's looking toward.
@@ -46,8 +48,9 @@ sealed partial class Figure
             r.Oval(cheek, HeadR * 0.3f, HeadR * 0.2f, pink);
             r.Oval(cheek - new Vector2(Facing * HeadR * 0.62f, 0), HeadR * 0.22f, HeadR * 0.16f, pink.A(0.6f));
         }
-        r.Line(Jt[J.Pelvis], Jt[J.KneeN], near, w); r.Line(Jt[J.KneeN], Jt[J.FootN], near, w);
-        r.Line(Jt[J.Neck], Jt[J.ElbowN], near, w); r.Line(Jt[J.ElbowN], Jt[J.HandN], near, w);
+        r.ShadedLine(Jt[J.Pelvis], Jt[J.KneeN], near, w); r.ShadedLine(Jt[J.KneeN], Jt[J.FootN], near, w);
+        r.ShadedLine(Jt[J.Neck], Jt[J.ElbowN], near, w); r.ShadedLine(Jt[J.ElbowN], Jt[J.HandN], near, w);
+        DrawFace(r, fade);
         DrawLookBody(r, fade);
         DrawLookFront(r, fade);
         DrawGear(r, J.ElbowN, J.HandN, 1);

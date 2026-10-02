@@ -201,9 +201,10 @@ sealed class Item
         if (Def.Verbs.Contains(Verb.Eat)) k = MathF.Sqrt(MathF.Max(0.15f, BitesLeft / (float)Def.Bites));
         if (Def.Verbs.Contains(Verb.Read) && Open) { if (!over) DrawOpenBook(r); return; }
         if (Def.Verbs.Contains(Verb.Shelter) && Open && Holder is { } holder) { if (over) DrawOpenUmbrella(r, holder); return; }
+        bool detail = Gfx.Q.DetailedArt;
         foreach (var sh in Def.Shapes)
         {
-            if (sh.Over != over) continue;
+            if (sh.Over != over || (sh.Detail && !detail)) continue;
             if (sh.WhenUsed && User == null && Seated.All(s => s == null)) continue;
             DrawShape(r, sh, k);
         }
@@ -213,7 +214,19 @@ sealed class Item
         if (Def.Verbs.Contains(Verb.Dance) && Playing && Free && OnGround) DrawNotes(r, time);
     }
 
-    void DrawShape(Renderer r, Shape sh, float k)
+    /// <summary>A faint, offset silhouette cast onto the window behind (drop shadows).</summary>
+    public void DrawDropShadow(Renderer r)
+    {
+        if (Holder != null || Def.Key == "hammock") return;
+        float k = Def.Verbs.Contains(Verb.Eat) ? MathF.Sqrt(MathF.Max(0.15f, BitesLeft / (float)Def.Bites)) : 1;
+        foreach (var sh in Def.Shapes)
+        {
+            if (sh.Detail || (sh.WhenUsed && User == null && Seated.All(s => s == null))) continue;
+            DrawShape(r, sh, k, Gfx.DropOffset * _s);
+        }
+    }
+
+    void DrawShape(Renderer r, Shape sh, float k, Vector2? shadow = null)
     {
         var p = sh.P;
         float sc = Sc;
@@ -242,16 +255,113 @@ sealed class Item
                 for (int i = 0; i + 1 < p.Length; i += 2) Pt(p[i], p[i + 1]);
                 break;
             case 'l':
-                r.Line(Local(p[0] * k, p[1] * k), Local(p[2] * k, p[3] * k), Ink, (sh.W + 1.2f) * sc * k);
-                r.Line(Local(p[0] * k, p[1] * k), Local(p[2] * k, p[3] * k), Col(sh.Col), sh.W * sc * k);
+                if (shadow is Vector2 so)
+                {
+                    r.Line(Local(p[0] * k, p[1] * k) + so, Local(p[2] * k, p[3] * k) + so, DropInk, (sh.W + 1.5f) * sc * k);
+                    return;
+                }
+                if (!sh.NoOutline) r.Line(Local(p[0] * k, p[1] * k), Local(p[2] * k, p[3] * k), Ink, (sh.W + 1.2f) * sc * k);
+                if (Gfx.Q.Shading && sh.W >= 1.5f && !sh.Detail) r.ShadedLine(Local(p[0] * k, p[1] * k), Local(p[2] * k, p[3] * k), Col(sh.Col), sh.W * sc * k);
+                else r.Line(Local(p[0] * k, p[1] * k), Local(p[2] * k, p[3] * k), Col(sh.Col), sh.W * sc * k);
                 return;
             case 'c':
+                if (shadow is Vector2 sc2)
+                {
+                    for (int i = 0; i + 3 < p.Length; i += 2) r.Line(Local(p[i] * k, p[i + 1] * k) + sc2, Local(p[i + 2] * k, p[i + 3] * k) + sc2, DropInk, sh.W * sc * k);
+                    return;
+                }
                 for (int i = 0; i + 3 < p.Length; i += 2) r.Line(Local(p[i] * k, p[i + 1] * k), Local(p[i + 2] * k, p[i + 3] * k), Col(sh.Col), sh.W * sc * k);
                 return;
         }
         if (n < 3) return;
         var world = Matrix3x2.CreateScale(Flip ? -sc : sc, -sc) * Matrix3x2.CreateRotation(Angle) * Matrix3x2.CreateTranslation(Pos);
-        r.CachedShape(sh, (int)MathF.Round(k * 100), pts.AsSpan(0, n), world, Col(sh.Col), Ink, sh.NoOutline ? 0 : 1.1f);
+        if (shadow is Vector2 off)
+        {
+            r.CachedShape(sh, (int)MathF.Round(k * 100), pts.AsSpan(0, n), world * Matrix3x2.CreateTranslation(off), DropInk, DropInk, 0);
+            return;
+        }
+        r.CachedShape(sh, (int)MathF.Round(k * 100), pts.AsSpan(0, n), world, Col(sh.Col), Ink, sh.NoOutline ? 0 : 1.1f, !sh.Detail && !sh.NoOutline);
+        if (Gfx.Q.DetailedArt && !sh.Detail && !sh.NoOutline) Texture(r, sh, pts.AsSpan(0, n), k);
+    }
+
+    static readonly Color4 DropInk = new(0, 0, 0, 0.12f);
+
+    /// <summary>Detailed art: a texture for a part, from what it's made of (wood grain, stitching, a shine...).</summary>
+    void Texture(Renderer r, Shape sh, ReadOnlySpan<Vector2> pts, float k)
+    {
+        Vector2 mn = pts[0], mx = pts[0];
+        foreach (var q in pts) { mn = Vector2.Min(mn, q); mx = Vector2.Max(mx, q); }
+        float w = mx.X - mn.X, h = mx.Y - mn.Y, sc = Sc;
+        if (w < 2.5f && h < 2.5f) return;
+        var mat = sh.Col switch { 3 or 4 or 13 => Material.Wood, 5 or 6 => Material.Metal, 7 => Material.Fabric, <= 2 => Def.Material, _ => Material.Plain };
+        var baseCol = Col(sh.Col);
+        void Ln(float x0, float y0, float x1, float y1, Color4 c, float width) => r.Line(Local(x0, y0), Local(x1, y1), c, width * sc);
+        switch (mat)
+        {
+            case Material.Wood:
+            {
+                var grain = Gfx.Darker(baseCol, 0.3f).A(0.4f);
+                if (w >= h)
+                    for (int i = 1; i <= (h > 6 ? 3 : 2); i++)
+                    {
+                        float y = mn.Y + h * i / (h > 6 ? 4f : 3f);
+                        Ln(mn.X + w * (0.08f + 0.05f * i), y, mx.X - w * (0.1f + 0.04f * i), y + h * 0.04f, grain, 0.45f);
+                    }
+                else
+                    for (int i = 1; i <= 2; i++)
+                    {
+                        float x = mn.X + w * i / 3f;
+                        Ln(x, mn.Y + h * 0.08f, x + w * 0.05f, mx.Y - h * 0.12f, grain, 0.45f);
+                    }
+                break;
+            }
+            case Material.Metal:
+            {
+                var shine = new Color4(1, 1, 1, 0.55f);
+                if (h > w * 1.6f) Ln(mn.X + w * 0.3f, mn.Y + h * 0.15f, mn.X + w * 0.3f, mx.Y - h * 0.15f, shine, MathF.Min(0.9f, w * 0.18f));
+                else Ln(mn.X + w * 0.2f, mx.Y - h * 0.2f, mn.X + w * 0.45f, mx.Y - h * 0.08f, shine, 0.8f);
+                break;
+            }
+            case Material.Fabric:
+            {
+                if (sh.Kind is not ('r' or 'o') || w < 6 || h < 4) break;
+                // Stitching just inside the edge.
+                var thread = Gfx.Lighter(baseCol, 0.5f).A(0.55f);
+                float i0 = 1.3f;
+                void Dashes(float x0, float y0, float x1, float y1)
+                {
+                    float len = MathF.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+                    for (float t = 0.6f; t < len - 0.6f; t += 2.6f)
+                    {
+                        float a = t / len, b = MathF.Min(len, t + 1.4f) / len;
+                        Ln(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a, x0 + (x1 - x0) * b, y0 + (y1 - y0) * b, thread, 0.4f);
+                    }
+                }
+                Dashes(mn.X + i0 + 1, mx.Y - i0, mx.X - i0 - 1, mx.Y - i0);
+                if (h > 7) Dashes(mn.X + i0 + 1, mn.Y + i0, mx.X - i0 - 1, mn.Y + i0);
+                break;
+            }
+            case Material.Plastic:
+                if (w > 3 && h > 2.5f) r.Oval(Local(mn.X + w * 0.28f, mx.Y - h * 0.26f), w * 0.13f * sc, h * 0.09f * sc, new Color4(1, 1, 1, 0.38f));
+                break;
+            case Material.Cardboard:
+            {
+                var fold = Gfx.Darker(baseCol, 0.25f).A(0.45f);
+                if (w > 8) for (float x = mn.X + 3; x < mx.X - 2; x += 3.2f) Ln(x, mx.Y - 0.6f, x + 0.8f, mx.Y - 1.6f, fold, 0.35f);
+                break;
+            }
+            case Material.Food:
+            {
+                var speck = Gfx.Darker(baseCol, 0.25f).A(0.5f);
+                int seed = Def.Key.Length * 7 + sh.P.Length;
+                for (int i = 0; i < 4; i++)
+                {
+                    float fx = (float)((Math.Sin(seed * 12.9898 + i * 78.233) * 43758.5453) % 1 + 1) % 1, fy = (float)((Math.Sin(seed * 39.3468 + i * 11.135) * 24634.6345) % 1 + 1) % 1;
+                    r.Disc(Local(mn.X + w * (0.2f + fx * 0.6f), mn.Y + h * (0.2f + fy * 0.6f)), 0.35f * sc, speck);
+                }
+                break;
+            }
+        }
     }
 
     void DrawHammock(Renderer r)

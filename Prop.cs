@@ -322,8 +322,9 @@ sealed class Prop
             }
             default: rd.Disc(c, r, Color); break;
         }
+        rd.ShadeDisc(c, r);
         rd.Ring(c, r, outline, MathF.Max(1, 0.7f * _s));
-        rd.Disc(c + new Vector2(-r * 0.35f, -r * 0.4f), r * 0.22f, new Color4(1, 1, 1, 0.35f));
+        rd.Disc(c + new Vector2(-r * 0.35f, -r * 0.4f), r * 0.22f, new Color4(1, 1, 1, Gfx.Q.Shading ? 0.5f : 0.35f));
     }
 
     Vector2 Polar(Vector2 c, float rad, float a) => c + new Vector2(MathF.Cos(a + Angle), MathF.Sin(a + Angle)) * rad;

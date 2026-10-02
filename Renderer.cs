@@ -160,7 +160,67 @@ sealed class Renderer : IDisposable
     }
 
     // Shapes that never change (an object's parts in its own units) are built once and drawn with a transform.
-    readonly Dictionary<(object, int), ID2D1PathGeometry> _shapes = new();
+    readonly Dictionary<(object, int), (ID2D1PathGeometry geo, Vector2 min, Vector2 max)> _shapes = new();
+    ID2D1LinearGradientBrush? _shadeLin;
+    ID2D1RadialGradientBrush? _shadeRad;
+
+    /// <summary>Light-and-shade overlays (white towards the light, dark away from it), made once and moved per draw.</summary>
+    void EnsureShading()
+    {
+        if (_shadeLin != null) return;
+        using var lin = _ctx.CreateGradientStopCollection(new[]
+        {
+            new GradientStop(0, new Color4(1, 1, 1, 0.24f)), new GradientStop(0.45f, new Color4(1, 1, 1, 0)),
+            new GradientStop(0.6f, new Color4(0, 0, 0, 0)), new GradientStop(1, new Color4(0, 0, 0, 0.2f)),
+        });
+        _shadeLin = _ctx.CreateLinearGradientBrush(new LinearGradientBrushProperties(Vector2.Zero, Vector2.One), lin);
+        using var rad = _ctx.CreateGradientStopCollection(new[]
+        {
+            new GradientStop(0, new Color4(1, 1, 1, 0.42f)), new GradientStop(0.45f, new Color4(1, 1, 1, 0)),
+            new GradientStop(0.72f, new Color4(0, 0, 0, 0)), new GradientStop(1, new Color4(0, 0, 0, 0.26f)),
+        });
+        _shadeRad = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(Vector2.Zero, Vector2.Zero, 1, 1), rad);
+    }
+
+    /// <summary>A disc with a highlight toward the top left and a darker rim (plain disc when shading is off).</summary>
+    public void ShadedDisc(Vector2 c, float r, Color4 col)
+    {
+        Disc(c, r, col);
+        ShadeDisc(c, r, col.A);
+    }
+
+    /// <summary>Just the light and shade over something round that's already drawn (balls, heads).</summary>
+    public void ShadeDisc(Vector2 c, float r, float alpha = 1)
+    {
+        var col = new Color4(1, 1, 1, alpha);
+        if (!Gfx.Q.Shading || r < 1.5f) return;
+        EnsureShading();
+        _shadeRad!.Center = c;
+        _shadeRad.RadiusX = _shadeRad.RadiusY = r;
+        _shadeRad.GradientOriginOffset = new Vector2(-r * 0.45f, -r * 0.5f);
+        _shadeRad.Opacity = col.A;
+        _ctx.FillEllipse(new Ellipse(c, r, r), _shadeRad);
+    }
+
+    /// <summary>A thick line with a thin highlight along its lit side (plain line when shading is off).</summary>
+    public void ShadedLine(Vector2 a, Vector2 b, Color4 c, float width)
+    {
+        Line(a, b, c, width);
+        if (!Gfx.Q.Shading || width < 2) return;
+        Vector2 d = b - a;
+        if (d.LengthSquared() < 1) return;
+        Vector2 n = Vector2.Normalize(new Vector2(-d.Y, d.X));
+        if (n.X + n.Y > 0) n = -n;   // the side facing the top left
+        Vector2 o = n * width * 0.22f;
+        Line(a + o, b + o, Gfx.Lighter(c, 0.45f).A(0.55f), width * 0.3f);
+    }
+
+    static (Vector2, Vector2) PointBounds(ReadOnlySpan<Vector2> pts)
+    {
+        Vector2 mn = pts[0], mx = pts[0];
+        foreach (var p in pts) { mn = Vector2.Min(mn, p); mx = Vector2.Max(mx, p); }
+        return (mn, mx);
+    }
 
     ID2D1PathGeometry BuildGeometry(ReadOnlySpan<Vector2> pts)
     {
@@ -175,19 +235,29 @@ sealed class Renderer : IDisposable
 
     /// <summary>Fill and outline a polygon given in local units, cached under (key, variant); <paramref name="world"/>
     /// places it on screen. <paramref name="strokeLocal"/> is the outline width in local units (0: none).</summary>
-    public void CachedShape(object key, int variant, ReadOnlySpan<Vector2> localPts, Matrix3x2 world, Color4 fill, Color4 stroke, float strokeLocal)
+    public void CachedShape(object key, int variant, ReadOnlySpan<Vector2> localPts, Matrix3x2 world, Color4 fill, Color4 stroke, float strokeLocal, bool shade = false)
     {
         if (localPts.Length < 3) return;
-        if (!_shapes.TryGetValue((key, variant), out var geo))
+        if (!_shapes.TryGetValue((key, variant), out var entry))
         {
-            if (_shapes.Count > 4000) { foreach (var g in _shapes.Values) g.Dispose(); _shapes.Clear(); }
-            _shapes[(key, variant)] = geo = BuildGeometry(localPts);
+            if (_shapes.Count > 4000) { foreach (var g in _shapes.Values) g.geo.Dispose(); _shapes.Clear(); }
+            var (mn, mx) = PointBounds(localPts);
+            _shapes[(key, variant)] = entry = (BuildGeometry(localPts), mn, mx);
         }
         var old = _ctx.Transform;
         _ctx.Transform = world * old;
         _brush.Color = fill;
-        _ctx.FillGeometry(geo, _brush, null);
-        if (strokeLocal > 0 && stroke.A > 0) { _brush.Color = stroke; _ctx.DrawGeometry(geo, _brush, strokeLocal, _round); }
+        _ctx.FillGeometry(entry.geo, _brush, null);
+        if (shade && Gfx.Q.Shading)
+        {
+            // Light from the top left of the shape (local y points up), shade toward the bottom right.
+            EnsureShading();
+            _shadeLin!.StartPoint = new Vector2(entry.min.X, entry.max.Y);
+            _shadeLin.EndPoint = new Vector2(entry.max.X, entry.min.Y);
+            _shadeLin.Opacity = fill.A;
+            _ctx.FillGeometry(entry.geo, _shadeLin, null);
+        }
+        if (strokeLocal > 0 && stroke.A > 0) { _brush.Color = stroke; _ctx.DrawGeometry(entry.geo, _brush, strokeLocal, _round); }
         _ctx.Transform = old;
     }
 
@@ -258,7 +328,8 @@ sealed class Renderer : IDisposable
     {
         foreach (var f in _fonts.Values) f.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
-        foreach (var g in _shapes.Values) g.Dispose();
+        foreach (var g in _shapes.Values) g.geo.Dispose();
+        _shadeLin?.Dispose(); _shadeRad?.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

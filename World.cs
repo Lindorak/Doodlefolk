@@ -18,6 +18,7 @@ sealed partial class World
     public readonly List<Item> Items = new();
     public readonly List<Projectile> Projectiles = new();
     public readonly List<Match> Matches = new();
+    public readonly List<Pet> Pets = new();
     public Sound? Sound;
     /// <summary>Play a sound effect at a spot on screen (no-op when sound is off or unavailable).</summary>
     public static void Play(Sfx s, Vector2 at, float vol = 1, float pitch = 1, double gap = 0.03) => Current?.Sound?.Play(s, at, vol, pitch, gap);

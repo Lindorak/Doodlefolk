@@ -203,6 +203,7 @@ sealed partial class App : ApplicationContext
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
+        foreach (var pet in _w.Pets) pet.ApplyCarry(_w.Env);
 
         _acc += dt;
         int n = (int)(_acc / World.Dt);
@@ -233,6 +234,7 @@ sealed partial class App : ApplicationContext
                 }
             }
             foreach (var p in _w.Props.ToArray()) p.Step(World.Dt, _w);
+            foreach (var pet in _w.Pets.ToArray()) pet.Step(_w, World.Dt);
             if (_pressItem != null) _pressItem.PinTarget = pin;
             foreach (var it in _w.Items.ToArray()) it.Step(World.Dt, _w);
             _w.Projectiles.RemoveAll(pr => !pr.Step(World.Dt, _w));
@@ -311,6 +313,11 @@ sealed partial class App : ApplicationContext
         _w.CursorVel = now - t0 > 1e-3 ? (c - p0) / (float)(now - t0) : Vector2.Zero;
         _w.Cursor = c;
 
+        if (_pressPet != null)
+        {
+            if ((Control.MouseButtons & MouseButtons.Left) == 0) EndPress();
+            else _pressPet.HoldTarget = c + new Vector2(0, _pressPet.Height * 0.6f);
+        }
         if (_pressFig != null || _pressProp != null)
         {
             if ((Control.MouseButtons & MouseButtons.Left) == 0) EndPress();
@@ -328,7 +335,7 @@ sealed partial class App : ApplicationContext
         _w.Hover = _dragging ? null : fig;
         if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
         if (_w.Wish != null) _w.Wish.Hot = WishHit(c);
-        _overlay.SetClickThrough(_w.Offer?.Hot != true && _w.Wish?.Hot != true && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        _overlay.SetClickThrough(_w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -352,8 +359,20 @@ sealed partial class App : ApplicationContext
         return null;
     }
 
+    Pet? HitPet(Vector2 c)
+    {
+        for (int i = _w.Pets.Count - 1; i >= 0; i--) if (_w.Pets[i].HitTest(c)) return _w.Pets[i];
+        return null;
+    }
+
     void OnMouseDown(object? sender, MouseEventArgs e)
     {
+        if (HitPet(_w.Cursor) is { } pet && HitTest(_w.Cursor).fig == null)
+        {
+            if (e.Button == MouseButtons.Left) { pet.Grab(); _pressPet = pet; }
+            else if (e.Button == MouseButtons.Right) ShowPop("pet", pet.Id);
+            return;
+        }
         if (e.Button == MouseButtons.Left && OfferHit(_w.Cursor)) { TakeOffer(); return; }
         if (e.Button == MouseButtons.Left && WishHit(_w.Cursor)) { GrantWish(); return; }
         if (HitProp(_w.Cursor) is { } prop)
@@ -393,6 +412,7 @@ sealed partial class App : ApplicationContext
     void EndPress()
     {
         ReleaseItem();
+        if (_pressPet != null) { _pressPet.Release(M.ClampLength(_w.CursorVel, 4000 * _w.Scale), _w); _pressPet = null; }
         if (_pressProp != null)
         {
             var p = _pressProp;
@@ -422,6 +442,7 @@ sealed partial class App : ApplicationContext
             if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
         }
         foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
+        foreach (var pet in _w.Pets) _regNow.Add(ToRect(pet.Bounds()));
         foreach (var pr in _w.Projectiles) _regNow.Add(ToRect(pr.Bounds()));
         foreach (var m in _w.Matches) _regNow.Add(ToRect(m.Bounds()));
         foreach (var it in _w.Items)
@@ -482,6 +503,7 @@ sealed partial class App : ApplicationContext
             if (Dirty(p.Bounds(_w.Env)) && p.Shadow(_w.Env, out var c, out float rx, out float ry, out float a))
                 _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
         if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
+        foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) pet.Draw(_r);
         for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].Draw(_r);
         DrawItems(true);
         foreach (var it in _w.Items)
@@ -707,6 +729,7 @@ sealed partial class App : ApplicationContext
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
         }).ToList();
         _settings.Items = SaveItems();
+        _settings.Pets = _w.Pets.Select(p => new SavedPet { Kind = p.Kind, Name = p.Name, Color = Settings.Hex(p.Color), Size = p.SizeMul, Owner = p.Owner?.Name }).ToList();
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();
         _settings.Save();
     }
@@ -731,6 +754,14 @@ sealed partial class App : ApplicationContext
             if (s.Sweetheart != null && made.FirstOrDefault(m => m.f.Name == s.Sweetheart).f is { } sh) f.Brain.SweetheartId = sh.Id;
         }
         RestoreItems(_settings.Items);
+        foreach (var sp in _settings.Pets)
+        {
+            var pet = SpawnPet(sp.Kind);
+            pet.Name = sp.Name.Length > 0 ? sp.Name : pet.Name;
+            if (sp.Color.Length == 7) pet.Color = Settings.ParseHex(sp.Color);
+            pet.SizeMul = Math.Clamp(sp.Size, 0.5f, 2.5f);
+            if (sp.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == sp.Owner) is { } owner) { pet.Owner = owner; pet.Bond[owner.Id] = 0.5f; }
+        }
         foreach (var s in _settings.Props)
         {
             var p = SpawnProp(s.Kind);
@@ -971,6 +1002,7 @@ sealed partial class App : ApplicationContext
                         World.Log("love: " + la.Brain.ForceLove(lb, p.Length > 3 ? float.Parse(p[3], inv) : 0.8f));
                     break;
                 case "testwin": TestWindow(p); break;
+                case "pet": World.Log("summon: " + Summon(p.Length > 1 ? p[1] : "cat")); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)

@@ -148,6 +148,7 @@ sealed partial class App
             tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing,
             users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
         }),
+        pets = _w.Pets.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = p.Name, hex = Settings.Hex(p.Color), size = p.SizeMul, owner = p.Owner?.Name, activity = p.Activity }),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -273,6 +274,7 @@ sealed partial class App
                     else OpenStudio();
                     break;
                 case "fig": FigureEdit(m); break;
+                case "pet": PetEdit(m); break;
                 case "sky":
                     if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk)) _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
                     break;
@@ -446,6 +448,20 @@ sealed partial class App
                 if (MathF.Abs(it.RestAngle) > 0.05f) foreach (var f in _w.Figures) f.Brain.OnItemGone(it);   // tipped over: nobody can stay on it
                 break;
             case "music": it.Playing = !it.Playing; break;
+        }
+    }
+
+    void PetEdit(JsonElement m)
+    {
+        var p = _w.Pets.FirstOrDefault(x => x.Id == m.GetProperty("id").GetInt32());
+        if (p == null) return;
+        switch (Str(m, "op"))
+        {
+            case "remove": _w.Pets.Remove(p); break;
+            case "size": p.SizeMul = Math.Clamp(Num(m, "v"), 0.5f, 2.5f); break;
+            case "color": p.Color = Settings.ParseHex(Str(m, "hex")); break;
+            case "rename": { var n = Str(m, "v").Trim(); if (n.Length is > 0 and <= 24) p.Name = n; break; }
+            case "call": p.CallTo(_w.Cursor); break;
         }
     }
 

@@ -59,6 +59,7 @@ sealed partial class Brain
                 G.Groove => _rainDance ? "Dancing in the rain" : "Dancing to your music",
                 G.Snowball => _snowTarget != null ? $"Throwing snowballs at {_snowTarget.Name}" : "Throwing snowballs",
                 G.Snowman => "Building a snowman",
+                G.PetAnimal => _petting != null ? $"Petting {_petting.Name}" : "Petting an animal",
                 G.Create => _drawing != null ? $"Drawing {_drawing.Article} {_drawing.Name.ToLowerInvariant()}" : "Drawing something",
                 G.WatchScreen => "Watching your video",
                 G.LookAtScreen => _look?.Seen.Kind == SeenKind.Link ? "Showing you a link" : _look != null ? $"Reading \"{_look.Value.Seen.Text}\"" : "Reading your screen",

@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal,
     }
 
     readonly Figure f;
@@ -333,6 +333,7 @@ sealed partial class Brain
             case G.Confess: DoConfess(w); break;
             case G.Snowball: DoSnowball(w); break;
             case G.Snowman: DoSnowman(w); break;
+            case G.PetAnimal: DoPetAnimal(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -646,6 +647,7 @@ sealed partial class Brain
         WishOptions(w, opts);
         RomanceOptions(w, opts);
         WeatherOptions(w, opts);
+        PetOptions(w, opts);
         Decide(opts);
     }
 

@@ -36,6 +36,15 @@ sealed class SavedItem
     public float Tilt { get; set; }
 }
 
+sealed class SavedPet
+{
+    public PetKind Kind { get; set; }
+    public string Name { get; set; } = "";
+    public string Color { get; set; } = "";
+    public float Size { get; set; } = 1;
+    public string? Owner { get; set; }
+}
+
 sealed class SavedProp
 {
     public PropKind Kind { get; set; }
@@ -78,6 +87,7 @@ sealed class Settings
     public List<SavedFigure> Library { get; set; } = new();
     public List<SavedProp> Props { get; set; } = new();
     public List<SavedItem> Items { get; set; } = new();
+    public List<SavedPet> Pets { get; set; } = new();
 
     static string PathOnDisk => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StickFight", "settings.json");

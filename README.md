@@ -57,7 +57,15 @@ panel (draw a figure, toss in a toy, hide them, quit).
   - they walk over to words they know and love them, hate them, or run from them (spiders!);
   - now and then one points out a link in a bubble (it only opens if you click it);
   - they dance when music plays and sit down to watch when a video's on.
-- **Sound**: footsteps, punches, boings, a radio, all synthesised on the fly.
+- **Pets**: type "a cat" or "a puppy". Pets pick a favourite figure and follow it around; dogs fetch, cats nap on
+  soft things and pounce at your cursor. Stroke them gently (purring, wagging), or pick them up.
+- **Weather and time of day**: now and then rain, a thunderstorm or (in winter) snow. Figures shelter, grab
+  umbrellas, dance in the rain, have snowball fights and build snowmen. Late at night they get sleepy.
+- **Diaries**: every figure writes about its day in its own voice. Read them in the Studio.
+- **They notice the desktop**: they ride windows you drag (and fly off if you shake them), react when a
+  window closes under them, look over at notifications, and fans cheer when you finish a long stretch of typing
+  (only the timing is noticed, never what you type).
+- **Sound**: footsteps, punches, boings, a radio, rain and thunder, barks and purrs, all synthesised on the fly.
 - **Colours & fights**: decide how colours get along (friends, rivals who spar, enemies who really fight),
   how hard they hit, health bars, and what happens at zero health (up to **permanent death**).
 - **Settings**: frame rate, paper or chalkboard look (the whole app follows it, bubbles included), sound,
@@ -124,6 +132,9 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true 
 | `Sports.cs`, `Projectile.cs` | Matches and scoring; darts and water from toy guns |
 | `Look.cs`, `UiTheme.cs`, `Sound.cs` | Outfits, the paper/chalkboard look for in-world UI, synthesised sound |
 | `Romance.cs` | Gender and attraction |
+| `Pet.cs` | Cats and dogs: body, movement, moods, bonding, drawing |
+| `World.Weather.cs` | Rain, storms, snow cover, day and night |
+| `App.Events.cs` | Typing (timing only) and notification watching; debug test window |
 | `Figure*.cs` | The body: movement, procedural animation, climbing, grappling hook, moves, combat, drawing |
 | `BodyStyle.cs` | Per-figure body language (walk, run, idle, climb, jump, fight, celebrate, rope styles) |
 | `Tastes.cs` | Likes and dislikes |
@@ -142,7 +153,8 @@ line), e.g. `spawn blue hothead`, `ball SoccerBall`, `rel Red Blue Enemies`, `Re
 `fling Red 1800 -2000`, `Red grapple`, `Red dance Blue`, `taste Red Dancing 1`, `fond Red -0.8`,
 `ko Red`, `deathrule Permanent`, `studio figure Red`, `summon a red couch`, `screen` (what the reader
 sees), `screengo Red word|link|watch|groove`, `wish Red`, `love Red Blue 0.8`, `pop item 3`,
-`tracejumps` (log every jump, landing and route), `clear`, `exit`.
+`tracejumps` (log every jump, landing and route), `weather rain|storm|snow|clear`, `pet a cat`,
+`testwin open 1300 1500` / `testwin shake` / `testwin close`, `clear`, `exit`.
 `tools\burst.ps1` captures a contact sheet of frames around a figure; `tools\winshot.ps1` captures
 one of the app's windows; `tools\printwin.ps1` captures the Studio even when it's covered.
 

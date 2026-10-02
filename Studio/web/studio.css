@@ -410,3 +410,5 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .diary-time { font: 12px var(--body); color: var(--pencil); }
 .diary-mood { font-size: 15px; color: var(--accent); text-align: center; }
 .diary-text { font: 17px var(--scrawl); color: var(--ink); }
+.pop-pet { font-size: 34px; line-height: 46px; }
+.pop-field input.text { font: 15px var(--scrawl); background: var(--card); color: var(--ink); border: 1.5px solid var(--faint); border-radius: 8px; padding: 3px 8px; width: 100%; }

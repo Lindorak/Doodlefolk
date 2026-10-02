@@ -45,6 +45,13 @@ sealed partial class App
             if (colour is { } c) p.Color = c;
             return $"Here's your {Prop.KindName(kind).ToLowerInvariant()}!";
         }
+        if (PetFor(noun) is PetKind pk)
+        {
+            var pet = SpawnPet(pk);
+            pet.SizeMul = Math.Clamp(size, 0.5f, 2.5f);
+            if (colour is { } pc) pet.Color = pc;
+            return $"Meet {pet.Name} the {(pk == PetKind.Cat ? "cat" : "dog")}!";
+        }
         if (def == null) return $"Nobody here knows what \"{noun}\" is yet.";
         if (_w.Items.Count >= 60) return "That's a lot of stuff already. Clear some things first.";
         var it = SpawnItem(def, size, colour, _w.Rng.NextDouble() < 0.5);
@@ -52,6 +59,29 @@ sealed partial class App
         string sz = size >= 2.4f ? "giant " : size >= 1.8f ? "huge " : size >= 1.3f ? "big " : size <= 0.5f ? "tiny " : size <= 0.75f ? "little " : "";
         return $"Drew {(sz.Length > 0 || colour != null ? "a " : def.Article + " ")}{sz}{def.Name.ToLowerInvariant()}.";
     }
+
+    static PetKind? PetFor(string noun)
+    {
+        foreach (var w in noun.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (w is "cat" or "cats" or "kitten" or "kitty" or "kittens" or "kitties" or "pussycat" or "moggy") return PetKind.Cat;
+            if (w is "dog" or "dogs" or "puppy" or "puppies" or "pup" or "doggy" or "doggo" or "pupper" or "hound") return PetKind.Dog;
+        }
+        return null;
+    }
+
+    Pet SpawnPet(PetKind kind)
+    {
+        var pet = new Pet(kind, _w.Scale, _w.Rng);
+        var plat = RandomSpawnPlatform(40 * _w.Scale);
+        float x = plat != null ? _w.Rng.Range(plat.X1 + 20, MathF.Max(plat.X1 + 21, plat.X2 - 20)) : _w.Env.Virtual.Left + _w.Env.Virtual.Width / 2f;
+        var (_, _, top) = _w.Env.BoundsAt(x);
+        pet.Pos = new Vector2(x, top + 60 * _w.Scale);
+        _w.Pets.Add(pet);
+        return pet;
+    }
+
+    Pet? _pressPet;
 
     double _nextTidy;
 

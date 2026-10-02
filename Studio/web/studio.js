@@ -1197,7 +1197,7 @@ function buildPop(kind, id) {
   if (!INIT || !S) { pendingPop = [kind, id]; return; }   // built as soon as the first state arrives
   pendingPop = null;
   popKey = kind + ":" + id;
-  const find = () => kind === "prop" ? S.props.find(p => p.id === id) : kind === "item" ? S.items.find(i => i.id === id) : S.figures.find(f => f.id === id);
+  const find = () => kind === "prop" ? S.props.find(p => p.id === id) : kind === "item" ? S.items.find(i => i.id === id) : kind === "pet" ? (S.pets || []).find(p => p.id === id) : S.figures.find(f => f.id === id);
   let x = find();
   root.replaceChildren();
   if (!x) { popUpdate = () => {}; fit(); return; }
@@ -1207,7 +1207,23 @@ function buildPop(kind, id) {
   const field = (label, ...kids) => h("div", { class: "pop-field" }, h("label", null, label), kids);
   const updates = [];
 
-  if (kind === "prop") {
+  if (kind === "pet") {
+    const sub = h("div", { class: "hint" });
+    const art = h("span", { class: "pop-pet" }, x.kind === "Cat" ? "🐈" : "🐕");
+    const name = h("input", { class: "text", value: x.name, maxlength: 24, onchange: () => send({ t: "pet", op: "rename", id, v: name.value }) });
+    const col = colourPicker(x.hex, hex => sendSoon("petc", { t: "pet", op: "color", id, hex }));
+    const sz = range(0.5, 2.5, 0.05, x.size, v => sendSoon("pets", { t: "pet", op: "size", id, v }));
+    add(root, head(art, x.name, sub), field("Name", name), field("Colour", col), field("Size", sz),
+      h("div", { class: "row pop-foot" },
+        h("button", { class: "btn small primary", onclick: () => { send({ t: "pet", op: "call", id }); close(); } }, "Here, " + (x.kind === "Cat" ? "kitty!" : "boy!")),
+        h("span", { class: "spacer" }),
+        armed("Remove", "Sure?", () => { send({ t: "pet", op: "remove", id }); close(); }, "btn small danger")));
+    updates.push(() => {
+      sub.textContent = `${x.activity}${x.owner ? ` · ${x.owner}'s ${x.kind === "Cat" ? "cat" : "dog"}` : " · nobody's pet yet"}`;
+      if (idle(name)) name.value = x.name;
+      col.set(x.hex); setRange(sz, x.size);
+    });
+  } else if (kind === "prop") {
     const sub = h("div", { class: "hint" });
     const art = h("span");
     const paintArt = () => art.replaceChildren(ballSvg(x.kind, x.hex));

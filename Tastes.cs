@@ -11,6 +11,8 @@ enum Thing
     SoccerBalls, Basketballs, BeachBalls,
     // You
     YourCursor, BeingPickedUp, BeingThrown,
+    // Animals
+    Pets,
 }
 
 /// <summary>A figure's likes and dislikes, Sims-style: opinions from -1 (hates) to 1 (loves) on things,

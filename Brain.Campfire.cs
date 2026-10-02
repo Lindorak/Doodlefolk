@@ -47,6 +47,21 @@ sealed partial class Brain
         foreach (var o in round) o.Brain.ListenTo(f);
     }
 
+    /// <summary>Debug: tell a story now, to whoever's warming at the same fire.</summary>
+    public string DebugStory(World w)
+    {
+        if (_g != G.UseItem || _item is not { } fire || _verb != Verb.Warm) return "not at a fire";
+        var round = w.Figures.Where(o => o != f && o.Brain._g == G.UseItem && o.Brain._item == fire && o.Brain._verb == Verb.Warm).ToList();
+        if (round.Count == 0) return "nobody to listen";
+        MakeStory(w, round);
+        _storyTeller = f; _storyLine = 0; _storyBeat = 0.5f;
+        _dur = MathF.Max(_dur, _t + _story.Count * 3.8f + 6);
+        foreach (var o in round) o.Brain.ListenTo(f);
+        return $"story for {string.Join(", ", round.Select(o => o.Name))}";
+    }
+
+    public void DebugWarm(World w, Item fire) => UseItem(fire, Verb.Warm, w);
+
     void ListenTo(Figure teller)
     {
         _storyTeller = teller;

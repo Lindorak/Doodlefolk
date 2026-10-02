@@ -29,6 +29,15 @@ sealed partial class Brain
         if (NearestFreeBall(w, 380 * S) is { SizeMul: <= 1.8f } ball) opts.Add(0.25f + P.Playfulness * 0.3f, () => StartLasso(null, ball, false), "Lasso a ball");
     }
 
+    /// <summary>Debug: give it a lasso (if it has none) and go for a target.</summary>
+    public void DebugLasso(World w, string target)
+    {
+        if (!HasLasso && w.MakeItem?.Invoke("lasso") is { } l) f.Equip(l);
+        if (target == "cursor") { w.CursorStill = 10; StartLasso(null, null, true); }
+        else if (target == "ball" && NearestFreeBall(w, 2000 * S) is { } b) StartLasso(null, b, false);
+        else if (w.Figures.FirstOrDefault(o => o.Name == target) is { } o) StartLasso(o, null, false);
+    }
+
     void StartLasso(Figure? who, Prop? ball, bool cursor)
     {
         _roped = who; _ropedBall = ball; _ropedCursor = cursor;

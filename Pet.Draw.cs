@@ -27,7 +27,7 @@ sealed partial class Pet
     {
         float s = S, f = Facing;
         var ink = new Color4(0.12f, 0.12f, 0.12f, 0.95f);
-        var col = Wet > 0.3f ? Color4.Lerp(Color, Darken(Color, 0.75f), Wet * 0.5f) : Color;
+        var col = Lit(Wet > 0.3f ? Color4.Lerp(Color, Darken(Color, 0.75f), Wet * 0.5f) : Color);
         var dark = Darken(col, 0.7f);
         bool cat = Kind == PetKind.Cat;
         float L = Length, H = Height, g = Girth;
@@ -221,8 +221,9 @@ sealed partial class Pet
     {
         float s = S, f = Facing, H = Height;
         var ink = new Color4(0.12f, 0.12f, 0.12f, 0.95f);
-        var col = Color;
+        var col = Lit(Color);
         var dark = Darken(col, 0.72f);
+        var accent = Lit(Accent);
         float headK = 1 + (1 - Age) * 0.4f, g = Girth;
         bool fluff = _pose == Pose.Fluff || _st == State.Sleep;
         bool flying = Flying || (!Grounded && !Held && !OnCursor && _perchFig == null);
@@ -233,7 +234,7 @@ sealed partial class Pet
         // Tail feathers (long, angled back and down).
         Vector2 tb = body + new Vector2(-f * bw * 0.4f, bh * 0.6f);
         Vector2 tt = tb + new Vector2(-f * H * (flying ? 0.55f : 0.25f), H * (flying ? 0.15f : 0.45f));
-        r.Line(tb, tt, ink, 4.6f * s); r.Line(tb, tt, Accent, 3.2f * s);
+        r.Line(tb, tt, ink, 4.6f * s); r.Line(tb, tt, accent, 3.2f * s);
         r.Line(tb, tt + new Vector2(f * 2 * s, 1 * s), col, 1.6f * s);
         // Feet gripping.
         if (!flying)
@@ -253,12 +254,12 @@ sealed partial class Pet
             Vector2 sh = body + new Vector2(0, -bh * 0.3f);
             Vector2 tip = sh + new Vector2(-f * H * 0.35f, -H * 0.45f * beat);
             r.FillPolygon(stackalloc Vector2[] { sh + new Vector2(f * 2 * s, 0), tip, sh + new Vector2(-f * H * 0.2f, H * 0.12f) }, dark);
-            r.Line(tip, tip + (tip - sh) * 0.2f, Accent, 2 * s);
+            r.Line(tip, tip + (tip - sh) * 0.2f, accent, 2 * s);
         }
         else
         {
             r.Oval(body + new Vector2(-f * bw * 0.2f, 0), bw * 0.65f, bh * 0.85f, dark);
-            r.Line(body + new Vector2(-f * bw * 0.3f, bh * 0.4f), body + new Vector2(-f * bw * 0.65f, bh * 0.95f), Accent, 2.2f * s);
+            r.Line(body + new Vector2(-f * bw * 0.3f, bh * 0.4f), body + new Vector2(-f * bw * 0.65f, bh * 0.95f), accent, 2.2f * s);
         }
         // Head.
         float hr = H * 0.2f * headK;
@@ -266,7 +267,7 @@ sealed partial class Pet
         if (_st == State.Perch && _pose == Pose.Fluff) head += new Vector2(0, MathF.Sin(_tail * 8) * 1.5f * s);   // head-bobbing to the music
         r.Disc(head, hr + 1.2f * s, ink);
         r.ShadedDisc(head, hr, col);
-        r.Disc(head + new Vector2(f * hr * 0.15f, hr * 0.35f), hr * 0.38f, Accent);   // cheek patch
+        r.Disc(head + new Vector2(f * hr * 0.15f, hr * 0.35f), hr * 0.38f, accent);   // cheek patch
         // Hooked beak.
         Vector2 b0 = head + new Vector2(f * hr * 0.75f, -hr * 0.1f);
         r.FillPolygon(stackalloc Vector2[] { b0 + new Vector2(0, -hr * 0.35f), b0 + new Vector2(f * hr * 0.6f, hr * 0.05f), b0 + new Vector2(f * hr * 0.15f, hr * 0.55f), b0 + new Vector2(0, hr * 0.3f) }, new Color4(0.22f, 0.22f, 0.24f, 1));

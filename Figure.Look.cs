@@ -26,7 +26,7 @@ sealed partial class Figure
         return (h, up, fwd);
     }
 
-    static Color4 Hex(string s, Color4 fallback) => s.Length == 7 ? Settings.ParseHex(s) : fallback;
+    Color4 Hex(string s, Color4 fallback) => Lit(s.Length == 7 ? Settings.ParseHex(s) : fallback);
 
     Color4 PartCol(int c, Color4 main) => c switch
     {

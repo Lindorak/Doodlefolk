@@ -180,8 +180,12 @@ sealed partial class World
     public float Night;
     public bool DayNight = true;
 
+    /// <summary>Debug: pretend it's this dark (null: follow the clock).</summary>
+    public float? NightOverride;
+
     public void UpdateClock()
     {
+        if (NightOverride is float no) { Night = no; return; }
         if (!DayNight) { Night = 0; return; }
         var t = DateTime.Now;
         float h = t.Hour + t.Minute / 60f;

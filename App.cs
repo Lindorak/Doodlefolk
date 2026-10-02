@@ -1167,6 +1167,13 @@ sealed partial class App : ApplicationContext
                 case "season": _w.Seasons.Override = Enum.TryParse<Season>(p[1], true, out var sn) ? sn : null; _w.Seasons.Gust(_clock.Elapsed.TotalSeconds); break;
                 case "garden": foreach (var gi in _w.Items.Where(i => i.IsPlant)) gi.Growth = float.Parse(p[1], inv); _gardenAt = 0; break;
                 case "trinket": _trinketAt = 0; break;
+                case "lasso": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } lf) lf.Brain.DebugLasso(_w, p.Length > 2 ? p[2] : "cursor"); break;
+                case "night": _w.NightOverride = p[1] == "off" ? null : float.Parse(p[1], inv); break;
+                case "warm":
+                    if (_w.Items.FirstOrDefault(i => i.Def.Key == "campfire") is { } fire)
+                        foreach (var wn in p.Skip(1)) if (_w.Figures.FirstOrDefault(x => x.Name == wn) is { } wf2) wf2.Brain.DebugWarm(_w, fire);
+                    break;
+                case "story": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } storyF) World.Log("story: " + storyF.Brain.DebugStory(_w)); break;
                 case "snap":
                 {
                     // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\stickfight_snap.png.

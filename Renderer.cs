@@ -201,6 +201,27 @@ sealed class Renderer : IDisposable
     ID2D1LinearGradientBrush? _shadeLin;
     ID2D1RadialGradientBrush? _shadeRad, _soft;
 
+    ID2D1RadialGradientBrush? _fireGlow;
+
+    /// <summary>Warm firelight: a smooth radial glow, hot in the middle and fading to nothing.</summary>
+    public void FireGlow(Vector2 c, float rx, float ry, float alpha)
+    {
+        if (_fireGlow == null)
+        {
+            using var stops = _ctx.CreateGradientStopCollection(new[]
+            {
+                new GradientStop(0, new Color4(1, 0.82f, 0.45f, 0.9f)), new GradientStop(0.25f, new Color4(1, 0.6f, 0.2f, 0.55f)),
+                new GradientStop(0.6f, new Color4(1, 0.42f, 0.1f, 0.18f)), new GradientStop(1, new Color4(1, 0.35f, 0.05f, 0)),
+            });
+            _fireGlow = _ctx.CreateRadialGradientBrush(new RadialGradientBrushProperties(Vector2.Zero, Vector2.Zero, 1, 1), stops);
+        }
+        _fireGlow.Center = c;
+        _fireGlow.RadiusX = rx;
+        _fireGlow.RadiusY = ry;
+        _fireGlow.Opacity = Math.Clamp(alpha, 0, 1);
+        _ctx.FillEllipse(new Ellipse(c, rx, ry), _fireGlow);
+    }
+
     /// <summary>A soft shadow: one smooth radial falloff (no rings), darkest in the middle.</summary>
     public void SoftShadow(Vector2 c, float rx, float ry, float alpha)
     {
@@ -386,7 +407,7 @@ sealed class Renderer : IDisposable
         foreach (var f in _fonts.Values) f.Dispose();
         foreach (var l in _layouts.Values) l.Dispose();
         foreach (var g in _shapes.Values) g.geo.Dispose();
-        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _soft?.Dispose();
+        _shadeLin?.Dispose(); _shadeRad?.Dispose(); _soft?.Dispose(); _fireGlow?.Dispose();
         _dwrite?.Dispose();
         _round.Dispose(); _brush.Dispose(); _ctx.Target = null; _bitmap?.Dispose(); _ctx.Dispose(); _d2d.Dispose();
         _factory.Dispose(); _visual.Dispose(); _target.Dispose(); _dcomp.Dispose(); _swap.Dispose(); _dxgi.Dispose(); _d3d.Dispose();

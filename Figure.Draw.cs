@@ -23,7 +23,7 @@ sealed partial class Figure
 
         // Dead figures fade out (and go grey) before disappearing.
         float fade = Fade;
-        Color4 baseColor = Dead ? Color4.Lerp(Color, new Color4(0.55f, 0.55f, 0.55f, 1), M.Clamp01(_fadeT / 1.5f)) : Color;
+        Color4 baseColor = Lit(Dead ? Color4.Lerp(Color, new Color4(0.55f, 0.55f, 0.55f, 1), M.Clamp01(_fadeT / 1.5f)) : Color);
         Color4 near = new(baseColor.R, baseColor.G, baseColor.B, fade);
         Color4 far = new(baseColor.R * 0.72f, baseColor.G * 0.72f, baseColor.B * 0.72f, fade);
         Color4 outline = new(0, 0, 0, Outline.A * fade);

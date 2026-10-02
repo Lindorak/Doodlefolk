@@ -450,18 +450,91 @@ sealed class Item
     public bool IsPlant => Def.Verbs.Contains(Verb.Tend);
     public bool IsMess => Def.Key is "puddle" or "poop" or "dropping";
 
+    static readonly Vector2[] _flamePoly = new Vector2[17];
+
+    /// <summary>Flicker for the firelight (also used to light the figures around it).</summary>
+    public static float Flicker(double time, int seed = 0)
+    {
+        float t = (float)time + seed * 1.7f;
+        return 0.86f + 0.07f * MathF.Sin(t * 9.1f) + 0.04f * MathF.Sin(t * 23.7f) + 0.03f * MathF.Sin(t * 4.3f + 1);
+    }
+
+    /// <summary>A real campfire: a ring of stones, crossed logs with glowing cracks, a bed of embers, layered flame
+    /// tongues (deep orange outside, yellow, a white-hot core) that lick and sway, sparks drifting up, a wisp of
+    /// smoke, and warm light that flickers on the ground around it (much stronger at night).</summary>
     void DrawFire(Renderer r, double time)
     {
         float sc = Sc, t = (float)time;
+        float night = World.Current?.Night ?? 0;
+        float flick = Flicker(time, Id);
         Vector2 b = Local(0, 3);
-        r.Oval(b + new Vector2(0, -5 * sc), 22 * sc, 12 * sc, new Color4(1, 0.55f, 0.15f, 0.12f + 0.04f * MathF.Sin(t * 9)));
+        // Light: a pool on the ground and a glow in the air.
+        r.FireGlow(b + new Vector2(0, -14 * sc), (85 + 95 * night) * sc * flick, (55 + 55 * night) * sc * flick, (0.35f + 0.6f * night) * flick);
+        r.FireGlow(b + new Vector2(0, -8 * sc), (34 + 16 * night) * sc * flick, (26 + 10 * night) * sc * flick, (0.45f + 0.4f * night) * flick);
+        r.FireGlow(b + new Vector2(0, -1 * sc), (50 + 40 * night) * sc * flick, 7 * sc, (0.5f + 0.4f * night) * flick);
+        // Stones (back row).
+        var stone = new Color4(0.36f, 0.34f, 0.33f, 1);
+        var stoneDark = new Color4(0.2f, 0.19f, 0.19f, 1);
+        for (int i = 0; i < 4; i++) { var c = Local(-11 + i * 7.3f, 4.2f); r.Oval(c, 3.6f * sc, 2.3f * sc, stoneDark); r.Oval(c - new Vector2(0.4f, 0.5f) * sc, 3.1f * sc, 1.9f * sc, stone); }
+        // Ember bed and glowing cracks in the logs.
+        r.Oval(Local(0, 2.5f), 10 * sc, 2.4f * sc, new Color4(0.55f, 0.12f, 0.04f, 1));
+        for (int i = 0; i < 6; i++) r.Disc(Local(-7 + i * 2.8f, 2.6f + (i % 2) * 0.6f), (0.9f + 0.4f * MathF.Sin(t * 5 + i)) * sc, new Color4(1, 0.45f + 0.25f * MathF.Sin(t * 3 + i * 2), 0.1f, 0.9f));
+        var glowLine = new Color4(1, 0.55f, 0.15f, 0.55f + 0.35f * MathF.Sin(t * 4));
+        r.Line(Local(-8, 2.2f), Local(-3, 3.8f), glowLine, 0.8f * sc);
+        r.Line(Local(3, 3.8f), Local(8, 2.2f), glowLine, 0.8f * sc);
+        // Flames: tongues of fire, outer to inner.
+        float wind = MathF.Sin(t * 0.7f) * 1.5f;
+        var poly = _flamePoly;
+        void Tongue(float x, float h, float w, float sway, float ph, Color4 col)
+        {
+            int n = 0;
+            for (int k = 0; k <= 7; k++)
+            {
+                float s = k / 8f, wob = 1 + 0.18f * MathF.Sin(t * 17 + ph + k * 1.3f);
+                float hw = w * MathF.Pow(1 - s, 0.75f) * wob, cx = x + (sway + wind) * MathF.Pow(s, 1.5f);
+                poly[n++] = Local(cx - hw, 3 + s * h);
+            }
+            poly[n++] = Local(x + (sway + wind) * 1.1f, 3 + h * 1.04f);
+            for (int k = 7; k >= 0; k--)
+            {
+                float s = k / 8f, wob = 1 + 0.18f * MathF.Sin(t * 19 + ph * 1.3f + k * 1.1f);
+                float hw = w * MathF.Pow(1 - s, 0.75f) * wob, cx = x + (sway + wind) * MathF.Pow(s, 1.5f);
+                poly[n++] = Local(cx + hw, 3 + s * h);
+            }
+            r.FillPolygon(poly.AsSpan(0, n), col);
+        }
+        float Noise(int i) => 0.55f + 0.22f * MathF.Sin(t * 7.3f + i * 1.7f) + 0.14f * MathF.Sin(t * 13.1f + i * 3.1f) + 0.09f * MathF.Sin(t * 21.7f + i * 0.7f);
+        for (int i = 0; i < 5; i++)
+        {
+            float x = (i - 2) * 3.2f, h = (11 + 12 * Noise(i)) * (i is 0 or 4 ? 0.65f : 1), sway = MathF.Sin(t * 3 + i * 1.9f) * 2.2f;
+            Tongue(x, h, 3.6f, sway, i, new Color4(0.93f, 0.27f, 0.06f, 0.85f));
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            float x = (i - 1.5f) * 2.8f, h = (8 + 9 * Noise(i + 7)) * (i is 0 or 3 ? 0.7f : 1), sway = MathF.Sin(t * 3.4f + i * 2.3f) * 1.6f;
+            Tongue(x, h, 2.6f, sway, i + 5, new Color4(1, 0.58f, 0.1f, 0.92f));
+        }
         for (int i = 0; i < 3; i++)
         {
-            float x = (i - 1) * 5, h = 13 + 4 * MathF.Sin(t * (7 + i) + i * 2), wob = 1.5f * MathF.Sin(t * 11 + i);
-            Span<Vector2> fl = stackalloc Vector2[] { Local(x - 4.5f, 3), Local(x + wob, h), Local(x + 4.5f, 3) };
-            r.FillPolygon(fl, ItemDef.Fixed[19]);
-            Span<Vector2> inner = stackalloc Vector2[] { Local(x - 2.2f, 3), Local(x + wob * 0.6f, h * 0.6f), Local(x + 2.2f, 3) };
-            r.FillPolygon(inner, ItemDef.Fixed[20]);
+            float x = (i - 1) * 2.2f, h = (5 + 5 * Noise(i + 13)) * (i == 1 ? 1.15f : 0.8f), sway = MathF.Sin(t * 4 + i * 2.9f) * 1;
+            Tongue(x, h, 1.7f, sway, i + 9, new Color4(1, 0.88f, 0.45f, 0.95f));
+        }
+        r.Oval(Local(0, 4.5f), 2.4f * sc, 1.6f * sc, new Color4(1, 0.97f, 0.85f, 0.85f * flick));   // white-hot heart
+        // Stones (front row).
+        for (int i = 0; i < 5; i++) { var c = Local(-13 + i * 6.5f, 1.4f); r.Oval(c, 3.4f * sc, 2.1f * sc, stoneDark); r.Oval(c - new Vector2(0.4f, 0.5f) * sc, 2.9f * sc, 1.7f * sc, stone); r.Oval(c - new Vector2(1.1f, 1) * sc, 1 * sc, 0.5f * sc, new Color4(1, 0.62f, 0.3f, 0.55f * flick)); }
+        // Sparks rising and winking out.
+        for (int i = 0; i < 9; i++)
+        {
+            float ph = (t * (0.45f + (i % 3) * 0.12f) + i * 0.137f) % 1;
+            float x = MathF.Sin(i * 12.9f + t * 1.7f) * 5 * ph + (i - 4) * 1.2f + wind * ph * 2, y = 8 + ph * 42;
+            r.Disc(Local(x, y), (0.7f + 0.5f * (1 - ph)) * sc, new Color4(1, 0.75f - ph * 0.3f, 0.25f, (1 - ph) * 0.95f));
+        }
+        // A wisp of smoke above it all.
+        for (int i = 0; i < 4; i++)
+        {
+            float ph = (t * 0.12f + i * 0.25f) % 1;
+            var c = Local(MathF.Sin(t * 0.5f + i * 2) * 4 + wind * 3 * ph, 26 + ph * 30);
+            r.Disc(c, (3 + ph * 8) * sc, new Color4(0.55f, 0.55f, 0.55f, 0.12f * (1 - ph) * MathF.Min(1, ph * 4)));
         }
     }
 
@@ -552,7 +625,7 @@ sealed class Item
     System.Drawing.RectangleF BoundsBody()
     {
         float sc = Sc, w = Def.W * sc, h = Def.H * sc, pad = 6 * sc;
-        if (Def.Verbs.Contains(Verb.Warm)) h += 14 * sc;
+        if (Def.Verbs.Contains(Verb.Warm)) { h += 46 * sc; w = MathF.Max(w, (World.Current?.Night > 0.3f ? 250 : 150) * sc); }
         if (Def.Verbs.Contains(Verb.Dance)) h += 30 * sc;
         if (Def.Verbs.Contains(Verb.Read)) w = MathF.Max(w, 20 * sc);
         float ext = MathF.Max(w, h) * MathF.Abs(MathF.Sin(Angle));

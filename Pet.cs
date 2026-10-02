@@ -44,6 +44,14 @@ sealed partial class Pet
     public float UserBond = 0.2f;
     public Figure? Owner;
     public Prop? Mouth;   // a ball being carried (dogs)
+    /// <summary>Lighting this frame (see Figure.Lit).</summary>
+    public float Warmth, NightDim;
+    Color4 Lit(Color4 c)
+    {
+        if (NightDim > 0.005f) c = new Color4(c.R + (0.22f - c.R) * NightDim, c.G + (0.25f - c.G) * NightDim, c.B + (0.38f - c.B) * NightDim, c.A);
+        if (Warmth > 0.005f) { float k = Warmth * 0.32f; c = new Color4(c.R + (1 - c.R) * k, c.G + (0.62f - c.G) * k, c.B + (0.3f - c.B) * k, c.A); }
+        return c;
+    }
 
     readonly Random _rng;
     float _walk, _tail, _flap, _soundCd, _ownerCheck;

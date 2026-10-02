@@ -190,6 +190,16 @@ sealed partial class Figure
     public Color4? ClubColour;
     /// <summary>0 lean … 0.3 fit … 0.5 chubby … 0.75 fat … 1 obese. Changes with eating and exercise (a setting).</summary>
     public float Weight = 0.2f;
+    /// <summary>Lighting this frame: how warmly a nearby fire lights it, and how much the night dims it.</summary>
+    public float Warmth, NightDim;
+
+    /// <summary>A colour as the light falls on it (night-time dimming, firelight).</summary>
+    public Color4 Lit(Color4 c)
+    {
+        if (NightDim > 0.005f) c = new Color4(c.R + (0.22f - c.R) * NightDim, c.G + (0.25f - c.G) * NightDim, c.B + (0.38f - c.B) * NightDim, c.A);
+        if (Warmth > 0.005f) { float k = Warmth * 0.32f; c = new Color4(c.R + (1 - c.R) * k, c.G + (0.62f - c.G) * k, c.B + (0.3f - c.B) * k, c.A); }
+        return c;
+    }
     /// <summary>How much heavier than fit (0 at fit or lighter).</summary>
     public float Fat => World.WeightOn && Weight > 0.27f ? MathF.Pow((Weight - 0.27f) / 0.73f, 0.8f) : 0;
     public string WeightWord => Weight < 0.1f ? "Skinny" : Weight < 0.3f ? "Fit" : Weight < 0.5f ? "Chubby" : Weight < 0.75f ? "Fat" : "Obese";

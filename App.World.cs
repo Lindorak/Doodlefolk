@@ -12,8 +12,30 @@ sealed partial class App
     static readonly string[] PlantStages = { "seedpatch", "sprout", "bud" };
     const float StageSeconds = 900;
 
+    /// <summary>Who's lit by a campfire (and, at night, dimmed away from one).</summary>
+    void LightFrame(double now)
+    {
+        var fires = _w.Items.Where(i => i.Def.Key == "campfire" && i.Holder == null).ToList();
+        float night = _settings.DayNight ? _w.Night : 0;
+        float Warm(Vector2 at, float s)
+        {
+            float best = 0;
+            foreach (var fi in fires)
+            {
+                float d = Vector2.Distance(at, fi.Pos), reach = (180 + 120 * night) * s;
+                if (d < reach) best = MathF.Max(best, MathF.Pow(1 - d / reach, 1.6f) * (0.45f + 0.55f * night) * Item.Flicker(now, fi.Id));
+            }
+            return best;
+        }
+        foreach (var f in _w.Figures) { f.Warmth = Warm(f.Jt[J.Pelvis], f.S); f.NightDim = night * 0.3f * (1 - MathF.Min(1, f.Warmth * 2.5f)); }
+        foreach (var p in _w.Pets) { p.Warmth = Warm(p.Centre, p.Scale); p.NightDim = night * 0.3f * (1 - MathF.Min(1, p.Warmth * 2.5f)); }
+        // A crackle now and then.
+        foreach (var fi in fires) if (_w.Rng.NextDouble() < 0.04) World.Play(Sfx.Crackle, fi.Pos, 0.18f, (float)_w.Rng.Range(0.8f, 1.3f), 0.05);
+    }
+
     void WorldFrame(double now)
     {
+        LightFrame(now);
         float dt = (float)Math.Clamp(now - _seasonLast, 0, 0.1);
         _seasonLast = now;
         _w.Seasons.Step(_w, dt, now);

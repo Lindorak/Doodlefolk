@@ -330,6 +330,7 @@ sealed partial class Brain
     {
         var b = _ball;
         if (b == null || f.Carrying != b) { Go(G.Idle, 1); return; }
+        if (HuntThrow(w)) return;
         if (BringBallToUser(w)) return;
         if (_passTo == null) MoveToward(_carryX, 5 * S);
         else { f.DesiredVX = 0; FaceTo(_passTo.Base.X); f.LookAt = _passTo.Jt[J.Head]; }
@@ -360,6 +361,7 @@ sealed partial class Brain
         {
             Vector2 v;
             if (_selfCatch) v = new Vector2(f.Facing * rng.Range(0, 60) * S, -rng.Range(800, 1050) * S);
+            else if (_fastball) v = FastballVelocity(f.HoldPoint, _throwAt, b.Grav);
             else if (!SolveLob(f.HoldPoint, _throwAt, b.Grav, 40 * S, 450 * S, 1900 * S, out v))
                 v = new Vector2(MathF.Sign(_throwAt.X - f.Base.X) * 800 * S, -700 * S);
             f.Carrying = null;
@@ -367,6 +369,8 @@ sealed partial class Brain
             b.LastTouch = f;
             b.ThrownByUser = false;
             b.PassTarget = _selfCatch ? f : _passTo;
+            b.CursorThrow = _fastball ? f : null;
+            _fastball = false;
             Stamina = MathF.Max(0, Stamina - 0.01f);
         }
         if (f.ActionT < Figure.ThrowTime) return;

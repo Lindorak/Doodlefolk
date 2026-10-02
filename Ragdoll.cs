@@ -1,6 +1,9 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace StickFight;
+
+/// <summary>What a figure does while you're holding it.</summary>
+enum HeldMood { Limp, Flail, Fight, Happy, Grumpy, Wriggle }
 
 /// <summary>Verlet ragdoll over the figure's 11 joints. Collides with platforms (one-way window edges,
 /// solid floors) and screen edges, and rides along with windows it's lying on.</summary>
@@ -17,6 +20,10 @@ sealed class Ragdoll
     public int Pin = -1;
     public Vector2 PinTarget;
     float _struggleT;
+    public HeldMood Held;
+    float _heldT, _moodT, _punchT;
+    int _punchHand;
+    bool _punchHit;
 
     public Ragdoll(Figure f)
     {
@@ -50,6 +57,8 @@ sealed class Ragdoll
         }
         Pin = -1;
         Contact = false;
+        _heldT = 0;
+        _moodT = 0;
     }
 
     public void Release(Vector2 vel)
@@ -98,7 +107,8 @@ sealed class Ragdoll
 
     public void Step(float dt, World w)
     {
-        if (Pin >= 0) Struggle(dt, w.Rng);
+        if (Pin >= 0) Muscles(dt, w);
+        else _heldT = 0;
         float g = f.Gravity * dt * dt;
         for (int i = 0; i < J.Count; i++)
         {
@@ -164,6 +174,113 @@ sealed class Ragdoll
                 P[i].Y = _touchY[i] - r;
             }
         }
+    }
+
+    /// <summary>Held up by the cursor: limbs pulled toward poses that depend on the figure's mood (punching
+    /// at you, panicked flailing, happy leg swings, arms folded in a huff...).</summary>
+    void Muscles(float dt, World w)
+    {
+        _heldT += dt;
+        _moodT -= dt;
+        if (_moodT <= 0)
+        {
+            var prev = Held;
+            Held = f.Brain.ChooseHeldMood(_heldT, prev);
+            _moodT = w.Rng.Range(1.0f, 2.2f);
+            if (Held != prev) f.Brain.OnHeldMood(Held);
+        }
+        if (Held == HeldMood.Limp) return;
+
+        float t = _heldT + f.Id;
+        Vector2 neck = P[J.Neck], pel = P[J.Pelvis];
+        // Poses are laid out in screen space (up is up), not along the body: steering limbs relative to a
+        // body that they themselves are swinging around feeds back and spins the whole figure.
+        Vector2 up = new(0, -1), side = new(f.Facing, 0);
+        if (Pin is J.FootN or J.FootF or J.KneeN or J.KneeF) up = new(0, 1);   // dangling upside down
+        float arm = f.Arm, leg = f.Leg, k = 0.16f;
+        Vector2 hN, hF, fN, fF;
+        switch (Held)
+        {
+            case HeldMood.Flail:
+            {
+                // Cartoon panic: everything windmills.
+                float sp = 11 + f.Traits.Energy * 5;
+                hN = neck + side * MathF.Sin(t * sp) * arm * 0.85f + up * MathF.Cos(t * sp * 0.9f) * arm * 0.6f;
+                hF = neck + side * MathF.Sin(t * sp + 2.1f) * arm * 0.85f + up * MathF.Cos(t * sp * 1.1f + 1) * arm * 0.6f;
+                fN = pel - up * leg * 0.7f + side * MathF.Sin(t * sp * 0.95f + 1) * leg * 0.6f;
+                fF = pel - up * leg * 0.7f + side * MathF.Sin(t * sp * 0.95f + 4) * leg * 0.6f;
+                k = 0.13f;
+                break;
+            }
+            case HeldMood.Fight:
+            {
+                // Punch at whatever is holding it (your cursor), alternating hands; kick now and then.
+                Vector2 to = PinTarget - neck;
+                Vector2 dc = to.LengthSquared() > 1 ? Vector2.Normalize(to) : -up;
+                _punchT -= dt;
+                if (_punchT <= 0)
+                {
+                    _punchT = w.Rng.Range(0.22f, 0.38f) * (1.3f - f.Traits.Aggression * 0.4f);
+                    _punchHand = 1 - _punchHand;
+                    _punchHit = false;
+                }
+                Vector2 strike = neck + dc * arm * 0.98f, guard = neck + dc * arm * 0.35f + side * 3 * f.S;
+                hN = _punchHand == 0 ? strike : guard;
+                hF = _punchHand == 1 ? strike : guard;
+                Vector2 fist = _punchHand == 0 ? P[J.HandN] : P[J.HandF];
+                // A hit is a fist that started out of range and swung in to the hand holding it.
+                if (!_punchHit && _punchT < 0.12f && Vector2.Distance(fist, PinTarget) < 14 * f.S) { _punchHit = true; f.Brain.OnPunchedHolder(w, _heldT); }
+                float kick = MathF.Max(0, MathF.Sin(t * 7));
+                fN = pel - up * leg * 0.75f + dc * kick * leg * 0.5f;
+                fF = pel - up * leg * 0.8f - dc * kick * leg * 0.2f;
+                k = 0.17f;
+                break;
+            }
+            case HeldMood.Happy:
+            {
+                // Wheee: legs swinging together, arms up.
+                float s = MathF.Sin(t * 5);
+                hN = neck + up * arm * 0.85f + side * arm * 0.35f;
+                hF = neck + up * arm * 0.85f - side * arm * 0.35f;
+                fN = pel - up * leg * 0.8f + side * s * leg * 0.55f;
+                fF = pel - up * leg * 0.8f + side * (s * leg * 0.55f - 3 * f.S);
+                k = 0.09f;
+                break;
+            }
+            case HeldMood.Grumpy:
+            {
+                // Arms folded, legs hanging, the odd sulky swing.
+                hN = neck - up * f.Torso * 0.42f + side * arm * 0.28f;
+                hF = neck - up * f.Torso * 0.36f + side * arm * 0.22f;
+                float s = MathF.Sin(t * 1.6f) * 0.25f;
+                fN = pel - up * leg * 0.92f + side * s * leg;
+                fF = pel - up * leg * 0.9f + side * (s * leg - 2 * f.S);
+                k = 0.07f;
+                break;
+            }
+            default:
+            {
+                // Wriggle: kicking legs side to side together, elbows working.
+                float s = MathF.Sin(t * 8);
+                hN = neck + side * arm * (0.5f + 0.3f * s) - up * arm * 0.2f;
+                hF = neck - side * arm * (0.5f - 0.3f * s) - up * arm * 0.2f;
+                fN = pel - up * leg * 0.75f + side * s * leg * 0.7f;
+                fF = pel - up * leg * 0.75f + side * (s * leg * 0.7f + 3 * f.S);
+                k = 0.11f;
+                break;
+            }
+        }
+        Pull(J.HandN, hN, k); Pull(J.HandF, hF, k);
+        Pull(J.FootN, fN, k * 0.9f); Pull(J.FootF, fF, k * 0.9f);
+        // Elbows and knees follow halfway so limbs bend instead of snapping straight.
+        Pull(J.ElbowN, (neck + P[J.HandN]) * 0.5f, k * 0.25f); Pull(J.ElbowF, (neck + P[J.HandF]) * 0.5f, k * 0.25f);
+        Pull(J.KneeN, (pel + P[J.FootN]) * 0.5f, k * 0.25f); Pull(J.KneeF, (pel + P[J.FootF]) * 0.5f, k * 0.25f);
+    }
+
+    void Pull(int j, Vector2 target, float k)
+    {
+        if (j == Pin) return;
+        P[j] += (target - P[j]) * k;
     }
 
     void Struggle(float dt, Random rng)

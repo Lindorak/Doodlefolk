@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt,
     }
 
     readonly Figure f;
@@ -48,6 +48,8 @@ sealed partial class Brain
     void Go(G g, float dur)
     {
         _snub = false;
+        if (g != G.Throw) _fastball = false;
+        if (g is not (G.Carry or G.Walk)) _huntThrow = false;
         if (f.GrappleBusy && !f.Climbing) f.CancelGrapple();
         if (_g is G.Chat or G.HighFive or G.SitWith or G.Follow or G.DanceWith && g != _g) EndSocial();
         if (_g is G.Carry or G.Throw && g is not (G.Carry or G.Throw) && f.Carrying != null) f.DropCarried(Vector2.Zero);
@@ -296,6 +298,7 @@ sealed partial class Brain
             case G.Catch: DoCatch(w); break;
             case G.Fight: DoFight(w); break;
             case G.CursorFight: DoCursorFight(w); break;
+            case G.Hunt: DoHunt(w); break;
             case G.Revive: DoRevive(w); break;
             case G.DanceWith: DoDanceWith(w); break;
             case G.Victory:
@@ -399,6 +402,11 @@ sealed partial class Brain
         if (errand) return false;
         // How it feels about you shows when your cursor comes by.
         float fond = UserFondness;
+        if (f.Hunter && near && _g is G.Idle or G.SitFloor or G.SitEdge or G.Watch or G.Walk && Stamina > 0.25f && Rules.Enabled)
+        {
+            BeginHunt(w);
+            return true;
+        }
         if (near && fond < -0.35f && _awayT > 0.6f && _swatCd <= 0 && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch)
         {
             _swatCd = rng.Range(4, 8);
@@ -578,6 +586,7 @@ sealed partial class Brain
         if (FightOption(w) is { } fight) opts.Add(fight);
         if (Stamina > 0.3f && BallOption(w) is { } ball) opts.Add(ball);
         if (UserOption(w) is { } user) opts.Add(user);
+        if (HuntOption(w) is { } hunt) opts.Add(hunt);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);

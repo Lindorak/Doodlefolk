@@ -278,15 +278,17 @@ PAGES.cast = {
 };
 
 function newFigureCard() {
-  const preset = select([{ value: -1, label: "Random personality" }, ...INIT.presets.map((p, i) => ({ value: i, label: `${p.name}: ${p.blurb}` }))], -1, () => {});
+  const preset = select([{ value: -1, label: "Random personality" }, ...INIT.presets.map((p, i) => ({ value: i, label: `${p.name}: ${p.blurb}` })),
+    { value: -2, label: "Cursor hunter: hunts your cursor, relentlessly" }], -1, () => {});
+  const spawn = color => { const v = +preset.sel.value; send({ t: "spawn", color, preset: v, hunter: v === -2 }); };
   return h("div", { class: "card new" },
     h("div", { class: "name" }, "Draw someone new"),
     h("div", { class: "hint" }, "Pick a colour to draw them in:"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) =>
-      h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => send({ t: "spawn", color: i, preset: +preset.sel.value }) }))),
+      h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => spawn(i) }))),
     preset,
     h("div", { class: "row" },
-      h("button", { class: "btn small primary", onclick: () => send({ t: "spawn", color: -1, preset: +preset.sel.value }) }, "Surprise me"),
+      h("button", { class: "btn small primary", onclick: () => spawn(-1) }, "Surprise me"),
       h("button", { class: "btn small", onclick: () => go("library") }, "From library…")));
 }
 
@@ -410,11 +412,14 @@ const SUBPANELS = {
     const presets = h("div", { class: "row" }, INIT.presets.map((p, i) => h("button", { class: "chip", title: p.blurb, onclick: () => send({ t: "fig", id, op: "preset", v: i }) }, p.name)),
       h("button", { class: "chip", onclick: () => send({ t: "fig", id, op: "dice" }), title: "Roll a random personality" }, "🎲 Dice"));
     const blurb = h("p", { class: "sub" });
+    const hunter = check("Cursor hunter", "Hunts your cursor across the screen, boxes it, and throws whatever it can grab at it. Never forgives you.",
+      () => fig(id) && fig(id).hunter, v => send({ t: "fig", id, op: "hunter", v }));
     add(panel, h("div", { class: "split" }, svg, h("div", null,
       h("h2", { style: { marginTop: 0 } }, "Who they are"), blurb, sliders.map(x => x.el),
-      h("h3", null, "Start from a type"), presets)));
+      h("h3", null, "Start from a type"), presets, h("div", { style: { marginTop: "12px" } }, hunter))));
     return f => {
-      blurb.textContent = f.describe + ".";
+      blurb.textContent = f.describe + "." + (f.hunter ? " Out to get you." : "");
+      hunter.update();
       if (dragging < 0 && Date.now() - touchedT > 900) { Object.assign(local, f.traits); draw(f.hex); }
       for (const x of sliders) { setRange(x.r, f.traits[x.k]); x.val.textContent = Math.round((idle(x.r) ? f.traits[x.k] : +x.r.value) * 100); }
       shape.setAttribute("fill", f.hex + "55");

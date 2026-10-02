@@ -13,6 +13,7 @@ sealed class SavedFigure
     /// <summary>How it feels about the user: fondness -1..1 and trust 0..1.</summary>
     public float? Fondness { get; set; }
     public float? Trust { get; set; }
+    public bool Hunter { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();

@@ -131,6 +131,7 @@ sealed partial class App
             activity = b.Activity,
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
+            hunter = f.Hunter,
             trust = R(b.CursorTrust),
             memories = b.Memories.AsEnumerable().Reverse().Select(m => new { what = m.What, delta = R(m.Delta), ago = MathF.Round(b.Age - m.At) }),
             hp = R(f.HP),
@@ -172,6 +173,21 @@ sealed partial class App
         };
     }
 
+    /// <summary>Turn a figure into (or out of) a cursor hunter.</summary>
+    void MakeHunter(Figure f, bool on)
+    {
+        f.Hunter = on;
+        if (on)
+        {
+            f.Brain.UserFondness = -1;
+            f.Tastes.Set(Thing.YourCursor, -1);
+            f.Traits.Aggression = MathF.Max(f.Traits.Aggression, 0.85f);
+            f.Traits.Bravery = MathF.Max(f.Traits.Bravery, 0.8f);
+            f.Traits.Energy = MathF.Max(f.Traits.Energy, 0.7f);
+            f.Emote("#@!", 1.4f);
+        }
+    }
+
     // ---------------- edits from the page ----------------
 
     void OnStudioMessage(JsonElement m)
@@ -200,6 +216,7 @@ sealed partial class App
                         ? Personality.Presets[pi].Traits.Clone() : null;
                     int? ci = m.TryGetProperty("color", out var co) && co.GetInt32() is int cidx && cidx >= 0 ? cidx : null;
                     var f = Spawn(ci, traits);
+                    if (f != null && m.TryGetProperty("hunter", out var hu) && hu.ValueKind == JsonValueKind.True) MakeHunter(f, true);
                     bool quiet = m.TryGetProperty("quiet", out var q) && q.ValueKind == JsonValueKind.True;
                     if (f != null && !quiet) _studio?.Post(JsonSerializer.Serialize(new { t = "spawned", id = f.Id }, Json));
                     break;
@@ -303,6 +320,7 @@ sealed partial class App
             case "save": SaveToLibrary(f); break;
             case "remove": _w.RemoveFigure(f); break;
             case "heal": f.HP = 100; break;
+            case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
             case "call": _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = f.Brain.CalledByUser(_w) }, Json)); break;
         }
     }

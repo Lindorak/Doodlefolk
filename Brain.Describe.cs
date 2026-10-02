@@ -50,6 +50,7 @@ sealed partial class Brain
                 G.Victory => "Celebrating a win",
                 G.CursorFight => "Boxing your cursor",
                 G.Revive => "Helping a friend up",
+                G.Hunt => "Hunting your cursor",
                 _ => "Busy",
             };
         }

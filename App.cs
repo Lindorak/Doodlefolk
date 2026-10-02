@@ -200,6 +200,7 @@ sealed partial class App : ApplicationContext
         for (int i = 0; i < n; i++)
         {
             Vector2 pin = Vector2.Lerp(_prevCursor, _w.Cursor, (i + 1f) / n);
+            if (_dragging && _pressFig != null && !_pressFig.Held) { _pressFig = null; _dragging = false; }   // it broke free
             if (_dragging && _pressFig != null) _pressFig.Rag.PinTarget = pin;
             if (_pressProp != null) _pressProp.PinTarget = pin;
             // Iterate over copies: brains may add/remove things (e.g. drop a ball) mid-step.
@@ -490,6 +491,7 @@ sealed partial class App : ApplicationContext
         f.Gear = old.Gear;
         f.StyleChoice = old.StyleChoice;
         f.Tastes = old.Tastes;
+        f.Hunter = old.Hunter;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
         f.PlaceAt(plat, Math.Clamp(old.Base.X, plat.X1 + 4, plat.X2 - 4));
@@ -527,6 +529,7 @@ sealed partial class App : ApplicationContext
             Tastes = f.Tastes.Clone(),
             Fondness = f.Brain.UserFondness,
             Trust = f.Brain.CursorTrust,
+            Hunter = f.Hunter,
             Traits = f.Traits.Clone(),
         });
         _settings.Save();
@@ -548,6 +551,7 @@ sealed partial class App : ApplicationContext
     static void ApplySaved(Figure f, SavedFigure s)
     {
         if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
+        f.Hunter = s.Hunter;
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
         if (s.Trust is float trust) f.Brain.CursorTrust = Math.Clamp(trust, 0, 1);
     }
@@ -580,6 +584,7 @@ sealed partial class App : ApplicationContext
             Tastes = f.Tastes.Clone(),
             Fondness = f.Brain.UserFondness,
             Trust = f.Brain.CursorTrust,
+            Hunter = f.Hunter,
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
         }).ToList();
@@ -761,6 +766,21 @@ sealed partial class App : ApplicationContext
                     OpenStudio(p.Length > 1 ? p[1] : null, p.Length > 2 && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } sfi ? sfi.Id : 0);
                     break;
                 case "quick": ToggleQuick(); break;
+                case "hold":
+                    // hold <Name>: lift by the head (as if the user grabbed it)
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } hof)
+                    {
+                        var at = hof.Jt[J.Head] - new Vector2(0, 90 * _w.Scale);
+                        hof.Grab(J.Head);
+                        hof.Rag.PinTarget = at;
+                    }
+                    break;
+                case "drop":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } drf) drf.Release(Vector2.Zero);
+                    break;
+                case "hunter":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } hf2) MakeHunter(hf2, p.Length < 3 || p[2] != "off");
+                    break;
                 case "studiojs":
                     _studio?.Eval(line[(line.IndexOf(' ') + 1)..]);
                     break;

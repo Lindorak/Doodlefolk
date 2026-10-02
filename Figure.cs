@@ -100,6 +100,8 @@ sealed partial class Figure
     /// <summary>Likes and dislikes (Sims-style), editable.</summary>
     public Tastes Tastes;
     public string Team => FightSettings.Team(Color);
+    /// <summary>Hunts your cursor relentlessly and never forgives you.</summary>
+    public bool Hunter;
     public readonly Brain Brain;
     public readonly Ragdoll Rag;
 

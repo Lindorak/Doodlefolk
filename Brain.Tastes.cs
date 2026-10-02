@@ -24,7 +24,7 @@ sealed partial class Brain
     public readonly List<UserMemory> Memories = new();
     public float Age => _t0;
 
-    float FondBaseline => Math.Clamp(0.1f + (P.Sociability - 0.5f) * 0.4f + f.Tastes.Of(Thing.YourCursor) * 0.4f, -1, 1);
+    float FondBaseline => f.Hunter ? -1 : Math.Clamp(0.1f + (P.Sociability - 0.5f) * 0.4f + f.Tastes.Of(Thing.YourCursor) * 0.4f, -1, 1);
 
     /// <summary>Change how it feels about you, and remember why.</summary>
     void FeelUser(float delta, string what)
@@ -278,6 +278,52 @@ sealed partial class Brain
         World.Log($"{f.Name} heading down to y={b.p.Y:0} x={b.x:0}");
         var a = Anchor.On(env, b.p, b.x);
         Navigate(() => a.Resolve(env), 6 * S, true, () => { f.Emote("…", 1); Go(G.Idle, 2); }, WalkPurpose.Other);
+    }
+
+    // ---------------- held by the cursor ----------------
+
+    int _holderHits;
+
+    /// <summary>Picked up: fight, flail, enjoy it, sulk, wriggle or go limp, depending on who it is and how
+    /// it feels about you (and how long you've been holding it).</summary>
+    public HeldMood ChooseHeldMood(float heldT, HeldMood prev)
+    {
+        if (f.KO || f.Dead || Asleep) return HeldMood.Limp;
+        if (heldT < 0.05f) _holderHits = 0;
+        float like = f.Tastes.Of(Thing.BeingPickedUp), fond = UserFondness;
+        // Struggling is tiring: exhausted figures hang there for a moment before having another go.
+        if (prev is HeldMood.Flail or HeldMood.Fight or HeldMood.Wriggle && Stamina < 0.2f) return HeldMood.Limp;
+        if (prev != HeldMood.Limp) Stamina = MathF.Max(0, Stamina - (prev is HeldMood.Flail or HeldMood.Fight ? 0.03f : 0.01f));
+        if (f.Hunter || (fond < -0.4f && P.Aggression > 0.45f && P.Bravery > 0.4f)) return HeldMood.Fight;
+        if (like > 0.35f) return heldT > 8 && rng.NextDouble() < 0.5 ? HeldMood.Wriggle : HeldMood.Happy;
+        if (Fear > 0.4f || P.Bravery < 0.35f || like < -0.35f)
+            return prev == HeldMood.Flail && heldT > 4 && rng.NextDouble() < 0.3 ? HeldMood.Limp : HeldMood.Flail;
+        if (P.Aggression > 0.6f && fond < 0.2f) return HeldMood.Fight;
+        if (P.Energy < 0.35f) return rng.NextDouble() < 0.5 ? HeldMood.Grumpy : HeldMood.Limp;
+        if (P.Energy > 0.65f || P.Playfulness > 0.65f) return rng.NextDouble() < 0.7 ? HeldMood.Wriggle : HeldMood.Grumpy;
+        return heldT < 2 ? HeldMood.Wriggle : HeldMood.Grumpy;
+    }
+
+    public void OnHeldMood(HeldMood m)
+    {
+        string? e = m switch
+        {
+            HeldMood.Fight => "#@!", HeldMood.Flail => "!!", HeldMood.Happy => "♪", HeldMood.Grumpy => "hmph", HeldMood.Limp => "…", _ => null,
+        };
+        if (e != null && (f.CurrentEmote == null || m == HeldMood.Fight)) f.Emote(e, 1.1f);
+    }
+
+    /// <summary>Landed a punch on the hand holding it. Hunters that land enough wriggle free.</summary>
+    public void OnPunchedHolder(World w, float heldT)
+    {
+        _holderHits++;
+        if (_holderHits % 4 == 0) f.Emote(rng.NextDouble() < 0.5 ? "#@!" : "ha", 0.8f);
+        if (f.Hunter && _holderHits >= 8 && heldT > 3 && rng.NextDouble() < 0.5)
+        {
+            _holderHits = 0;
+            f.Emote("ha", 1.2f);
+            f.Release(new Vector2(rng.Range(-200, 200), -300) * S);
+        }
     }
 
     // ---------------- the user as a friend (or not) ----------------

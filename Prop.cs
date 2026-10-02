@@ -28,6 +28,8 @@ sealed class Prop
     /// <summary>Who last kicked/threw it (null = the user's mouse), and how long ago.</summary>
     public Figure? LastTouch;
     public bool ThrownByUser;
+    /// <summary>Thrown at your cursor by this figure (a hunter); hitting it knocks the cursor away.</summary>
+    public Figure? CursorThrow;
     public float SinceTouch = 99, SinceBounce = 99;
     /// <summary>Set when someone kicks/throws it at a teammate.</summary>
     public Figure? PassTarget;
@@ -78,6 +80,7 @@ sealed class Prop
         OnGround = false;
         LastTouch = by;
         if (by != null && ThrownByUser && SinceTouch < 6) by.Brain.GotBallFromUser(this);
+        CursorThrow = null;
         ThrownByUser = by == null;
         SinceTouch = 0;
     }
@@ -122,6 +125,18 @@ sealed class Prop
         _prevPos = Pos;
         _prevAngle = Angle;
         SinceTouch += dt;
+        if (CursorThrow != null)
+        {
+            if (SinceTouch > 2.5f || Holder != null) CursorThrow = null;
+            else if (Vector2.Distance(Pos, w.Cursor) < Radius + 9 * _s)
+            {
+                if (w.Fight.Enabled && w.Fight.PunchCursor) w.CursorPush += Vel * 0.16f;
+                w.Fx.Spark(w.Cursor, _s, w.Rng);
+                Vel = -Vel * 0.3f;
+                CursorThrow.Brain.OnHitCursor();
+                CursorThrow = null;
+            }
+        }
         SinceBounce += dt;
         if (Holder != null)
         {

@@ -199,6 +199,16 @@ sealed class Settings
     public bool Visitors { get; set; } = true;
     /// <summary>Big moments (a first date, a baby, a race won) are photographed for the album, town only.</summary>
     public bool AutoAlbum { get; set; } = true;
+    /// <summary>Background sound (rain, birds, the pond, the town talking…): off until you turn it on.</summary>
+    public bool AmbienceOn { get; set; }
+    public float AmbienceVolume { get; set; } = 0.6f;
+    /// <summary>Each channel's level (0..1), by name; missing ones are 1 (the lo-fi has its own switch).</summary>
+    public Dictionary<string, float> AmbienceLevels { get; set; } = new();
+    /// <summary>Channels follow the town (rain when it rains, crickets on warm nights); off: they just play at their levels.</summary>
+    public bool AmbienceFollow { get; set; } = true;
+    public bool LoFiOn { get; set; }
+    /// <summary>The lo-fi beat plays during focus sessions (when ambience is on).</summary>
+    public bool FocusLoFi { get; set; } = true;
     public int CratesWaiting { get; set; }
     public List<string> UnlockedHats { get; set; } = new();
     public Dictionary<string, DexEntry> Dex { get; set; } = new();

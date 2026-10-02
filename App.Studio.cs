@@ -184,7 +184,7 @@ sealed partial class App
                 pets = Pet.RareCoats.Select(c => new { coat = c, seen = _settings.Dex.ContainsKey("pet:" + c) }),
                 fish = FishDex(),
             }, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
-                tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
+                tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, ambience = AmbienceState(), steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
             modFiles = Directory.Exists(Mods.Dir) ? Directory.GetFiles(Mods.Dir, "*.json").Select(Path.GetFileName) : Enumerable.Empty<string?>(), beatDance = _settings.BeatDance, gesturesOnly = _settings.GesturesOnly, breakNudges = _settings.BreakNudges, breakMinutes = _settings.BreakMinutes, tourDone = _settings.TourDone, problems = ProblemsJson(), aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
             installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
             mods = new { loaded = Mods.Loaded, errors = Mods.Errors, items = Mods.ItemCount, hats = Mods.HatCount, jokes = Mods.Jokes.Count, dir = Mods.Dir }, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
@@ -449,6 +449,9 @@ sealed partial class App
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
                     break;
                 }
+                case "ambLevel":
+                    if (Enum.TryParse<AmbienceChannel>(Str(m, "key"), out var ach)) { _settings.AmbienceLevels[ach.ToString()] = Math.Clamp(Num(m, "v"), 0, 1); _ambAt = 0; }
+                    break;
                 case "album":
                 {
                     var file = Str(m, "file");
@@ -760,6 +763,11 @@ sealed partial class App
             case "beatDance": _settings.BeatDance = v.GetBoolean(); break;
             case "visitors": _settings.Visitors = v.GetBoolean(); break;
             case "townMood": _settings.TownMood = v.GetString() is "cozy" or "chaos" ? v.GetString()! : "classic"; break;
+            case "ambienceOn": _settings.AmbienceOn = v.GetBoolean(); _ambAt = 0; break;
+            case "ambienceVolume": _settings.AmbienceVolume = Math.Clamp(v.GetSingle(), 0, 1); _ambAt = 0; break;
+            case "ambienceFollow": _settings.AmbienceFollow = v.GetBoolean(); _ambAt = 0; break;
+            case "lofi": _settings.LoFiOn = v.GetBoolean(); if (_settings.LoFiOn) _settings.AmbienceOn = true; _ambAt = 0; break;
+            case "focusLofi": _settings.FocusLoFi = v.GetBoolean(); break;
             case "hemisphere": _settings.Hemisphere = v.GetString() is "north" or "south" ? v.GetString()! : "auto"; _nextTopmost = 0; break;
             case "gesturesOnly": _settings.GesturesOnly = World.Gestures = v.GetBoolean(); break;
             case "breakNudges": _settings.BreakNudges = v.GetBoolean(); break;

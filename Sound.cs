@@ -95,6 +95,23 @@ sealed class Sound : IDisposable
         if (_radio is { Done: true }) _radio = null;
     }
 
+    // ---------------- ambience ----------------
+
+    Ambience? _amb;
+    int _ambLoading;
+    /// <summary>The background-sound mixer, once built (it's built the first time ambience is switched on).</summary>
+    public Ambience? Ambience => _amb;
+
+    public void EnsureAmbience()
+    {
+        if (_amb != null || _out == null || Interlocked.Exchange(ref _ambLoading, 1) == 1) return;
+        Task.Run(() =>
+        {
+            try { var a = new Ambience(); _mixer.AddMixerInput(a); _amb = a; }
+            catch (Exception e) { World.Log($"ambience: {e.Message}"); }
+        });
+    }
+
     public void Dispose()
     {
         try { _out?.Stop(); _out?.Dispose(); } catch (Exception) { }

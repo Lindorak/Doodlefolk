@@ -1401,6 +1401,23 @@ PAGES.settings = {
     const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
     const voicesC = check("Babble voices", "They mumble along when they talk: their own little voice, higher or lower, quicker or shyer.", () => st().voices !== false, v => setS("voices", v));
     const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
+    // Ambience: background sound, channel by channel.
+    const amb = () => st().ambience || { channels: [] };
+    const AMB_NAMES = { Rain: "☔ Rain", Wind: "🌬 Wind", Pond: "🦆 The pond", Birds: "🐦 Birdsong", Crickets: "🦗 Crickets", Chatter: "💬 Town chatter", Fire: "🔥 Campfire", LoFi: "🎧 Lo-fi beat" };
+    const ambOn = check("Ambience", "Background sound that follows the town: rain when it rains, birds by day, crickets on warm nights, the pond, the campfire, everyone chatting. Made up on the fly like the rest.", () => amb().on, v => setS("ambienceOn", v));
+    const ambFollow = check("Follow the town", "Off: every channel just plays at its level, whatever the weather.", () => amb().follow !== false, v => setS("ambienceFollow", v));
+    const lofiC = check("Lo-fi beat", "A soft looping beat to work to.", () => amb().lofi, v => setS("lofi", v));
+    const focusLofiC = check("Lo-fi during focus sessions", "", () => amb().focusLofi !== false, v => setS("focusLofi", v));
+    const avv = h("span", { class: "val" });
+    const ambVol = range(0, 1, 0.01, amb().volume ?? 0.6, v => { avv.textContent = Math.round(v * 100) + "%"; sendSoon("ambvol", { t: "setting", key: "ambienceVolume", v }); });
+    const ambRows = (amb().channels || []).map(c => {
+      const meter = h("span", { class: "amb-meter" });
+      const r = range(0, 1, 0.01, c.level, v => sendSoon("amb" + c.key, { t: "ambLevel", key: c.key, v }));
+      const row = h("div", { class: "field amb-row" }, h("label", null, AMB_NAMES[c.key] || c.key), r, meter);
+      row.update = () => { const now = (amb().channels || []).find(x => x.key === c.key); meter.style.setProperty("--lvl", now ? Math.min(1, now.now) : 0); meter.title = now && now.now > 0 ? "Playing now" : "Quiet right now"; };
+      return row;
+    });
+    const ambBox = h("div", { class: "amb-box" }, ambFollow, h("div", { class: "field" }, h("label", null, "Ambience volume"), ambVol, avv), ambRows, lofiC, focusLofiC);
     const checks = [
       check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
       check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
@@ -1501,6 +1518,7 @@ PAGES.settings = {
       h("div", { class: "field" }, h("label", null, "Faces"), faceSel),
       gfxChecks,
       h("h2", null, "Sound"), soundC, voicesC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
+      ambOn, ambBox,
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
       h("h2", null, "Weather & time"),
@@ -1569,6 +1587,8 @@ PAGES.settings = {
       soundC.update(); voicesC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
+      ambOn.update(); ambFollow.update(); lofiC.update(); focusLofiC.update(); ambRows.forEach(r => r.update());
+      ambBox.style.display = amb().on ? "" : "none";
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
       dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update();
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
@@ -1668,6 +1688,7 @@ function buildQuick() {
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\Doodlefolk", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\Doodlefolk", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
       h("button", { class: "btn small", title: "25 minutes of quiet work together (Studio → Focus for more)", onclick: () => send({ t: "focus", op: S.settings.focus && S.settings.focus.on ? "stop" : "start", minutes: (S.settings.focus && S.settings.focus.length) || 25 }) }, "🎯 Focus"),
+      h("button", { class: "btn small", title: "Background sound: rain, birds, the pond, the town chatting (Studio → Settings → Sound to mix it)", onclick: () => send({ t: "setting", key: "ambienceOn", v: !(S.settings.ambience && S.settings.ambience.on) }) }, "🎧 Ambience"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,

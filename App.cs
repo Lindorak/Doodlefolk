@@ -250,7 +250,9 @@ sealed partial class App : ApplicationContext
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
 
-        if (!_selfTest && !_trailer && (_paused || _w.Env.FullscreenActive || QuietHours()))
+        bool hiddenNow = !_selfTest && !_trailer && (_paused || _w.Env.FullscreenActive || QuietHours());
+        AmbienceFrame(now, hiddenNow);
+        if (hiddenNow)
         {
             if (now > _reminderTick) { _reminderTick = now + 5; ReminderTick(hidden: true); }
             EndPress();

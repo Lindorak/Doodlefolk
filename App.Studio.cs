@@ -166,6 +166,7 @@ sealed partial class App
         albumCount = Album.Count,
         quests = QuestState(),
         memorials = MemorialState(),
+        toybox = ToyboxState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -449,6 +450,12 @@ sealed partial class App
                     }
                     _settings.Save();
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
+                    break;
+                }
+                case "toy":
+                {
+                    string tr = Toybox(Str(m, "op"));
+                    if (tr.Length > 0) PostAll(new { t = "toast", text = tr });
                     break;
                 }
                 case "quest":
@@ -782,6 +789,7 @@ sealed partial class App
             case "requests": _settings.Requests = v.GetBoolean(); break;
             case "mortality": _settings.Mortality = v.GetString() == "oldage" ? "oldage" : "never"; _nextTopmost = 0; break;
             case "ghosts": _settings.Ghosts = v.GetBoolean(); break;
+            case "toyboxMinutes": _settings.ToyboxMinutes = Math.Clamp(v.GetInt32(), 0, 60); break;
             case "hemisphere": _settings.Hemisphere = v.GetString() is "north" or "south" ? v.GetString()! : "auto"; _nextTopmost = 0; break;
             case "gesturesOnly": _settings.GesturesOnly = World.Gestures = v.GetBoolean(); break;
             case "breakNudges": _settings.BreakNudges = v.GetBoolean(); break;

@@ -198,6 +198,12 @@ sealed partial class App
             foreach (var f in _w.Figures.Take(3)) f.Brain.DebugTown(_w, "ride", "");
             _w.Weather.Start(WeatherKind.Storm, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
         });
+        At(640, "toybox", () =>
+        {
+            SetGravity("moon"); GiantBall(); Earthquake(); Gust(); Confetti(); SlowMotion();
+            Check("moon gravity makes things lighter", World.GravityMul < 0.5f && _w.Figures.All(f => f.Gravity < 1000 * f.S));
+        });
+        At(652, "toybox over", () => { SetGravity("normal"); Check("gravity goes back to normal", World.GravityMul == 1); });
         At(660, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });
         At(671, "remembered", () =>
         {

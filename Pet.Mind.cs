@@ -203,7 +203,7 @@ sealed partial class Pet
                 if (MathF.Abs(dx) > 70 * S) MoveTo(w, new Vector2(cur.X, Pos.Y), 1.3f, 50 * S);
                 else if (_t > 0.6f && Grounded && cur.Y < Pos.Y && cur.Y > Pos.Y - 200 * S)
                 {
-                    Vel = new Vector2(dx * 2.4f, -MathF.Sqrt(2 * 1900 * S * MathF.Max(30 * S, Pos.Y - cur.Y + 10 * S)));
+                    Vel = new Vector2(dx * 2.4f, -MathF.Sqrt(2 * PetG * MathF.Max(30 * S, Pos.Y - cur.Y + 10 * S)));
                     Grounded = false;
                     _t = 0;
                     _dur = 2;

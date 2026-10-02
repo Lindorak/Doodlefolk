@@ -79,6 +79,8 @@ sealed partial class World
     public float Scale = 1;
     /// <summary>Very old elders may pass away (the "old age" setting).</summary>
     public static bool OldAge;
+    /// <summary>The toybox's gravity (1 normal, 0.3 moon…), applied to everything that falls.</summary>
+    public static float GravityMul = 1;
     /// <summary>Something came out of the pond: the app records it (returns a few words for the diary, e.g. " A new kind!").</summary>
     public Func<Figure, FishKind, float, string>? FishCaught;
     /// <summary>Freeze-frame on big impacts: the simulation pauses while this counts down.</summary>

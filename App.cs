@@ -299,6 +299,7 @@ sealed partial class App : ApplicationContext
         VisitorFrame(now);
         QuestFrame(now);
         GhostFrame(now);
+        ToyboxFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -1342,6 +1343,7 @@ sealed partial class App : ApplicationContext
                     _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
                     break;
                 }
+                case "toy": World.Log("toy: " + Toybox(p.Length > 1 ? p[1] : "")); break;
                 case "ghost": World.Log("ghost: " + (_settings.Memorials.LastOrDefault() is { } gm ? GhostOf(gm) : "nobody to remember")); break;
                 case "passaway": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } paf) paf.PassAway(_w); break;
                 case "quest": World.Log("quest: " + NewQuest(null, p.Length > 1 && Enum.TryParse<QuestKind>(p[1], true, out var qk) ? qk : null)); break;

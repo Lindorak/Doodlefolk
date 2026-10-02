@@ -106,7 +106,7 @@ sealed partial class Pet
             {
                 Go(State.PounceBird, 2);
                 _other = b;
-                if (NavGraph.Lob(Pos, b.Pos, 1900 * S, S, out var v)) Vel = v; else Vel = new Vector2(dx * 3, -500 * S);
+                if (NavGraph.Lob(Pos, b.Pos, PetG, S, out var v)) Vel = v; else Vel = new Vector2(dx * 3, -500 * S);
                 Grounded = false;
                 Misdeed(Habit.ChaseBirds, w);
                 return;

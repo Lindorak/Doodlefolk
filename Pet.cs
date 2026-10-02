@@ -105,7 +105,9 @@ sealed partial class Pet
 
     public float Height => Kind switch { PetKind.Cat => 15, PetKind.Dog => 18, PetKind.Rabbit => 13, PetKind.Hamster => 7, _ => 15 } * S;
     public float Length => Kind switch { PetKind.Cat => 22, PetKind.Dog => 26, PetKind.Rabbit => 17, PetKind.Hamster => 10, _ => 9 } * S;
-    Mover MyMover => new(S * 0.8f, 1900 * S, 0, Height);
+    /// <summary>How fast an animal falls (toybox gravity included).</summary>
+    float PetG => 1900 * S * World.GravityMul;
+    Mover MyMover => new(S * 0.8f, PetG, 0, Height);
     public string Species(bool young = true) => Kind switch
     {
         PetKind.Cat => young && Age < 0.6f ? "kitten" : "cat",
@@ -176,7 +178,7 @@ sealed partial class Pet
         else
         {
             float py = Pos.Y;
-            Vel.Y = MathF.Min(Vel.Y + 1900 * S * dt, 3500 * S);
+            Vel.Y = MathF.Min(Vel.Y + PetG * dt, 3500 * S);
             Pos += Vel * dt;
             var (L, R, T) = env.BoundsAt(Pos.X);
             if (Pos.X < L + 6 * S) { Pos.X = L + 6 * S; Vel.X = MathF.Abs(Vel.X) * 0.3f; }
@@ -310,7 +312,7 @@ sealed partial class Pet
         {
             case MoveKind.Jump:
                 float toY = w.Nav.Get(e.To)?.Y ?? e.ToY;
-                if (NavGraph.Lob(Pos, new Vector2(e.ToX, toY), 1900 * S, S * 0.8f, out var v)) { Vel = v; Grounded = false; Facing = v.X >= 0 ? 1 : -1; }
+                if (NavGraph.Lob(Pos, new Vector2(e.ToX, toY), PetG, S * 0.8f, out var v)) { Vel = v; Grounded = false; Facing = v.X >= 0 ? 1 : -1; }
                 break;
             default:
                 _offEdge = true;

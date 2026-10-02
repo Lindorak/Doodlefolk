@@ -1310,6 +1310,20 @@ PAGES.toys = {
       h("div", { class: "row", style: { margin: "10px 0 4px" } }, ["a comfy couch", "trampoline", "pizza", "hammock", "campfire", "a giant beanbag", "a watching chair", "box"].map(t =>
         h("button", { class: "chip", onclick: () => send({ t: "summon", text: t }) }, t))));
 
+    // The toybox: just for fun, all temporary.
+    const tb = () => S.toybox || { gravity: "normal", minutes: 5 };
+    const gravChips = [["normal", "🌍 Normal"], ["low", "🪶 Low"], ["moon", "🌙 Moon"], ["floaty", "🎈 Floaty"], ["heavy", "🪨 Heavy"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); send({ t: "toy", op: "gravity:" + k }); } }, l); c.key = k; return c; });
+    const gravLine = h("span", { class: "hint" });
+    const tmv = h("span", { class: "val" });
+    const tbMin = range(0, 30, 1, tb().minutes, v => { tmv.textContent = v ? `${v} min` : "until I change it"; sendSoon("tbm", { t: "setting", key: "toyboxMinutes", v }); });
+    tmv.textContent = tb().minutes ? `${tb().minutes} min` : "until I change it";
+    add(root, h("h2", null, "Toybox"),
+      h("p", { class: "sub" }, "Just for fun. Gravity drifts back to normal after a while; everything else is over in a moment."),
+      h("div", { class: "field" }, h("label", null, "Gravity"), h("div", { class: "row tight" }, gravChips), gravLine),
+      h("div", { class: "field" }, h("label", null, "Lasts"), tbMin, tmv),
+      h("div", { class: "row" }, [["ball", "⚽ Giant ball"], ["gust", "🌬 Gust of wind"], ["quake", "🫨 Earthquake"], ["slow", "🐌 Slow motion"], ["confetti", "🎉 Confetti"]].map(([op, l]) =>
+        h("button", { class: "btn small", onclick: () => send({ t: "toy", op }) }, l))));
+
     add(root, h("h2", null, "On your desktop"));
     const list = h("div");
     const rows = [];
@@ -1358,6 +1372,8 @@ PAGES.toys = {
           itemSvg(c, c.hex), h("span", null, c.name)))));
     }
     return () => {
+      gravChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === tb().gravity); });
+      gravLine.textContent = tb().gravityLeft > 0 ? ` back to normal in ${Math.ceil(tb().gravityLeft / 60)} min` : "";
       for (const r of rows) {
         const it = S.items.find(x => x.id === r.id); if (!it) continue;
         setRange(r.size, it.size); if (idle(r.size)) r.sv.textContent = Math.round(it.size * 100) + "%";
@@ -1719,6 +1735,7 @@ function buildQuick() {
       h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\Doodlefolk", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
       h("button", { class: "btn small", title: "25 minutes of quiet work together (Studio → Focus for more)", onclick: () => send({ t: "focus", op: S.settings.focus && S.settings.focus.on ? "stop" : "start", minutes: (S.settings.focus && S.settings.focus.length) || 25 }) }, "🎯 Focus"),
       h("button", { class: "btn small", title: "Background sound: rain, birds, the pond, the town chatting (Studio → Settings → Sound to mix it)", onclick: () => send({ t: "setting", key: "ambienceOn", v: !(S.settings.ambience && S.settings.ambience.on) }) }, "🎧 Ambience"),
+      h("button", { class: "btn small", title: "Moon gravity (Studio → Things → Toybox for more toys)", onclick: () => send({ t: "toy", op: "gravity:" + (S.toybox && S.toybox.gravity === "moon" ? "normal" : "moon") }) }, "🌙 Moon gravity"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,

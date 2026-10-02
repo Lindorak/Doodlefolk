@@ -207,6 +207,8 @@ sealed class Settings
     public string Mortality { get; set; } = "never";
     /// <summary>On dark nights, someone remembered may come back as a ghost for a minute.</summary>
     public bool Ghosts { get; set; } = true;
+    /// <summary>How long the toybox's gravity lasts before drifting back to normal (0: until you change it).</summary>
+    public int ToyboxMinutes { get; set; } = 5;
     public List<Memorial> Memorials { get; set; } = new();
     public List<Quest> Quests { get; set; } = new();
     public int QuestsDone { get; set; }

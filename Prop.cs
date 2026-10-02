@@ -55,7 +55,7 @@ sealed class Prop
     public float Radius => 6.5f * _s * SizeMul;
     /// <summary>Relative to a default-size ball; 2D so mass grows with area.</summary>
     public float Mass => SizeMul * SizeMul * Kind switch { PropKind.BeachBall => 0.35f, PropKind.TennisBall => 0.5f, PropKind.Shuttlecock => 0.25f, _ => 1f };
-    public float Grav => 2300 * _s * Kind switch { PropKind.BeachBall => 0.55f, PropKind.Shuttlecock => 0.55f, _ => 1f };
+    public float Grav => 2300 * _s * World.GravityMul * Kind switch { PropKind.BeachBall => 0.55f, PropKind.Shuttlecock => 0.55f, _ => 1f };
     public bool Free => Holder == null && !Pinned;
 
     public static string KindName(PropKind k) => k switch

@@ -20,7 +20,7 @@ sealed class Projectile
         Life = kind == Ammo.Water ? 0.9f : kind == Ammo.Snow ? 2.5f : 1.8f;
     }
 
-    float Grav => (Kind == Ammo.Water ? 1400 : Kind == Ammo.Snow ? 900 : 500) * _s;
+    float Grav => (Kind == Ammo.Water ? 1400 : Kind == Ammo.Snow ? 900 : 500) * _s * World.GravityMul;
 
     /// <summary>Returns false when it's done (hit something or ran out).</summary>
     public bool Step(float dt, World w)

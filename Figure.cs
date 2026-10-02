@@ -145,7 +145,10 @@ sealed partial class Figure
     public readonly Brain Brain;
     public readonly Ragdoll Rag;
 
-    public readonly float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW, Gravity;
+    public readonly float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW;
+    readonly float _gravity;
+    /// <summary>How fast it falls (the toybox can change gravity, and every jump is planned with it).</summary>
+    public float Gravity => _gravity * World.GravityMul;
     public float WalkSpeed => (55 + 30 * Traits.Energy) * S * Style.SpeedMul * MoodSpeed;
     public float RunSpeed => (190 + 70 * Traits.Energy) * S * (Style.Run == RunStyle.Jogger ? 0.8f : Style.Run == RunStyle.Tippy ? 0.85f : 1) * MoodSpeed;
     public float Leg => Thigh + Shin;
@@ -224,7 +227,7 @@ sealed partial class Figure
         HeadR = 6.5f * S; NeckGap = 1.2f * S; Torso = 21 * S;
         UpperArm = 11 * S; ForeArm = 11 * S; Thigh = 14 * S; Shin = 14 * S;
         LineW = 3.3f * S;
-        Gravity = 2300 * S;
+        _gravity = 2300 * S;
         Rag = new Ragdoll(this);
         Brain = new Brain(this, rng);
         _rng = rng;

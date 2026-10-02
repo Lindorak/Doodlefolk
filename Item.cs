@@ -107,7 +107,7 @@ sealed partial class Item
             OnGround = false;
         }
         float py = Pos.Y;
-        Vel.Y = MathF.Min(Vel.Y + 2300 * _s * dt, 4000 * _s);
+        Vel.Y = MathF.Min(Vel.Y + 2300 * _s * World.GravityMul * dt, 4000 * _s);
         Pos += Vel * dt;
         Angle += Spin * dt;
         var (L, R, T) = env.BoundsAt(Pos.X);

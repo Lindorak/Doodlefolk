@@ -85,6 +85,7 @@ sealed partial class Pet
     void Think(World w, float dt)
     {
         _t += dt;
+        _t0 += dt;
         _leashTug = MathF.Max(0, _leashTug - dt);
         _ownerCheck -= dt;
         if (_ownerCheck <= 0) { _ownerCheck = 1; Bonding(w, 1); SocialTick(w, 1); }
@@ -337,8 +338,9 @@ sealed partial class Pet
         if (bird) { Add(0.9f, "perch", () => PerchSomewhere(w)); Add(0.25f + Boredom * 0.6f, "chatter", () => Chatter(w)); Add(0.2f, "preen", () => Go(State.Groom, _rng.Range(3, 6))); }
         if (Energy > 0.75f && !bird) Add((Young ? 0.5f : 0.12f) * Energy, "zoomies", () => { Go(State.Zoomies, _rng.Range(4, 8)); Shout(cat ? "!!" : "woof!"); });
         // Temptations (training holds them back).
-        if (cat || dog) foreach (var bp in w.Pets.Where(p => p.Kind == PetKind.Parrot && p != this && !p.Flying && !p.OnCursor && Vector2.Distance(p.Pos, Pos) < 700 * _s))
-            { if (Tempted(Habit.ChaseBirds, cat ? 0.55f : 0.3f)) Add(cat ? 2.2f : 1.2f, "stalk", () => BeginStalk(bp, w)); break; }
+        // (A hunt takes it out of them: a while between tries.)
+        if ((cat || dog) && _t0 > _huntAgain) foreach (var bp in w.Pets.Where(p => p.Kind == PetKind.Parrot && p != this && !p.Flying && !p.OnCursor && Vector2.Distance(p.Pos, Pos) < 700 * _s))
+            { if (Tempted(Habit.ChaseBirds, cat ? 0.45f : 0.2f)) Add(cat ? 1.3f : 0.6f, "stalk", () => { _huntAgain = _t0 + _rng.Range(90, 240); BeginStalk(bp, w); }); break; }
         if (dog) foreach (var cp in w.Pets.Where(p => p.Kind == PetKind.Cat && Vector2.Distance(p.Pos, Pos) < 600 * _s && PetBond(p) < 0.4f))
             { if (Tempted(Habit.ChasePets, 0.4f * Energy)) Add(1.4f, "chase cat", () => BeginChase(cp, w)); break; }
         if (cat && Boredom > 0.45f && Attention > 0.4f && Tempted(Habit.KnockingThings, 0.5f)) Add(1.2f, "knock", () => BeginKnock(w));
@@ -360,6 +362,7 @@ sealed partial class Pet
     }
 
     public string LastChoice = "";
+    float _t0, _huntAgain = 30;
 
     void WanderNear(World w)
     {

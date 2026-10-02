@@ -382,6 +382,7 @@ sealed partial class Brain
         float target = seg != null ? M.ClampIn(w.Cursor.X - f.Facing * 25 * S, seg.X1 + 6 * S, seg.X2 - 6 * S) : f.Base.X;
         _run = false;
         if (!MoveToward(target, 10 * S) && _t < 8) return true;
+        if (_t < 0.8f) { FaceTo(w.Cursor.X); f.SetAction(Act.Ready); return true; }   // a beat before throwing
         _bringToUser = false;
         FaceTo(w.Cursor.X);
         f.Emote("♥", 1.2f);

@@ -106,6 +106,8 @@ sealed partial class App
         }
     }
 
+    float _closest = 1e9f;
+
     void CatchFrame(UserGame g, float dt)
     {
         if (g.Ball is not { } b || !_w.Props.Contains(b)) { StopGame(); return; }
@@ -116,12 +118,14 @@ sealed partial class App
         if (b.Holder == null && !b.Pinned && !b.OnGround && b.LastTouch == who && g.Flight == 0) g.Flight = 1;
         if (g.Flight == 1 && !b.Pinned && b.Holder == null)
         {
+            _closest = MathF.Min(_closest, Vector2.Distance(b.Pos, _w.Cursor));
             if (Vector2.Distance(b.Pos, _w.Cursor) < b.Radius + 36 * _w.Scale)
             {
                 // Caught it: straight back to them in a friendly lob.
                 g.Streak++;
                 g.Best = Math.Max(g.Best, g.Streak);
                 if (g.Streak >= 10) _w.Sticker("catch10");
+                World.Log($"catch: you caught it (streak {g.Streak})");
                 g.Quiet = 0;
                 Vector2 to = who.Base - new Vector2(0, who.Height * 0.75f);
                 float t = Math.Clamp(Vector2.Distance(to, b.Pos) / (900 * _w.Scale), 0.55f, 1.3f);
@@ -129,12 +133,16 @@ sealed partial class App
                 b.LastTouch = null;
                 b.ThrownByUser = true;
                 b.OnGround = false;
+                b.PassTarget = who;     // they'll get under it and catch it
+                b.SinceTouch = 0;
                 g.Flight = 2;
                 World.Play(Sfx.BounceBall, b.Pos, 0.5f, 1.2f);
                 who.Emote(g.Streak >= 3 ? $"x{g.Streak}!" : _w.Rng.NextDouble() < 0.5 ? "nice catch!" : "yay!", 1);
             }
             else if (b.OnGround)
             {
+                World.Log($"catch: missed you by {_closest:0}px (cursor {_w.Cursor.X:0},{_w.Cursor.Y:0}, landed {b.Pos.X:0},{b.Pos.Y:0})");
+                _closest = 1e9f;
                 g.Flight = 0;
                 if (g.Streak > 0) who.Emote(g.Streak >= 3 ? $"aww, {g.Streak} in a row!" : "oops!", 1.2f);
                 g.Streak = 0;
@@ -156,6 +164,7 @@ sealed partial class App
     {
         if (_w.Game is not { Kind: GameKind.HideSeek } g || g.Count > 0 || !g.Hidden(fig)) return false;
         g.Found.Add(fig);
+        World.Log($"hide-and-seek: found {fig.Name} ({g.Found.Count}/{g.Players.Count})");
         fig.Brain.FoundByUser(_w, g);
         return true;
     }

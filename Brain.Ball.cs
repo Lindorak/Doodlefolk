@@ -324,6 +324,13 @@ sealed partial class Brain
         b.Holder = f;
         b.PassTarget = null;
         f.Carrying = b;
+        // Playing catch with you: that's a catch (if you threw it), and it goes back to you.
+        if (World.Current?.Game is { Kind: GameKind.Catch, Over: false } ug && ug.Thrower == f && ug.Ball == b)
+        {
+            _bringToUser = true;
+            if (ug.Flight == 2) { ug.Streak++; ug.Best = Math.Max(ug.Best, ug.Streak); World.Log($"catch: {f.Name} caught it (streak {ug.Streak})"); if (ug.Streak >= 3) f.Emote($"x{ug.Streak}!", 1); }
+            ug.Flight = 0;
+        }
         _carryX = f.Base.X + rng.Range(-250, 250) * S;
     }
 
@@ -364,7 +371,16 @@ sealed partial class Brain
             if (_selfCatch) v = new Vector2(f.Facing * rng.Range(0, 60) * S, -rng.Range(800, 1050) * S);
             else if (_fastball) v = FastballVelocity(f.HoldPoint, _throwAt, b.Grav);
             else if (!SolveLob(f.HoldPoint, _throwAt, b.Grav, 40 * S, 450 * S, 1900 * S, out v))
-                v = new Vector2(MathF.Sign(_throwAt.X - f.Base.X) * 800 * S, -700 * S);
+            {
+                // Too steep for a lob (say, straight up to your cursor): throw it so it peaks right there.
+                Vector2 d = _throwAt - f.HoldPoint;
+                if (d.Y < -10 * S)
+                {
+                    float vy = -MathF.Sqrt(2 * b.Grav * -d.Y), t = -vy / b.Grav;
+                    v = new Vector2(d.X / t, vy);
+                }
+                else v = new Vector2(MathF.Sign(_throwAt.X - f.Base.X) * 800 * S, -700 * S);
+            }
             f.Carrying = null;
             b.Release(v);
             b.LastTouch = f;

@@ -102,7 +102,7 @@ sealed partial class Pet
     };
     public Vector2 Centre => Pos + new Vector2(0, -Height * 0.5f);
     /// <summary>Where a leash clips on (the collar).</summary>
-    public Vector2 Collar => Kind == PetKind.Parrot ? Pos + new Vector2(0, -Height * 0.75f) : Pos + new Vector2(Facing * Length * 0.36f, -Height * 0.72f);
+    public Vector2 Collar => Kind == PetKind.Parrot ? Pos + new Vector2(0, -Height * 0.75f) : HeadPos + new Vector2(-Facing * Height * 0.12f, Height * 0.25f);
     public float LeashLength => 150 * _s;
 
     // ---------------- physics ----------------

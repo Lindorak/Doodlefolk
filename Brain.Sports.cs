@@ -33,8 +33,12 @@ sealed partial class Brain
     }
 
     /// <summary>Asked to join a game.</summary>
+    /// <summary>Already promised elsewhere: a game with you, or a tournament.</summary>
+    bool Engaged => (World.Current.Game is { Over: false } ug && ug.Players.Contains(f)) || (World.Current.Tourney is { Over: false } tn && tn.Entrants.Contains(f));
+
     bool InvitePlay(Figure from, Sport s)
     {
+        if (Engaged) return false;
         bool free = f.Mode == Mode.Control && f.Grounded && Match == null && !InFight && f.Carrying == null &&
                     _g is G.Idle or G.Watch or G.Walk or G.SitFloor or G.Juggle or G.Dribble;
         if (!free) return false;

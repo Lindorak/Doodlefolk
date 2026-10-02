@@ -108,6 +108,7 @@ sealed partial class Brain
 
     bool AcceptSpar(Figure from)
     {
+        if (Engaged) return false;
         bool free = f.Mode == Mode.Control && f.Grounded && !f.Climbing && f.Carrying == null && _g is G.Idle or G.Watch or G.Walk or G.SitFloor;
         if (!free || !Rules.Enabled) return false;
         float yes = 0.3f + P.Playfulness * 0.4f + P.Aggression * 0.25f - (1 - Stamina) * 0.5f;

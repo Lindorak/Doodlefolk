@@ -109,6 +109,7 @@ sealed partial class Brain
     /// <summary>Another figure asks to hang out. Returns whether we said yes.</summary>
     bool Invite(Figure from, SocialKind kind, float dur)
     {
+        if (Engaged) return false;
         bool free = f.Mode == Mode.Control && f.Grounded && !f.Climbing && f.Carrying == null &&
                     (_g is G.Idle or G.Watch || (_g == G.Walk && _purpose is WalkPurpose.Wander or WalkPurpose.Explore));
         if (!free) return false;

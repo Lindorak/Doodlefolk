@@ -60,7 +60,7 @@ sealed class Weather
         int m = DateTime.Now.Month;
         double snow = m is 12 or 1 or 2 ? 0.65 : m is 11 or 3 ? 0.25 : 0;
         if (rng.NextDouble() < snow) return WeatherKind.Snow;
-        return rng.NextDouble() < 0.3 ? WeatherKind.Storm : WeatherKind.Rain;
+        return rng.NextDouble() < 0.3 && !World.Calm ? WeatherKind.Storm : WeatherKind.Rain;
     }
 
     public void Step(World w, float dt, double now, string mode)
@@ -79,7 +79,7 @@ sealed class Weather
         if (Kind == WeatherKind.Storm && Intensity > 0.5f && now > _thunderAt)
         {
             _thunderAt = now + rng.Range(7, 20);
-            Flash = 1;
+            Flash = World.Calm ? 0 : 1;
             _rumbleAt = now + rng.Range(0.3f, 1.6f);
             w.OnThunder();
         }

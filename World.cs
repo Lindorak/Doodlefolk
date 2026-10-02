@@ -44,6 +44,8 @@ sealed partial class World
     public static bool LassoCursor = true;
     /// <summary>Figures have jobs and earn coins (setting); how many years they age per real day (0: they don't).</summary>
     public static bool Jobs = true;
+    /// <summary>Accessibility: calm mode (no fights, flashes or cursor hunting) and team badges for colour-blind players.</summary>
+    public static bool Calm, ColourBlind;
     /// <summary>The temperature outside in °C, when the real weather is on (null otherwise).</summary>
     public float? TempC;
     public static float LifePace;

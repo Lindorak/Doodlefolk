@@ -246,7 +246,7 @@ sealed partial class Pet
     void StartScuffle(Pet o, World w, string why = "")
     {
         // After a scrap, both need a good while before they'd fight again.
-        if (World.Now < _calmUntil || World.Now < o._calmUntil) { FleeFrom(o, w); return; }
+        if (World.Calm || World.Now < _calmUntil || World.Now < o._calmUntil) { FleeFrom(o, w); return; }
         _calmUntil = o._calmUntil = World.Now + _rng.Range(480, 900);
         if (o._st == State.Scuffle || o.Held || Held || Kind == PetKind.Parrot && o.Kind == PetKind.Parrot && _rng.NextDouble() < 0.5) return;
         foreach (var p in new[] { this, o })

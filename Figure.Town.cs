@@ -18,6 +18,22 @@ sealed partial class Figure
         r.Disc(foot, 1.3f * S, Gfx.Darker(wood, 0.3f));
     }
 
+    /// <summary>Colour-blind help: each colour team wears its own shape on its chest.</summary>
+    public static string TeamSymbol(string team) => team switch
+    {
+        "Red" => "▲", "Blue" => "●", "Green" => "■", "Orange" => "◆", "Purple" => "★", "Yellow" => "✚",
+        "Cyan" => "⬟", "Pink" => "♥", "Black" => "✖", "White" => "○", _ => "•",
+    };
+
+    void DrawTeamBadge(Renderer r, float fade)
+    {
+        if (!World.ColourBlind || Mode is Mode.Spawning || fade < 0.5f) return;
+        Vector2 at = Vector2.Lerp(Jt[J.Neck], Jt[J.Pelvis], 0.38f);
+        float sz = 7.5f * S;
+        r.Disc(at, sz * 0.62f, new Color4(1, 1, 1, 0.85f * fade));
+        r.Text(TeamSymbol(Team), at + new Vector2(0, -0.2f * S), sz, new Color4(0.1f, 0.1f, 0.1f, fade));
+    }
+
     void DrawDream(Renderer r)
     {
         if (Dream is not { } text || Mode != Mode.Control) return;

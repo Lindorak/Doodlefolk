@@ -37,6 +37,56 @@ sealed partial class Brain
         Write("shaken", like > 0.35f ? V("You shook me off a window. Again!", "You flung me off a window!! Again again!") : V("You shook me off a window. Rude.", "Got shaken off a window. I'm fine!", "You shook me off a window. Noted.", "Fell off a shaking window. My heart."), like > 0.35f ? "★" : "⚡", 900);
     }
 
+    float _comfortAt = -1;
+    string _reminderText = "";
+    float _reminderUntil = -1;
+
+    /// <summary>A download just finished (only its kind is known: "a picture", "a document"…).</summary>
+    public void OnDownload(string kind, World w)
+    {
+        f.LookAt = new Vector2(w.Env.Virtual.Right - 60, w.Env.Virtual.Bottom - 20);
+        f.Emote(V($"download done! ({kind})", $"YOUR DOWNLOAD'S DONE!! {kind}!", $"download finished. {kind}.", $"um, your {kind.Replace("a ", "").Replace("some ", "")} finished downloading…", $"{kind} has arrived"), 2.2f);
+        if (_g is G.Idle or G.SitFloor or G.Walk && P.Playfulness > 0.45f) Go(G.Cheer, 0.8f);
+    }
+
+    /// <summary>You seem frustrated (rage clicks, windows slammed shut): come over and be kind.</summary>
+    public void ComfortUser(World w, string why)
+    {
+        if (f.Mode != Mode.Control || !f.Grounded) return;
+        f.Emote(V("you okay?", "HEY! YOU OKAY?!", "…rough day?", "um… are you alright?", "a storm in you?"), 1.6f);
+        ComeToCursor(w);
+        _comfortAt = _t0 + 4;
+        Write("comfort", V("You seemed frustrated, so I went to check on you.", "You looked SO frustrated! I went to cheer you up!", "You were clicking like mad. I went over. Whatever.", "You seemed upset… I hope you're okay.", "I saw your storm and went to sit by it."), "♥", 1800);
+    }
+
+    /// <summary>A reminder you set is due: bring it to you.</summary>
+    public void BringReminder(string text, World w)
+    {
+        if (f.Mode != Mode.Control) return;
+        if (_g == G.Sleep) Go(G.Idle, 0.5f);
+        ComeToCursor(w);
+        _reminderText = text;
+        _reminderUntil = _t0 + 25;
+        f.Emote($"⏰ {text}", 6);
+        World.Play(Sfx.Pip, f.Base, 0.5f, 1.3f);
+    }
+
+    void DesktopTick(World w)
+    {
+        if (_comfortAt > 0 && _t0 > _comfortAt)
+        {
+            _comfortAt = -1;
+            f.Emote(new[] { "deep breaths…", "it'll be okay ♥", "want a hug?", "take a break?", "you've got this!" }[rng.Next(5)], 2.4f);
+            f.LookAt = w.Cursor;
+            if (_g is G.Idle or G.Watch) Go(G.Wave, 1.2f);
+        }
+        if (_reminderUntil > 0)
+        {
+            if (_t0 > _reminderUntil) _reminderUntil = -1;
+            else if (f.CurrentEmote == null && Vector2.Distance(f.Jt[J.Head], w.Cursor) < 260 * S) { f.Emote($"⏰ {_reminderText}", 5); f.LookAt = w.Cursor; if (_g is G.Idle or G.Watch) Go(G.Wave, 1); }
+        }
+    }
+
     /// <summary>The window it was standing on disappeared (closed or minimised).</summary>
     public void OnFloorVanished()
     {

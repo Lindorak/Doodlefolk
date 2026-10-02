@@ -170,6 +170,20 @@ sealed class Settings
     public string LifePace { get; set; } = "off";
     /// <summary>The town holds festivals, talent shows and race days now and then.</summary>
     public bool Events { get; set; } = true;
+    /// <summary>The name of the cast in play (others are kept in the casts folder).</summary>
+    public string CastName { get; set; } = "My cast";
+    /// <summary>Accessibility: calm mode, colour-blind team badges.</summary>
+    public bool Calm { get; set; }
+    public bool ColourBlind { get; set; }
+    /// <summary>Quiet hours: hide everyone on these days between these times.</summary>
+    public bool PauseSchedule { get; set; }
+    /// <summary>Desktop reactions: downloads finishing (only the file's kind is noticed), you getting frustrated.</summary>
+    public bool NoticeDownloads { get; set; } = true;
+    public bool NoticeFrustration { get; set; } = true;
+    public List<Reminder> Reminders { get; set; } = new();
+    public string PauseFrom { get; set; } = "09:00";
+    public string PauseTo { get; set; } = "17:00";
+    public List<int> PauseDays { get; set; } = new() { 1, 2, 3, 4, 5 };
     /// <summary>Where to take the real weather from (when the weather is set to "real").</summary>
     public string WeatherPlace { get; set; } = "";
     public double? WeatherLat { get; set; }
@@ -192,6 +206,7 @@ sealed class Settings
     public List<SavedItem> Items { get; set; } = new();
     public List<SavedPet> Pets { get; set; } = new();
 
+    public static string FilePath => PathOnDisk;
     static string PathOnDisk => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StickFight", "settings.json");
 

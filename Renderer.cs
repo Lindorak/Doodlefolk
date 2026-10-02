@@ -114,6 +114,41 @@ sealed class Renderer : IDisposable
         finally { cpu.Unmap(); }
     }
 
+    ID2D1Bitmap1? _capTarget, _capCpu;
+    int _capW, _capH;
+
+    /// <summary>Draw something offscreen and copy the pixels out (BGRA, tightly packed) for recording a clip.</summary>
+    public void Capture(System.Drawing.RectangleF area, Action<System.Drawing.RectangleF> draw, Color4 background, float zoom, byte[] dst, int w, int h)
+    {
+        var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
+        if (_capTarget == null || _capW != w || _capH != h)
+        {
+            _capTarget?.Dispose(); _capCpu?.Dispose();
+            _capTarget = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(w, h), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+            _capCpu = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI(w, h), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.CpuRead | BitmapOptions.CannotDraw));
+            _capW = w; _capH = h;
+        }
+        var old = _ctx.Target;
+        _ctx.Target = _capTarget;
+        _ctx.BeginDraw();
+        _ctx.Clear(background);
+        _ctx.Transform = Matrix3x2.CreateTranslation(-area.X, -area.Y) * Matrix3x2.CreateScale(zoom);
+        draw(area);
+        _ctx.Transform = Matrix3x2.Identity;
+        _ctx.EndDraw();
+        _ctx.Target = old;
+        _capCpu!.CopyFromBitmap(_capTarget);
+        var map = _capCpu.Map(MapOptions.Read);
+        try
+        {
+            for (int y = 0; y < h; y++)
+                System.Runtime.InteropServices.Marshal.Copy(map.Bits + y * (int)map.Pitch, dst, y * w * 4, w * 4);
+        }
+        finally { _capCpu.Unmap(); }
+    }
+
+    public void EndCapture() { _capTarget?.Dispose(); _capCpu?.Dispose(); _capTarget = _capCpu = null; }
+
     public void Resize(Rectangle bounds)
     {
         if (bounds == _bounds) return;

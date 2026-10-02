@@ -311,7 +311,7 @@ function crumbs() {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(","),
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name).join(",") : ""),
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -331,6 +331,20 @@ PAGES.cast = {
     });
     grid.append(newFigureCard());
     add(root, grid);
+    // Save slots.
+    const casts = S.casts || { current: "", others: [] };
+    const nameIn = h("input", { type: "text", placeholder: "Name", maxlength: 40, style: { width: "180px" } });
+    add(root, h("h2", null, "Casts"),
+      h("p", { class: "sub" }, `You're playing "${casts.current}". Keep several casts and switch between them: the one you leave is saved just as it is, with its things and pets.`),
+      h("div", { class: "row" }, nameIn,
+        h("button", { class: "btn small", onclick: () => nameIn.value.trim() && send({ t: "cast", op: "saveas", name: nameIn.value.trim() }) }, "Save this cast as…"),
+        h("button", { class: "btn small", onclick: () => nameIn.value.trim() && send({ t: "cast", op: "new", name: nameIn.value.trim() }) }, "Start a new cast")),
+      casts.others.length ? h("div", { class: "grid" }, casts.others.map(c => h("div", { class: "card" },
+        h("div", { class: "name" }, c.name),
+        h("div", { class: "hint" }, [c.figures.join(", "), c.pets ? `${c.pets} pet${c.pets > 1 ? "s" : ""}` : "", c.saved ? `saved ${c.saved}` : ""].filter(Boolean).join(" · ")),
+        h("div", { class: "row" },
+          h("button", { class: "btn small primary", onclick: () => send({ t: "cast", op: "load", name: c.name }) }, "Switch to this cast"),
+          armed("Delete", "Sure?", () => send({ t: "cast", op: "delete", name: c.name }), "btn small danger"))))) : h("p", { class: "hint" }, "No other casts yet."));
     return () => {
       for (const c of cards) {
         const f = fig(c.id); if (!f) continue;
@@ -344,6 +358,37 @@ PAGES.cast = {
   },
 };
 
+/** Read a calendar (.ics) file here in the page and send the next month's events as reminders. */
+function importIcs(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result).replace(/\r?\n[ \t]/g, "");
+    const events = [];
+    for (const block of text.split("BEGIN:VEVENT").slice(1)) {
+      const body = block.split("END:VEVENT")[0];
+      const summary = (body.match(/^SUMMARY[^:]*:(.*)$/m) || [])[1];
+      const start = body.match(/^DTSTART([^:]*):(\d{8})(T(\d{6})(Z?))?/m);
+      if (!summary || !start) continue;
+      const d = start[2], t = start[4] || "090000", utc = start[5] === "Z";
+      const iso = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}${utc ? "Z" : ""}`;
+      const when = new Date(iso);
+      if (isNaN(when)) continue;
+      const remindAt = new Date(when.getTime() - 10 * 60000);
+      if (remindAt < new Date() || remindAt - new Date() > 31 * 86400000) continue;
+      const pad = n => String(n).padStart(2, "0");
+      events.push({ text: summary.replace(/\\,/g, ",").replace(/\\n/g, " ").trim().slice(0, 100) + ` at ${pad(when.getHours())}:${pad(when.getMinutes())}`,
+        when: `${remindAt.getFullYear()}-${pad(remindAt.getMonth() + 1)}-${pad(remindAt.getDate())}T${pad(remindAt.getHours())}:${pad(remindAt.getMinutes())}` });
+    }
+    send({ t: "reminder", op: "import", items: events.slice(0, 100) });
+    input.value = "";
+  };
+  reader.readAsText(file);
+}
+
+const TEAM_SYM = { Red: "▲", Blue: "●", Green: "■", Orange: "◆", Purple: "★", Yellow: "✚", Cyan: "⬟", Pink: "♥", Black: "✖", White: "○" };
+
 function newFigureCard() {
   const preset = select([{ value: -1, label: "Random personality" }, ...INIT.presets.map((p, i) => ({ value: i, label: `${p.name}: ${p.blurb}` })),
     { value: -2, label: "Cursor hunter: hunts your cursor, relentlessly" }], -1, () => {});
@@ -352,7 +397,7 @@ function newFigureCard() {
     h("div", { class: "name" }, "Draw someone new"),
     h("div", { class: "hint" }, "Pick a colour to draw them in:"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) =>
-      h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => spawn(i) }))),
+      h("button", { class: "sw", title: p.name, style: { background: p.hex, color: "#111", "font-size": "11px", "text-shadow": "0 0 2px #fff" }, onclick: () => spawn(i) }, S.settings.colourBlind ? TEAM_SYM[p.name] || "" : ""))),
     preset,
     h("div", { class: "row" },
       h("button", { class: "btn small primary", onclick: () => spawn(-1) }, "Surprise me"),
@@ -1261,6 +1306,22 @@ PAGES.settings = {
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "talent" }) }, "🎤 Talent show"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "race" }) }, "🏁 Race day"),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "stop" }) }, "Stop"));
+    const calmC = check("Calm mode", "No fights, tournaments, cursor hunting or lassoing your cursor, no lightning flashes or thunderstorms, no freeze-frames on hits, and pets don't scrap.", () => !!st().calm, v => setS("calm", v));
+    const cbC = check("Colour-blind badges", "Each colour team wears its own shape on its chest (▲ red, ● blue, ■ green, ◆ orange, ★ purple, ✚ yellow, ⬟ cyan, ♥ pink, ✖ black, ○ white), and the colour swatches show them too.", () => !!st().colourBlind, v => setS("colourBlind", v));
+    const quietC = check("Quiet hours", "Hide everyone at set times (say, while you work) and bring them back afterwards.", () => !!st().pauseSchedule, v => setS("pauseSchedule", v));
+    const qFrom = h("input", { type: "time", onchange: () => setS("pauseFrom", qFrom.value) }), qTo = h("input", { type: "time", onchange: () => setS("pauseTo", qTo.value) });
+    const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayChips = DAYS.map((d, i) => { const c = h("button", { class: "chip", onclick: () => { touched(c); const cur = new Set(st().pauseDays || []); cur.has(i) ? cur.delete(i) : cur.add(i); setS("pauseDays", [...cur].sort()); } }, d); c.key = i; return c; });
+    const quietBox = h("div", null, h("div", { class: "field" }, h("label", null, "From"), qFrom, h("label", null, "to"), qTo), h("div", { class: "row tight" }, dayChips));
+    const dlC = check("Notice downloads", "A cheer when a download finishes. Only the kind of file is noticed (a picture, a document…), from its extension; nothing is opened or read.", () => st().noticeDownloads !== false, v => setS("noticeDownloads", v));
+    const frC = check("Notice when you're frustrated", "Lots of clicks in one spot, or a run of windows slammed shut: a friend comes over to check you're okay.", () => st().noticeFrustration !== false, v => setS("noticeFrustration", v));
+    const remText = h("input", { type: "text", placeholder: "Remind me to…", maxlength: 120, style: { width: "220px" } });
+    const remWhen = h("input", { type: "datetime-local" });
+    const remRepeat = h("select", null, [["none", "Once"], ["daily", "Every day"], ["weekdays", "Weekdays"], ["weekly", "Every week"]].map(([v, l]) => h("option", { value: v }, l)));
+    const remAdd = h("button", { class: "btn small", onclick: () => { if (remText.value.trim() && remWhen.value) { send({ t: "reminder", op: "add", text: remText.value.trim(), when: remWhen.value, repeat: remRepeat.value }); remText.value = ""; } } }, "Add reminder");
+    const remList = h("div", { class: "thoughts" });
+    const icsIn = h("input", { type: "file", accept: ".ics,text/calendar", style: { display: "none" }, onchange: () => importIcs(icsIn) });
+    let remSig = "";
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1304,6 +1365,12 @@ PAGES.settings = {
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
       eventsC, hapBtns, hapLine,
       h("p", { class: "hint" }, "With ageing on, figures count their years: kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
+      h("h2", null, "Reminders & your desktop"),
+      h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month. Everything stays on this PC."),
+      h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
+      remList, dlC, frC,
+      h("h2", null, "Accessibility & quiet hours"),
+      calmC, cbC, quietC, quietBox,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1325,7 +1392,18 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update();
+      const rs = JSON.stringify(st().reminders || []);
+      if (rs !== remSig) {
+        remSig = rs;
+        const list = st().reminders || [];
+        remList.replaceChildren(...(list.length ? list.map(r => h("div", { class: "row tight" }, h("span", null, `⏰ ${r.when} · ${r.text}${r.repeat !== "none" ? ` (${r.repeat})` : ""}`),
+          h("button", { class: "btn small", onclick: () => send({ t: "reminder", op: "delete", id: r.id }) }, "Remove"))) : [h("p", { class: "hint" }, "No reminders yet.")]));
+      } calmC.update(); cbC.update(); quietC.update();
+      quietBox.style.display = st().pauseSchedule ? "" : "none";
+      if (idle(qFrom)) qFrom.value = st().pauseFrom || "09:00";
+      if (idle(qTo)) qTo.value = st().pauseTo || "17:00";
+      dayChips.forEach(c => { if (idle(c)) c.classList.toggle("on", (st().pauseDays || []).includes(c.key)); });
       realBox.style.display = st().weather === "real" ? "" : "none";
       if (idle(placeIn) && !placeIn.value) placeIn.value = st().weatherPlace || "";
       wxStatus.textContent = st().weather === "real" ? (st().weatherStatus || (st().weatherPlace ? st().weatherPlace : "Type your town or city and press \"Use this place\".")) : "";
@@ -1379,6 +1457,7 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Catch" }) }, "⚾ Catch"),
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
+      h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\StickFight", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
       stopG),
     gameNote,
     h("h3", null, "Pets"),

@@ -30,7 +30,7 @@ sealed partial class Brain
 
     (float, Action)? FightOption(World w)
     {
-        if (!Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50 || Baby) return null;
+        if (World.Calm || !Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50 || Baby) return null;
         Figure? best = null;
         float bestScore = 0;
         bool bestSpar = false;
@@ -415,6 +415,9 @@ sealed partial class Brain
         AddAffinity(o, spar ? 0.05f : -0.05f);
         Stamina = MathF.Max(0, Stamina - 0.05f);
     }
+
+    /// <summary>Calm mode switched on mid-fight: stop.</summary>
+    public void CalmDown() { EndFight(); Go(G.Idle, 1.5f); }
 
     void EndFight()
     {

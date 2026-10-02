@@ -58,6 +58,7 @@ sealed partial class Figure
         DrawLookFront(r, fade);
         DrawGear(r, J.ElbowN, J.HandN, 1);
         DrawCane(r, fade);
+        DrawTeamBadge(r, fade);
         DrawRod(r, fade);
         DrawHealthBar(r);
         if (fade > 0.5f) DrawEmote(r);

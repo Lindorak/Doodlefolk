@@ -23,7 +23,7 @@ sealed partial class App
 
         var by = _w.CursorLasso;
         if (by == null) { _grabStart = -1; return; }
-        bool unsafeNow = !_settings.LassoCursor || Control.MouseButtons != MouseButtons.None || _w.Env.FullscreenActive || _fakeCursor != null || !_w.Figures.Contains(by) || by.Mode != Mode.Control;
+        bool unsafeNow = !_settings.LassoCursor || World.Calm || Control.MouseButtons != MouseButtons.None || _w.Env.FullscreenActive || _fakeCursor != null || !_w.Figures.Contains(by) || by.Mode != Mode.Control;
         if (_grabStart < 0)
         {
             if (unsafeNow) { EndCursorLasso(by, true); return; }

@@ -186,7 +186,7 @@ sealed partial class App : ApplicationContext
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
 
-        if (_paused || _w.Env.FullscreenActive)
+        if (_paused || _w.Env.FullscreenActive || QuietHours())
         {
             EndPress();
             _overlay.SetClickThrough(true);
@@ -223,6 +223,8 @@ sealed partial class App : ApplicationContext
         PhotoFrame(now);
         WeatherFrame(dt, now);
         HappeningFrame(dt, now);
+        DesktopFrame(now);
+        RecordFrame(now);
         SmartFps(dt);
         if (World.Debug && now > _nextAuditSample)
         {
@@ -238,6 +240,7 @@ sealed partial class App : ApplicationContext
         _acc += dt;
         int n = (int)(_acc / World.Dt);
         if (n > 8) { n = 8; _acc = 0; } else _acc -= n * World.Dt;
+        if (World.Calm) _w.HitStop = 0;
         if (_w.HitStop > 0)
         {
             // Freeze-frame on a big hit.
@@ -1203,6 +1206,11 @@ sealed partial class App : ApplicationContext
                     if (p.Length > 2 && p[1] == "off") { _settings.WeatherMode = p[2]; _settings.WeatherPlace = ""; _settings.WeatherLat = _settings.WeatherLon = null; RealWeatherStatus = ""; }
                     else SetWeatherPlace(string.Join(' ', p.Skip(1)));
                     break;
+                case "record": World.Log("record: " + StartRecording(p.Length > 1 ? int.Parse(p[1]) : 10, Path.GetTempPath())); break;
+                case "msg":
+                    // msg {json}: as if the Studio sent it (debug).
+                    OnStudioMessage(System.Text.Json.JsonDocument.Parse(line[(line.IndexOf(' ') + 1)..]).RootElement.Clone());
+                    break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;
@@ -1402,6 +1410,7 @@ sealed partial class App : ApplicationContext
             _overlay.Dispose();
             World.Log("dispose: overlay");
             _w.Sound?.Dispose();
+            _downloads?.Dispose();
             _w.Screen?.Dispose();
         }
         base.Dispose(disposing);

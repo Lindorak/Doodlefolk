@@ -89,6 +89,7 @@ sealed partial class App
 
     string StartTourney()
     {
+        if (World.Calm) return "Calm mode is on: no tournaments";
         if (_w.Tourney is { Over: false }) return "A tournament's already on";
         var t = Tournament.Start(_w, out string why);
         if (t == null) return why;

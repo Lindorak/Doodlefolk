@@ -237,6 +237,7 @@ sealed partial class Brain
         UpdateFamily(dt, w);
         UpdateDreams(w);
         TidyOutdoors(w);
+        DesktopTick(w);
         if (_g is G.Groove or G.DanceWith || (_g == G.UseItem && _verb == Verb.Dance)) Practice(SkillKind.Dancing, dt * 0.002f, true);
 
         Vector2 cur = w.Cursor;

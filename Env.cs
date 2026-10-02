@@ -38,6 +38,7 @@ sealed class Env
     public readonly List<Wall> Walls = new();
     public bool FullscreenActive;
     public int WindowCount => _wins.Count;
+    public IEnumerable<IntPtr> Hwnds => _rects.Keys;
     static readonly int[] Sides = { -1, 1 };
     public float MinHeadroom = 140;
 

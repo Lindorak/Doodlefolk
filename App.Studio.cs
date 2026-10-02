@@ -138,9 +138,19 @@ sealed partial class App
         back = (p.Back ?? Array.Empty<Shape>()).Select(s => new { k = s.Kind.ToString(), p = s.P, c = s.Col, w = s.W }),
     });
 
+    double _castsAt;
+    object? _castsCache;
+    object Casts()
+    {
+        double now = _clock.Elapsed.TotalSeconds;
+        if (_castsCache == null || now > _castsAt) { _castsCache = CastsJson(); _castsAt = now + 5; }
+        return _castsCache;
+    }
+
     object StudioState() => new
     {
         t = "state",
+        casts = Casts(),
         game = _w.Game is { } gm ? new { kind = gm.Kind.ToString(), players = gm.Players.Count, found = gm.Found.Count, streak = gm.Streak, best = gm.Best } : null,
         figures = _w.Figures.Select(FigureJson),
         items = _w.Items.Select(i => new
@@ -165,7 +175,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -306,6 +316,43 @@ sealed partial class App
                     break;
                 case "fig": FigureEdit(m); break;
                 case "pet": PetEdit(m); break;
+                case "cast":
+                {
+                    string cn = Str(m, "name");
+                    string res = Str(m, "op") switch { "saveas" => SaveCastAs(cn), "new" => SwitchCast(cn, true), "load" => SwitchCast(cn, false), "delete" => DeleteCast(cn), _ => "" };
+                    _castsAt = 0;
+                    PostAll(new { t = "toast", text = res });
+                    break;
+                }
+                case "reminder":
+                {
+                    string res = "";
+                    var ci = System.Globalization.CultureInfo.InvariantCulture;
+                    var local = System.Globalization.DateTimeStyles.AssumeLocal;
+                    switch (Str(m, "op"))
+                    {
+                        case "add":
+                            res = DateTime.TryParse(Str(m, "when"), ci, local, out var when)
+                                ? AddReminder(Str(m, "text"), when, Str(m, "repeat") is { Length: > 0 } rp ? rp : "none") : "Pick a date and time.";
+                            break;
+                        case "delete": _settings.Reminders.RemoveAll(r => r.Id == m.GetProperty("id").GetInt32()); _settings.Save(); res = "Removed."; break;
+                        case "import":
+                        {
+                            int n = 0;
+                            foreach (var e in m.GetProperty("items").EnumerateArray())
+                            {
+                                string et = e.GetProperty("text").GetString() ?? "";
+                                if (DateTime.TryParse(e.GetProperty("when").GetString(), ci, local, out var ew)
+                                    && !_settings.Reminders.Any(r => r.When == ew && r.Text == et)
+                                    && AddReminder(et, ew, "none").StartsWith("Reminder set")) n++;
+                            }
+                            res = n == 0 ? "No upcoming events found in that file." : $"Added {n} reminder{(n == 1 ? "" : "s")} from your calendar.";
+                            break;
+                        }
+                    }
+                    PostAll(new { t = "toast", text = res });
+                    break;
+                }
                 case "weatherPlace": SetWeatherPlace(Str(m, "v")); break;
                 case "happening": World.Log("happening: " + (Str(m, "kind") == "stop" ? (_w.Happening is { } hp ? "stopped" : "none") : StartHappening(Str(m, "kind")))); if (Str(m, "kind") == "stop" && _w.Happening is { } hs) EndHappening(hs, false); break;
                 case "sky":
@@ -351,6 +398,7 @@ sealed partial class App
                         PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
+                case "record": _quick?.Close(); _pop?.Hide(); PostAll(new { t = "toast", text = StartRecording(m.TryGetProperty("seconds", out var rsec) ? rsec.GetInt32() : 10) }); break;
                 case "sticker": if (Str(m, "key") == "paper") _w.Sticker("paper"); break;
                 case "tourney": PostAll(new { t = "toast", text = StartTourney() }); break;
                 case "adopt":
@@ -621,6 +669,14 @@ sealed partial class App
             case "jobs": _settings.Jobs = v.GetBoolean(); break;
             case "lifePace": _settings.LifePace = v.GetString() ?? "off"; break;
             case "events": _settings.Events = v.GetBoolean(); break;
+            case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
+            case "noticeFrustration": _settings.NoticeFrustration = v.GetBoolean(); break;
+            case "calm": _settings.Calm = World.Calm = v.GetBoolean(); if (World.Calm) { foreach (var f in _w.Figures) if (f.Brain.InFight) f.Brain.CalmDown(); } break;
+            case "colourBlind": _settings.ColourBlind = World.ColourBlind = v.GetBoolean(); ForceFullRedraw(); break;
+            case "pauseSchedule": _settings.PauseSchedule = v.GetBoolean(); _quietCheckAt = 0; break;
+            case "pauseFrom": if (v.GetString() is { Length: 5 } pf) _settings.PauseFrom = pf; _quietCheckAt = 0; break;
+            case "pauseTo": if (v.GetString() is { Length: 5 } pt) _settings.PauseTo = pt; _quietCheckAt = 0; break;
+            case "pauseDays": _settings.PauseDays = v.EnumerateArray().Select(x => x.GetInt32()).Where(d => d is >= 0 and <= 6).Distinct().ToList(); _quietCheckAt = 0; break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
             case "notifications": _settings.Notifications = v.GetBoolean(); break;

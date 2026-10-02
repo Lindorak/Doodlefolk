@@ -102,7 +102,7 @@ sealed partial class Brain
                 if (_hopLand.Resolve(env) is Vector2 land && SolveJump(f.Base, land, out var v))
                 {
                     _jRise = f.Base.Y - land.Y;
-                    f.RequestJump(v);
+                    f.RequestJump(v, styled: true);
                     _nav = Nav.InAir;
                     _navT = 0;
                 }

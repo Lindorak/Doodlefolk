@@ -21,6 +21,11 @@ sealed partial class Brain
 
     // ---- needs & mood (0..1) ----
     public float Stamina = 1, Boredom = 0.3f, Loneliness = 0.3f, Annoyance, CursorTrust = 0.6f;
+    /// <summary>Short-lived feelings: joy from good moments, sadness from losses, fear from scares.</summary>
+    public float Joy, Sadness, Fear;
+
+    public void Cheered(float amount) => Joy = M.Clamp01(Joy + amount);
+    public void Saddened(float amount) => Sadness = M.Clamp01(Sadness + amount);
     /// <summary>Personal experience with each other figure (by id), added on top of the colour rule's baseline.</summary>
     public readonly Dictionary<int, float> Affinity = new();
 
@@ -80,6 +85,7 @@ sealed partial class Brain
     public void OnClimbed()
     {
         Stamina = MathF.Max(0, Stamina - 0.06f);
+        Cheered(0.1f);
         if (_g == G.Walk && _nav == Nav.Climbing) { _nav = Nav.Direct; _hops++; return; }
         if (rng.NextDouble() < P.Playfulness * 0.6f) Go(G.Cheer, 0.9f);
         else Go(G.Idle, rng.Range(0.8f, 2f));
@@ -168,13 +174,16 @@ sealed partial class Brain
         {
             case G.Busy: break;
             case G.Idle:
-                DoIdle();
-                if (_t > _dur) Choose(w);
+                DoIdle(w);
+                if (_t > _dur && f.Action != Act.Fidget) Choose(w);
                 break;
             case G.Walk: DoWalk(w); break;
             case G.SitEdge:
             case G.SitFloor:
                 if (!f.Grounded) { Go(G.Idle, 0.5f); break; }
+                // Don't sit down on top of someone: shuffle over first.
+                if (_t < 1.2f && f.Action != Act.SitEdge && f.Action != Act.SitFloor && KeepSpace(w)) { f.SetAction(Act.Stand); break; }
+                f.DesiredVX = 0;
                 if (_g == G.SitEdge) f.Facing = _sitDir;
                 f.SetAction(_g == G.SitEdge ? Act.SitEdge : Act.SitFloor);
                 if (_t > _dur || (Stamina > 0.98f && _t > 3 && Boredom > 0.6f)) Go(G.Idle, rng.Range(0.6f, 1.5f));
@@ -202,6 +211,7 @@ sealed partial class Brain
                 }
                 break;
             case G.Annoyed:
+                KeepSpace(w);
                 if (_glareAt != null && w.Figures.Contains(_glareAt)) { f.LookAt = _glareAt.Jt[J.Head]; FaceTo(_glareAt.Base.X); }
                 else if (near) FaceTo(cur.X);
                 f.SetAction(Act.HandsHips);
@@ -216,6 +226,7 @@ sealed partial class Brain
                 break;
             case G.Cheer:
                 f.SetAction(Act.Cheer);
+                KeepSpace(w);
                 if (_t > _dur) Go(G.Idle, 1);
                 break;
             case G.Startled:
@@ -249,6 +260,7 @@ sealed partial class Brain
             case G.Revive: DoRevive(w); break;
             case G.Victory:
                 f.SetAction(Act.Cheer);
+                KeepSpace(w);
                 if (_t > _dur) Go(G.Idle, rng.Range(1, 2.5f));
                 break;
         }
@@ -277,6 +289,22 @@ sealed partial class Brain
         bool social = _g is G.Chat or G.HighFive or G.Follow or G.SitWith || _partner != null;
         Loneliness = M.Clamp01(Loneliness + dt * (social ? -0.08f : 0.01f * P.Sociability * (w.Figures.Count > 1 ? 1 : 0.3f)));
         Annoyance = M.Clamp01(Annoyance - dt * 0.04f);
+        Joy = M.Clamp01(Joy - dt * 0.04f);
+        Sadness = M.Clamp01(Sadness - dt * 0.015f);
+        Fear = M.Clamp01(Fear - dt * 0.25f);
+
+        // Feed the body: mood bends how it walks, stands and moves.
+        float cursorFear = Vector2.Distance(w.Cursor, f.Jt[J.Head]) < 220 * S && CursorTrust < 0.35f ? (1 - P.Bravery) * (0.35f - CursorTrust) * 2.5f : 0;
+        float fightFear = InFight && f.HP < 45 ? (1 - P.Bravery) * 0.6f : 0;
+        f.Mood = new MoodState
+        {
+            Tired = M.Clamp01((0.45f - Stamina) / 0.45f),
+            Angry = M.Clamp01((Annoyance - 0.3f) / 0.7f),
+            Happy = M.Clamp01(Joy * (1 - Sadness)),
+            Scared = M.Clamp01(MathF.Max(Fear, MathF.Max(cursorFear, fightFear))),
+            Sad = Sadness,
+            Hurt = M.Clamp01((55 - f.HP) / 45),
+        };
     }
 
     /// <summary>Notice other figures getting thrown around.</summary>
@@ -357,12 +385,23 @@ sealed partial class Brain
         if (MathF.Abs(dx) > 4 * S) f.Facing = MathF.Sign(dx);
     }
 
-    void DoIdle()
+    void DoIdle(World w)
     {
         f.DesiredVX = 0;
-        f.SetAction(Act.Stand);
+        if (f.Action == Act.Fidget)
+        {
+            if (f.ActionT < f.FidgetDur) { KeepSpace(w); return; }
+            f.SetAction(Act.Stand);
+        }
+        else f.SetAction(Act.Stand);
+        KeepSpace(w);
+
+        // Little habits while standing around, more often when bored or fidgety by nature.
+        float rate = f.Style.FidgetRate * (1 + Boredom) * (1 + f.Mood.Tired * 0.5f);
+        if (_t > 0.8f && f.DesiredVX == 0 && rng.NextDouble() < rate * World.Dt) { f.StartFidget(PickFidget()); return; }
+
         if (_t < _nextLook) return;
-        _nextLook = _t + rng.Range(1.2f, 3.5f);
+        _nextLook = _t + rng.Range(1.2f, 3.5f) / f.Style.LookAround;
         if (f.LookAt != null) return;
         if (rng.NextDouble() < 0.4) f.Facing = -f.Facing;
         else
@@ -370,6 +409,46 @@ sealed partial class Brain
             _idleLook = f.Jt[J.Head] + new Vector2(f.Facing * rng.Range(60, 200) * S, rng.Range(-120, 80) * S);
             _idleLookUntil = _t + rng.Range(0.8f, 1.8f);
         }
+    }
+
+    Fidget PickFidget()
+    {
+        var md = f.Mood;
+        var opts = new (float w, Fidget k)[]
+        {
+            (0.5f + md.Tired, Fidget.Stretch),
+            (0.4f + P.Curiosity * 0.6f, Fidget.ScratchHead),
+            (0.2f + P.Energy * 0.5f + Boredom * 0.6f, Fidget.CheckWatch),
+            (0.2f + P.Energy * 0.6f + Boredom * 0.5f, Fidget.FootTap),
+            (md.Tired * 2.5f + Boredom * 0.3f, Fidget.Yawn),
+            (0.3f + P.Sociability * 0.4f, Fidget.Shrug),
+            (P.Playfulness * 0.8f * (0.5f + Joy), Fidget.Groove),
+        };
+        float roll = rng.Range(0, opts.Sum(o => o.w));
+        foreach (var (wt, k) in opts) { roll -= wt; if (roll <= 0) return k; }
+        return Fidget.Stretch;
+    }
+
+    /// <summary>Personal space: when standing about, step aside from anyone we're standing on top of
+    /// (partners we're deliberately close to are exempt). Walking past each other is fine.</summary>
+    bool KeepSpace(World w)
+    {
+        if (!f.Grounded || f.JumpPending || f.Mode != Mode.Control) return false;
+        float push = 0;
+        foreach (var o in w.Figures)
+        {
+            if (o == f || o.Mode is Mode.Spawning || o.Dead || o == _partner || o == _foe || o == _reviving) continue;
+            if (MathF.Abs(o.Base.Y - f.Base.Y) > 4 * S || MathF.Abs(o.Vel.X) > o.WalkSpeed * 1.5f) continue;
+            float dx = f.Base.X - o.Base.X;
+            float want = 15 * S * (f.SizeMul + o.SizeMul) * 0.5f;
+            if (MathF.Abs(dx) >= want) continue;
+            float dir = MathF.Abs(dx) > 0.5f ? MathF.Sign(dx) : (f.Id < o.Id ? -1 : 1);
+            push += dir * (1 - MathF.Abs(dx) / want);
+        }
+        if (push == 0) { f.KeepFacing = false; return false; }
+        f.KeepFacing = true;   // sidestep without turning around
+        f.DesiredVX = MathF.Sign(push) * f.WalkSpeed * Math.Clamp(MathF.Abs(push), 0.35f, 0.8f);
+        return true;
     }
 
     void DoSleep()
@@ -381,6 +460,7 @@ sealed partial class Brain
         if ((Stamina > 0.97f && _t > 8) || _t > _dur)
         {
             f.Emote("♪", 0.8f);
+            Cheered(0.2f);
             Go(G.Cheer, 0.7f);   // a big stretch
         }
     }
@@ -390,6 +470,7 @@ sealed partial class Brain
         float away = -MathF.Sign(cur.X - f.Base.X);
         if (away == 0) away = -f.Facing;
         Go(G.Startled, 3);
+        Fear = 0.9f;
         f.Emote("!", 0.9f);
         f.Facing = (int)-away;
         f.KeepFacing = true;

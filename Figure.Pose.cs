@@ -64,8 +64,12 @@ sealed partial class Figure
             {
                 FightPose(ref hipT, ref leanT, ref handW, ref hN, ref hF, ref eN, ref eF, ref tiltT);
             }
+            else if (SuperLandingPose(ref hipT, ref leanT, ref hN, ref hF, ref eN)) { }
             else switch (Action)
             {
+                case Act.Fidget:
+                    FidgetPose(ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF);
+                    break;
                 case Act.SitEdge:
                 {
                     hipT = 1.2f * S; leanT = -0.12f + br * 0.01f;
@@ -129,13 +133,8 @@ sealed partial class Figure
                     eN = new(1, 0.6f); handW = 22;
                     break;
                 case Act.Cheer:
-                {
-                    float b = MathF.Abs(MathF.Sin(ActionT * 9));
-                    hN = new(Arm * 0.3f, -Arm * (0.8f + 0.15f * b)); hF = new(-Arm * 0.1f, -Arm * (0.85f + 0.1f * b));
-                    eN = eF = new(1, 0.2f); handW = 22;
-                    hipT = StandHip * (0.9f + 0.1f * b);
+                    CelebratePose(ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF);
                     break;
-                }
                 case Act.Swat:
                 {
                     float p = ActionT / 0.32f;
@@ -146,23 +145,8 @@ sealed partial class Figure
                     break;
                 }
                 default:
-                    if (speed > 8 * S)
-                    {
-                        // Arms swing opposite the legs: near arm forward when the far foot is forward.
-                        Vector2 pn = FootPos(_fN), pf = FootPos(_fF);
-                        float half = MathF.Max(speed * M.Lerp(0.25f, 0.15f, run), 4 * S);
-                        float sw = Math.Clamp((pf.X - pn.X) * Facing / half, -1, 1);
-                        Vector2 wN = M.Dir(MathF.PI - sw * 0.6f) * Arm * 0.93f;
-                        Vector2 wF = M.Dir(MathF.PI + sw * 0.6f) * Arm * 0.93f;
-                        Vector2 rN = new(Arm * 0.3f + sw * Arm * 0.38f, Arm * 0.42f - MathF.Max(0, sw) * Arm * 0.25f);
-                        Vector2 rF = new(Arm * 0.3f - sw * Arm * 0.38f, Arm * 0.42f - MathF.Max(0, -sw) * Arm * 0.25f);
-                        hN = Vector2.Lerp(wN, rN, run); hF = Vector2.Lerp(wF, rF, run);
-                        eN = eF = new(-1, 0.4f + run * 0.3f);
-                        leanT = 0.06f + run * 0.25f;
-                        hipT = StandHip * (1 - run * 0.06f);
-                        handW = 18;
-                    }
-                    else pdxT = MathF.Sin(_time * 0.55f + Id) * 0.9f * S;
+                    if (speed > 8 * S) WalkPose(speed, run, ref hipT, ref leanT, ref tiltT, ref handW, ref hN, ref hF, ref eN, ref eF);
+                    else IdlePose(br, ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF);
                     break;
             }
         }
@@ -187,6 +171,7 @@ sealed partial class Figure
                 fN = new(4 * S + k * 4 * S, Leg * 0.8f); fF = new(-3 * S - k * 4 * S, Leg * 0.75f);
                 leanT = -0.15f; handW = 26;
             }
+            else if (JumpStylePose(Vel.Y < -150 * S, ref leanT, ref hN, ref hF, ref fN, ref fF)) { }
             else if (Vel.Y < -150 * S)
             {
                 hN = new(Arm * 0.4f, -Arm * 0.75f); hF = new(Arm * 0.15f, -Arm * 0.8f);
@@ -242,7 +227,9 @@ sealed partial class Figure
             if (reach < hip) hip = MathF.Max(reach, MathF.Min(hip, StandHip * 0.88f));
             if (_fN.Stepping) bob += MathF.Sin(MathF.PI * _fN.T) * _fN.Lift;
             if (_fF.Stepping) bob += MathF.Sin(MathF.PI * _fF.T) * _fF.Lift;
-            bob *= 0.3f;
+            bob *= 0.3f * Style.Bounce * (1 + Mood.Happy * 0.4f) * (1 - Mood.Tired * 0.4f);
+            // Limp: the body dips while the weight is on the hurt (near) leg.
+            if (Mood.Hurt > 0.3f && !_fN.Stepping && _fF.Stepping) bob -= Mood.Hurt * 3 * S * MathF.Sin(MathF.PI * _fF.T);
         }
 
         Vector2 pelvis = new(Base.X + _pdx, Base.Y - hip - bob);
@@ -262,7 +249,7 @@ sealed partial class Figure
         }
         else
         {
-            footN = FootPos(_fN);
+            footN = FidgetFoot(FootPos(_fN));
             footF = FootPos(_fF);
             if (Action is Act.Kick or Act.Tap || AttackUsesFoot)
             {

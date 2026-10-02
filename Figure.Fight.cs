@@ -54,7 +54,19 @@ sealed partial class Figure
         LastAttackLanded = false;
     }
 
-    public void CancelAttack() => Atk = null;
+    public void CancelAttack() => EndAttack();
+
+    /// <summary>Ducking under high attacks (boxers' favourite defence).</summary>
+    public float DuckT;
+    bool _spun;
+    /// <summary>Mid spinning-back-kick: facing is temporarily turned away from the opponent.</summary>
+    public bool Spinning => _spun;
+
+    void EndAttack()
+    {
+        Atk = null;
+        if (_spun) { Facing = -Facing; _spun = false; }
+    }
 
     void TickCombat(float dt)
     {
@@ -62,22 +74,25 @@ sealed partial class Figure
         if (!KO) HP = MathF.Min(100, HP + (Action == Act.Fight ? 0.8f : 4f) * dt);
         HitStun = MathF.Max(0, HitStun - dt);
         BlockT = MathF.Max(0, BlockT - dt);
+        DuckT = MathF.Max(0, DuckT - dt);
         _bowlCd -= dt;
         if (Atk == null) return;
         if (Atk.Kind == AttackKind.FlyingKick)
         {
             if (!JumpPending) AtkT += dt;
-            if ((Grounded && !JumpPending && AtkT > 0.1f) || Mode != Mode.Control) Atk = null;
+            if ((Grounded && !JumpPending && AtkT > 0.1f) || Mode != Mode.Control) EndAttack();
         }
         else
         {
             AtkT += dt;
-            if (AtkT >= Atk.Total || Mode != Mode.Control) Atk = null;
+            // Spinning back kick: turn our back to them partway through the wind-up.
+            if (Atk.Kind == AttackKind.SpinKick && !_spun && AtkT >= Atk.Windup * 0.45f) { Facing = -Facing; _spun = true; }
+            if (AtkT >= Atk.Total || Mode != Mode.Control) EndAttack();
         }
     }
 
     Vector2 StrikePoint(AttackDef a) =>
-        a.Foot ? Jt[J.FootN] : a.Kind is AttackKind.Cross or AttackKind.Uppercut ? Jt[J.HandF] : Jt[J.HandN];
+        a.Foot ? Jt[J.FootN] : a.Kind is AttackKind.Cross or AttackKind.Uppercut or AttackKind.Haymaker ? Jt[J.HandF] : Jt[J.HandN];
 
     /// <summary>During an attack's active frames, see whether the striking hand/foot connects.</summary>
     void CheckStrike(World w)
@@ -100,9 +115,13 @@ sealed partial class Figure
         foreach (var o in w.Figures)
         {
             if (o == this || o.Mode == Mode.Spawning || (CanHit != null && !CanHit(o))) continue;
+            if (o.DuckT > 0 && a.Height == HitHeight.High) continue;   // it sails over their head
             if (o.BodyDistance(p) > LineW * 0.5f + 3 * S) continue;
             _atkHit = LastAttackLanded = true;
-            o.ReceiveAttack(a, this, knock, p, w, dmgMul, poiseMul);
+            // Always knock the victim away from us (a spinning kick faces the other way).
+            float dir = MathF.Sign(o.Jt[J.Pelvis].X - Jt[J.Pelvis].X);
+            if (dir == 0) dir = Facing;
+            o.ReceiveAttack(a, this, new Vector2(MathF.Abs(knock.X) * dir, knock.Y), p, w, dmgMul, poiseMul);
             return;
         }
     }
@@ -132,7 +151,8 @@ sealed partial class Figure
         float dx = from.Base.X - Base.X;
         bool facing = MathF.Abs(dx) < 2 * S || MathF.Sign(dx) == Facing;
         bool blocked = Blocking && facing && a.Height != HitHeight.Low && Grounded;
-        Atk = null;
+        EndAttack();
+        DuckT = 0;
         if (blocked)
         {
             HP -= a.Damage * 0.15f * str * mult;
@@ -144,7 +164,7 @@ sealed partial class Figure
         else
         {
             HP -= a.Damage * str * mult;
-            Poise -= a.Poise * (0.7f + 0.3f * w.Fight.Strength) * mult * poiseMul;
+            Poise -= a.Poise * (0.7f + 0.3f * w.Fight.Strength) * mult * poiseMul / Style.Toughness;
             w.Fx.Spark(at, S, w.Rng, 0.9f + a.Damage * dmgMul * 0.04f, sparkColor);
             w.HitStop = MathF.Max(w.HitStop, 0.035f + a.Damage * dmgMul * 0.0025f);
         }
@@ -296,14 +316,33 @@ sealed partial class Figure
     void FightPose(ref float hipT, ref float leanT, ref float handW, ref Vector2 hN, ref Vector2 hF,
                    ref Vector2 eN, ref Vector2 eF, ref float tiltT)
     {
-        float bounce = MathF.Sin(_time * 9 + Id);
-        Vector2 guardN = new(Arm * 0.48f, -Arm * 0.12f), guardF = new(Arm * 0.32f, Arm * 0.02f);
-        hipT = StandHip * (0.9f + 0.02f * bounce);
-        leanT = 0.1f;
+        var style = Style.Fight;
+        float gb = Style.GuardBounce;
+        float bounce = MathF.Sin(_time * (7 + 3 * gb) + Id);
+        // Each fighting style has its own guard.
+        (Vector2 guardN, Vector2 guardF, float guardLean, float guardHip) = style switch
+        {
+            FightStyle.Boxer => (new Vector2(Arm * 0.42f, -Arm * 0.3f), new Vector2(Arm * 0.3f, -Arm * 0.22f), 0.15f, 0.86f),
+            FightStyle.Kicker => (new Vector2(Arm * 0.55f, -Arm * 0.05f), new Vector2(Arm * 0.15f, Torso * 0.1f), -0.02f, 0.92f),
+            FightStyle.Brawler => (new Vector2(Arm * 0.5f, Torso * 0.15f), new Vector2(Arm * 0.35f, Torso * 0.25f), 0.18f, 0.88f),
+            FightStyle.Acrobat => (new Vector2(Arm * 0.6f, -Arm * 0.2f), new Vector2(-Arm * 0.45f, -Arm * 0.1f), 0.05f, 0.9f),
+            FightStyle.Turtle => (new Vector2(Arm * 0.3f, -Arm * 0.38f), new Vector2(Arm * 0.25f, -Arm * 0.3f), 0.2f, 0.84f),
+            _ => (new Vector2(Arm * 0.48f, -Arm * 0.12f), new Vector2(Arm * 0.32f, Arm * 0.02f), 0.1f, 0.9f),
+        };
+        hipT = StandHip * (guardHip + 0.022f * gb * bounce);
+        leanT = guardLean;
         hN = guardN;
         hF = guardF;
-        eN = eF = new(-0.2f, 1);
+        eN = eF = style == FightStyle.Brawler ? new(-1, 0.6f) : new(-0.2f, 1);
         handW = 30;
+        if (DuckT > 0)
+        {
+            hipT = StandHip * 0.6f;
+            leanT = 0.42f;
+            hN = new(Arm * 0.3f, -Arm * 0.32f);
+            hF = new(Arm * 0.25f, -Arm * 0.25f);
+            return;
+        }
         if (HitStun > 0)
         {
             leanT = -0.35f;
@@ -364,6 +403,25 @@ sealed partial class Figure
                 hN = new(Arm * 0.35f, Arm * 0.9f);
                 hF = new(-Arm * 0.2f, Arm * 0.85f);
                 break;
+            case AttackKind.Haymaker:
+            {
+                // Big wind-up behind the head, then a looping swing.
+                Vector2 hit = new(Arm * 1.02f, -Arm * 0.05f);
+                hF = t < wu ? Vector2.Lerp(guardF, new Vector2(-Arm * 0.75f, -Arm * 0.55f), M.Smooth(t / wu))
+                   : striking ? hit : Vector2.Lerp(hit, guardF, rec);
+                hN = new(Arm * 0.3f, Torso * 0.2f);
+                leanT = t < wu ? -0.22f : striking ? 0.38f : 0.15f;
+                eF = new(-0.3f, -1);
+                handW = t < wu ? 18 : 60;
+                break;
+            }
+            case AttackKind.SpinKick:
+                // Turn away, then drive the heel backwards into them.
+                leanT = t < wu * 0.45f ? 0.1f : 0.42f;
+                hN = new(Arm * 0.35f, Torso * 0.1f);
+                hF = new(Arm * 0.2f, -Arm * 0.1f);
+                tiltT -= 0.35f * Facing;   // looking back over the shoulder
+                break;
         }
     }
 
@@ -378,6 +436,7 @@ sealed partial class Figure
         {
             AttackKind.Roundhouse => (new Vector2(Leg * 0.3f, Leg * 0.3f), new Vector2(Leg * 0.72f, -Leg * 0.62f)),
             AttackKind.Sweep => (new Vector2(-Leg * 0.15f, Leg * 0.48f), new Vector2(Leg * 0.95f, StandHip * 0.48f)),
+            AttackKind.SpinKick => (new Vector2(Leg * 0.2f, Leg * 0.4f), new Vector2(-Leg * 0.98f, Leg * 0.38f)),
             _ => (new Vector2(Leg * 0.38f, Leg * 0.42f), new Vector2(Leg * 0.98f, Leg * 0.4f)),
         };
         if (t < wu) return Vector2.Lerp(planted, cock, M.Smooth(t / wu));

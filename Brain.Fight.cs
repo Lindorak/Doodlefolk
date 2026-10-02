@@ -165,6 +165,7 @@ sealed partial class Brain
         if (by == null || !ValidFoe(by) || !Rules.Enabled) return false;
         if (_downInSpar)
         {
+            Saddened(0.15f);
             f.Emote(rng.NextDouble() < 0.5 ? "…" : "ha", 1.2f);
             Go(G.Annoyed, 1.2f);
             return true;
@@ -234,28 +235,31 @@ sealed partial class Brain
         if (!_spar && f.HP < FleeHP) { EndFight(); Flee(o, w); return; }
 
         f.SetAction(Act.Fight);
-        FaceTo(o.Base.X);
+        if (!f.Spinning) FaceTo(o.Base.X);
         if (f.HitStun > 0) { f.DesiredVX = 0; return; }
+        var style = f.Style;
 
-        // ---- defence: read their windup ----
+        // ---- defence: read their windup (each fighting style defends its own way) ----
         var fa = o.Atk;
         if (fa == null) _reacted = false;
         else if (!_reacted && o.InWindup && f.Atk == null && d < fa.Range * S + 16 * S)
         {
             _reacted = true;
-            float skill = (0.25f + P.Bravery * 0.25f + P.Energy * 0.2f + P.Playfulness * 0.1f) * (0.6f + 0.4f * Stamina);
-            if (rng.NextDouble() < skill)
-            {
-                if (fa.Height == HitHeight.Low) f.RequestJump(new Vector2(0, -560 * S), 0.02f);
-                else if (rng.NextDouble() < 0.65) f.BlockT = fa.Windup - o.AtkT + fa.Active + 0.12f;
-                else _retreatT = 0.3f;
-            }
+            float skill = (0.25f + P.Bravery * 0.25f + P.Energy * 0.2f + P.Playfulness * 0.1f) * (0.6f + 0.4f * Stamina) * style.DefenseSkill;
+            if (rng.NextDouble() < skill) Defend(fa, o, dx);
         }
         if (_retreatT > 0) { _retreatT -= World.Dt; f.DesiredVX = -MathF.Sign(dx) * f.WalkSpeed * 1.6f; return; }
-        if (f.Atk != null || f.Blocking || f.JumpPending) { f.DesiredVX = 0; return; }
+        if (f.Atk != null || f.Blocking || f.JumpPending || f.DuckT > 0) { f.DesiredVX = 0; return; }
 
         // ---- offence ----
         if (f.LastAttackLanded) { _landed++; f.LastAttackLanded = false; }
+        if (_counter && o.Atk == null)
+        {
+            // Turtles punish right after a successful block.
+            _counter = false;
+            _plan = d < 32 * S ? AttackKind.Cross : AttackKind.FrontKick;
+            _atkCd = 0;
+        }
         _plan ??= PickAttack(d);
         if (_plan == AttackKind.FlyingKick)
         {
@@ -269,7 +273,7 @@ sealed partial class Brain
             return;
         }
         var def = AttackDef.Get(_plan!.Value);
-        float want = def.Range * S * 0.92f;
+        float want = def.Range * S * 0.92f * style.Spacing;
         _atkCd -= World.Dt;
         float err = d - want;
         if (d < 18 * S) f.DesiredVX = -MathF.Sign(dx) * f.WalkSpeed * 1.3f;   // too close: give ourselves room
@@ -277,7 +281,10 @@ sealed partial class Brain
         else if (err < -8 * S) f.DesiredVX = -MathF.Sign(dx) * f.WalkSpeed;
         else
         {
-            f.DesiredVX = MathF.Sin(_t * 3 + f.Id) * f.WalkSpeed * 0.3f;   // footsie
+            // Footsie: boxers bob in and out, brawlers plod forward, turtles hold their ground.
+            float sway = style.Fight switch { FightStyle.Boxer => 0.55f, FightStyle.Acrobat => 0.45f, FightStyle.Turtle => 0.12f, _ => 0.3f };
+            f.DesiredVX = MathF.Sin(_t * (style.Fight == FightStyle.Boxer ? 4.5f : 3) + f.Id) * f.WalkSpeed * sway
+                        + (style.Fight == FightStyle.Brawler ? MathF.Sign(dx) * f.WalkSpeed * 0.15f : 0);
             if (_atkCd <= 0)
             {
                 f.StartAttack(_plan.Value);
@@ -300,9 +307,14 @@ sealed partial class Brain
             (0.8f, AttackKind.FrontKick),
             (0.3f + P.Playfulness * 0.6f, AttackKind.Roundhouse),
             (0.25f + P.Playfulness * 0.25f, AttackKind.Sweep),
+            (0.3f + P.Aggression * 0.4f, AttackKind.Haymaker),
+            (0.2f + P.Playfulness * 0.3f, AttackKind.SpinKick),
         };
         if (d < 30 * S) opts.Add((0.6f, AttackKind.Uppercut));
         if (d > 70 * S && Stamina > 0.3f) opts.Add((P.Playfulness * 0.5f + P.Energy * 0.3f, AttackKind.FlyingKick));
+        // The figure's fighting style shapes its move choice.
+        var bias = StyleBias[(int)f.Style.Fight];
+        for (int i = 0; i < opts.Count; i++) opts[i] = (opts[i].w * bias[(int)opts[i].k], opts[i].k);
         if (f.Gear != Gear.None)
         {
             // Gear on the fists: box more, kick less (gloves especially).
@@ -316,7 +328,67 @@ sealed partial class Brain
     }
 
     float AttackCooldown() =>
-        rng.Range(0.25f, 0.8f) * (1.4f - P.Aggression * 0.6f - P.Energy * 0.3f) / (0.6f + 0.4f * Stamina) / MathF.Max(0.4f, Rules.Frequency);
+        rng.Range(0.25f, 0.8f) * (1.4f - P.Aggression * 0.6f - P.Energy * 0.3f) / (0.6f + 0.4f * Stamina)
+        / MathF.Max(0.4f, Rules.Frequency) / f.Style.AttackRate;
+
+    // Move preferences per fighting style, indexed [style][AttackKind]:
+    //                     Jab   Cross Upper FrontK Round Sweep Flying Haymkr Spin
+    static readonly float[][] StyleBias =
+    {
+        new[] { 1f,   1f,   1f,   1f,    1f,   1f,   1f,    1f,    1f },     // Auto (unused)
+        new[] { 2.0f, 2.0f, 1.6f, 0.25f, 0.15f, 0.1f, 0.1f, 0.4f,  0.05f },  // Boxer
+        new[] { 0.6f, 0.4f, 0.3f, 1.8f,  2.0f, 0.8f, 0.6f,  0.15f, 1.6f },   // Kicker
+        new[] { 0.8f, 1.4f, 1.2f, 0.8f,  0.4f, 0.3f, 0.3f,  2.4f,  0.1f },   // Brawler
+        new[] { 0.6f, 0.5f, 0.5f, 0.8f,  1.4f, 1.5f, 2.2f,  0.1f,  1.4f },   // Acrobat
+        new[] { 1.6f, 1.4f, 0.6f, 1.0f,  0.3f, 0.2f, 0.1f,  0.2f,  0.1f },   // Turtle
+    };
+
+    bool _counter;
+
+    /// <summary>React to an incoming attack the way this fighting style does.</summary>
+    void Defend(AttackDef fa, Figure o, float dx)
+    {
+        var style = f.Style.Fight;
+        float r = (float)rng.NextDouble();
+        float blockFor = fa.Windup - o.AtkT + fa.Active + 0.12f;
+        if (fa.Height == HitHeight.Low)
+        {
+            // Hop the sweep (acrobats backflip over it).
+            if (style == FightStyle.Acrobat) BackflipAway(dx);
+            else f.RequestJump(new Vector2(0, -560 * S), 0.02f);
+            return;
+        }
+        switch (style)
+        {
+            case FightStyle.Boxer:
+                if (fa.Height == HitHeight.High && r < 0.7f) f.DuckT = blockFor + 0.1f;     // slip under it
+                else if (r < 0.75f) f.BlockT = blockFor;
+                else _retreatT = 0.25f;
+                break;
+            case FightStyle.Turtle:
+                f.BlockT = blockFor + 0.1f;
+                _counter = true;
+                break;
+            case FightStyle.Acrobat:
+                if (r < 0.45f) BackflipAway(dx);
+                else if (fa.Height == HitHeight.High && r < 0.75f) f.DuckT = blockFor;
+                else _retreatT = 0.3f;
+                break;
+            case FightStyle.Kicker:
+                if (r < 0.6f) _retreatT = 0.32f;
+                else f.BlockT = blockFor;
+                break;
+            default:   // Brawler: just eats it or covers up
+                if (r < 0.5f) f.BlockT = blockFor;
+                break;
+        }
+    }
+
+    void BackflipAway(float dx)
+    {
+        f.KeepFacing = true;
+        f.RequestJump(new Vector2(-MathF.Sign(dx) * 260 * S, -720 * S), 0.03f, flip: true);
+    }
 
     void Victory(Figure o)
     {
@@ -325,6 +397,7 @@ sealed partial class Brain
         Go(G.Victory, 1.6f);
         _spar = spar;
         f.Emote(spar ? "♪" : P.Aggression > 0.5f ? "ha" : "♪", 1.3f);
+        Cheered(0.4f);
         AddAffinity(o, spar ? 0.05f : -0.05f);
         Stamina = MathF.Max(0, Stamina - 0.05f);
     }
@@ -364,6 +437,7 @@ sealed partial class Brain
                 {
                     // Grief, and a grudge against whoever did it.
                     f.Emote("…", 2.5f);
+                    Saddened(0.85f);
                     Annoyance = M.Clamp01(Annoyance + 0.5f);
                     if (killer != null) AddAffinity(killer, -0.7f);
                 }
@@ -401,6 +475,8 @@ sealed partial class Brain
         if (_t < _dur) return;
         o.Revive(f);
         f.Emote("♥", 1.2f);
+        Cheered(0.4f);
+        o.Brain.Cheered(0.4f);
         AddAffinity(o, 0.2f);
         o.Brain.AddAffinity(f, 0.3f);
         _reviving = null;
@@ -471,7 +547,7 @@ sealed partial class Brain
         }
         f.SetAction(Act.Fight);
         f.KeepFacing = true;
-        FaceTo(cur.X);
+        if (!f.Spinning) FaceTo(cur.X);
         f.LookAt = cur;
         f.PunchTarget = cur;
         if (f.LastAttackLanded) { _landed++; f.LastAttackLanded = false; }

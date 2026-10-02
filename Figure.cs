@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 namespace StickFight;
 
 enum Mode { Spawning, Control, Ragdoll, GetUp }
-enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight }
+enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget }
 
 /// <summary>Joint indices. N = near side (drawn in front), F = far side (drawn behind, slightly darker).</summary>
 static class J
@@ -101,8 +101,8 @@ sealed partial class Figure
     public readonly Ragdoll Rag;
 
     public readonly float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW, Gravity;
-    public float WalkSpeed => (55 + 30 * Traits.Energy) * S;
-    public float RunSpeed => (190 + 70 * Traits.Energy) * S;
+    public float WalkSpeed => (55 + 30 * Traits.Energy) * S * Style.SpeedMul * MoodSpeed;
+    public float RunSpeed => (190 + 70 * Traits.Energy) * S * (Style.Run == RunStyle.Jogger ? 0.8f : Style.Run == RunStyle.Tippy ? 0.85f : 1) * MoodSpeed;
     public float Leg => Thigh + Shin;
     public float Arm => UpperArm + ForeArm;
     public float StandHip => Leg * 0.95f;
@@ -150,6 +150,7 @@ sealed partial class Figure
         Rag = new Ragdoll(this);
         Brain = new Brain(this, rng);
         _rng = rng;
+        StyleChoice = new StyleChoice { Seed = rng.Next() };
         _time = rng.Range(0, 10);
         Facing = rng.Next(2) == 0 ? 1 : -1;
     }
@@ -172,13 +173,20 @@ sealed partial class Figure
         ActionT = 0;
     }
 
-    public void RequestJump(Vector2 v, float crouch = 0.13f)
+    /// <summary>Jump with launch velocity <paramref name="v"/>. <paramref name="styled"/>: an ordinary
+    /// jump (getting somewhere), so flip-happy figures may throw in a flip.</summary>
+    public void RequestJump(Vector2 v, float crouch = 0.13f, bool styled = false, bool flip = false)
     {
         if (!Grounded || JumpPending) return;
         _jumpVel = v;
         _crouchT = crouch;
         if (MathF.Abs(v.X) > 1 && !KeepFacing) Facing = MathF.Sign(v.X);
         SetAction(Act.Stand);
+        if (flip || (styled && Style.Jump == JumpStyle.Flipper && v.Y < -500 * S && _rng.NextDouble() < 0.6))
+        {
+            _flipT = 0;
+            _flipDur = 2 * -v.Y / Gravity * 0.8f;
+        }
     }
 
     public void Step(float dt, World w)
@@ -323,6 +331,7 @@ sealed partial class Figure
         w.Fx.Dust(Base, S, (int)Math.Clamp(impact / (300 * S), 2, 10), impact / (1500 * S), w.Rng);
         if (impact > 3000 * S) { World.Log($"{Name} knocked down by landing {impact / S:F0}S/s"); GoRagdoll(Vector2.Zero); return; }
         _hipV -= impact * 0.06f;
+        if (Style.Jump == JumpStyle.Superhero && impact > 1100 * S && !Flailing) _landPoseT = 0.5f;
         Brain.OnLanded(impact);
     }
 
@@ -331,13 +340,27 @@ sealed partial class Figure
         float speed = MathF.Abs(Vel.X);
         float run = M.Clamp01((speed - 90 * S) / (120 * S));
         bool idle = speed < 8 * S;
-        float dur = idle ? 0.15f : M.Lerp(0.25f, 0.15f, run);
-        float lift = idle ? 3 * S : M.Lerp(5 * S, 9 * S, run);
+        // Step rhythm and height come from this figure's walk/run style, bent by mood.
+        var st = Style;
+        var md = Mood;
+        float cad = st.Cadence * (1 - md.Tired * 0.15f) * (1 + md.Happy * 0.08f), stride = st.Stride;
+        float liftMul = st.FootLift * (1 - md.Tired * 0.35f);
+        if (run > 0)
+            switch (st.Run)
+            {
+                case RunStyle.Tippy: stride *= M.Lerp(1, 0.6f, run); cad *= M.Lerp(1, 1.5f, run); liftMul *= M.Lerp(1, 0.6f, run); break;
+                case RunStyle.Jogger: liftMul *= M.Lerp(1, 0.8f, run); break;
+                case RunStyle.Flailer: liftMul *= M.Lerp(1, 1.2f, run); break;
+                case RunStyle.NinjaRun: stride *= M.Lerp(1, 1.15f, run); break;
+                default: liftMul *= M.Lerp(1, 1.25f, run); break;
+            }
+        float dur = idle ? 0.15f : M.Lerp(0.25f, 0.15f, run) * stride / cad;
+        float lift = idle ? 3 * S : M.Lerp(5 * S, 9 * S, run) * liftMul;
         // Plan steps for the speed we're heading to, so stopping doesn't leave a foot a full
         // running stride ahead of the body.
         float vPlan = MathF.Abs(DesiredVX) < MathF.Abs(Vel.X) ? DesiredVX : Vel.X;
         float lead = Math.Clamp(vPlan * dur * 1.5f, -Leg * 0.6f, Leg * 0.6f);
-        float stance = Action == Act.Fight ? 8 * S : idle ? (JumpPending ? 7f : 5.5f) * S : 0;
+        float stance = Action == Act.Fight ? (st.Fight == FightStyle.Kicker ? 10 : 8) * S : idle ? (JumpPending ? 7f : 5.5f) * S : 0;
         float tN = Base.X + Facing * stance, tF = Base.X - Facing * stance;
 
         // Feet still in the air keep re-aiming: land half a step's travel ahead of where the body
@@ -346,8 +369,13 @@ sealed partial class Figure
         if (_fN.Stepping && _fN.T < 0.75f) _fN.To.X = M.Lerp(_fN.To.X, tN + LeadAt(_fN.T), 0.2f);
         if (_fF.Stepping && _fF.T < 0.75f) _fF.To.X = M.Lerp(_fF.To.X, tF + LeadAt(_fF.T), 0.2f);
 
-        Advance(_fN, dt);
-        Advance(_fF, dt);
+        bool landed = Advance(_fN, dt) | Advance(_fF, dt);
+        if (landed && !idle)
+        {
+            // Heavy-footed (or angry) walkers stomp: the body drops on each footfall.
+            float stomp = st.Stomp + md.Angry * 0.6f;
+            if (stomp > 0.15f) _hipV -= stomp * 7 * S;
+        }
         if (_fN.Stepping && _fF.Stepping) return;
         if (_fN.Stepping || _fF.Stepping)
         {
@@ -369,15 +397,20 @@ sealed partial class Figure
         f.T = 0;
         f.Dur = dur;
         f.Lift = lift;
+        if (f == _fN && md.Hurt > 0.3f && !idle) { f.Dur *= 0.7f; f.Lift *= 0.5f; }   // limping on the hurt leg
         f.From = f.Pos;
         f.To = new(tx, Base.Y);
     }
 
-    void Advance(Foot f, float dt)
+    /// <summary>Advance a stepping foot; true on the frame it lands.</summary>
+    bool Advance(Foot f, float dt)
     {
-        if (!f.Stepping) { f.Pos.Y = Base.Y; return; }
+        if (!f.Stepping) { f.Pos.Y = Base.Y; return false; }
         f.T += dt / f.Dur;
-        if (f.T >= 1) { f.Stepping = false; f.Pos = new(f.To.X, Base.Y); }
+        if (f.T < 1) return false;
+        f.Stepping = false;
+        f.Pos = new(f.To.X, Base.Y);
+        return true;
     }
 
     Vector2 FootPos(Foot f)

@@ -92,7 +92,7 @@ static class GearInfo
     };
 }
 
-enum AttackKind { Jab, Cross, Uppercut, FrontKick, Roundhouse, Sweep, FlyingKick }
+enum AttackKind { Jab, Cross, Uppercut, FrontKick, Roundhouse, Sweep, FlyingKick, Haymaker, SpinKick }
 enum HitHeight { Low, Mid, High }
 
 /// <summary>One fighting move. Times in seconds; range/knock in figure-scale units (multiply by S);
@@ -111,6 +111,8 @@ sealed record AttackDef(AttackKind Kind, float Windup, float Active, float Recov
         new(AttackKind.Roundhouse, 0.17f, 0.08f, 0.28f, 34, 16, new(650, -380), 60, HitHeight.High, true,  false),
         new(AttackKind.Sweep,      0.15f, 0.10f, 0.28f, 34, 8,  new(140, -420), 0,  HitHeight.Low,  true,  true),
         new(AttackKind.FlyingKick, 0f,    9f,    0.2f,  0,  18, new(1100, -320), 0, HitHeight.Mid,  true,  true),
+        new(AttackKind.Haymaker,   0.30f, 0.08f, 0.35f, 27, 20, new(780, -320), 70, HitHeight.Mid,  false, false),
+        new(AttackKind.SpinKick,   0.22f, 0.08f, 0.30f, 34, 17, new(900, -260), 65, HitHeight.Mid,  true,  false),
     };
 
     public static AttackDef Get(AttackKind k) => All[(int)k];

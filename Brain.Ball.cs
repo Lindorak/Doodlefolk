@@ -272,6 +272,7 @@ sealed partial class Brain
                 if (!hit)
                 {
                     b.Juggler = null;
+                    if (_count >= 5) Cheered(0.3f);
                     f.Emote(_count >= 5 ? "♪" : "…", 1);
                     Go(_count >= 5 ? G.Cheer : G.Idle, 1);
                     return;
@@ -413,6 +414,7 @@ sealed partial class Brain
             if (Vector2.Distance(f.HoldPoint, b.Pos) < b.Radius + 11 * S)
             {
                 f.Emote("♪", 0.8f);
+                Cheered(0.15f);
                 var from = _passFrom;
                 bool back = from != null && from != f && w.Figures.Contains(from) &&
                             rng.NextDouble() < (P.Playfulness * 0.6f + 0.3f) * Stamina && Boredom < 0.85f;

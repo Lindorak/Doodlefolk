@@ -160,6 +160,7 @@ sealed partial class Brain
         {
             AddAffinity(o, 0.08f + P.Sociability * 0.05f);
             if (AffinityWith(o) > 0.5f) f.Emote("♥", 1.2f);
+            Cheered(0.2f);
             Go(G.Idle, 1.5f);
         }
     }
@@ -189,6 +190,8 @@ sealed partial class Brain
             o.Emote(rng.NextDouble() < 0.5 ? "♪" : "!", 1);
             AddAffinity(o, 0.15f);
             o.Brain.AddAffinity(f, 0.15f);
+            Cheered(0.5f);
+            o.Brain.Cheered(0.5f);
         }
         if (_t > _dur) Go(P.Playfulness > 0.6f ? G.Cheer : G.Idle, 0.8f);
     }

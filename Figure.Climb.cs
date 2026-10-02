@@ -29,8 +29,8 @@ sealed partial class Figure
     Vector2 _mantleFrom;
 
     float ClimbHip => StandHip * 0.8f;
-    float Rise => Arm * (0.6f + 0.08f * MathF.Min(ClimbPace, 1.6f)) * (_dyno ? 1.7f : 1);
-    float CycleTime => (0.42f - 0.14f * Traits.Energy) / MathF.Max(0.3f, ClimbPace) * (_dyno ? 1.3f : 1);
+    float Rise => Arm * (0.6f + 0.08f * MathF.Min(ClimbPace, 1.6f)) * Style.ClimbRise * (_dyno ? 1.7f : 1);
+    float CycleTime => (0.42f - 0.14f * Traits.Energy) / MathF.Max(0.3f, ClimbPace) * Style.ClimbCycle * (_dyno ? 1.3f : 1);
     float HandReach => ClimbHip + Torso + Arm * 0.82f;     // Base.Y minus this = height of a fresh hand hold
 
     public bool StartClimb(Wall wall)
@@ -63,7 +63,7 @@ sealed partial class Figure
     {
         _cyc = 0;
         _cycY0 = Base.Y;
-        _dyno = ClimbPace > 1.2f && _rng.NextDouble() < 0.3;
+        _dyno = _rng.NextDouble() < Style.DynoChance * (ClimbPace > 1.1f ? 1.2f : 0.6f);
         Array.Copy(_handY, _handFrom, 2);
         Array.Copy(_footY, _footFrom, 2);
     }
@@ -216,7 +216,7 @@ sealed partial class Figure
         float hx = _climbX + side * 1.2f * S, fx = _climbX + side * 1.5f * S;
         // The moving hand swings out from the wall on its way up; the moving foot lifts its knee out.
         float handArc = MathF.Sin(MathF.PI * M.Clamp01(p / 0.4f)) * 5 * S;
-        float footArc = MathF.Sin(MathF.PI * M.Clamp01((p - 0.35f) / 0.5f)) * 6 * S;
+        float footArc = MathF.Sin(MathF.PI * M.Clamp01((p - 0.35f) / 0.5f)) * 6 * S * Style.ClimbFlail;
         if (_dyno)
         {
             handArc = MathF.Sin(MathF.PI * M.Clamp01((p - 0.3f) / 0.4f)) * 6 * S;

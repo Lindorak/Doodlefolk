@@ -8,6 +8,7 @@ sealed class SavedFigure
     public string Color { get; set; } = "#E53935";
     public float Size { get; set; } = 1;
     public Gear Gear { get; set; }
+    public StyleChoice? Style { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();

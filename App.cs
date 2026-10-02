@@ -494,6 +494,7 @@ sealed class App : ApplicationContext
         var f = new Figure(old.Color, old.Name, _w.Scale * size, old.Traits, _w.Rng, old.Id) { SizeMul = size };
         f.Brain.CopyFrom(old.Brain);
         f.Gear = old.Gear;
+        f.StyleChoice = old.StyleChoice;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
         f.PlaceAt(plat, Math.Clamp(old.Base.X, plat.X1 + 4, plat.X2 - 4));
@@ -532,6 +533,7 @@ sealed class App : ApplicationContext
             Color = Settings.Hex(f.Color),
             Size = f.SizeMul,
             Gear = f.Gear,
+            Style = f.StyleChoice.Clone(),
             Traits = f.Traits.Clone(),
         });
         _settings.Save();
@@ -540,7 +542,11 @@ sealed class App : ApplicationContext
     Figure? SpawnFromLibrary(SavedFigure s)
     {
         var f = SpawnFigure(Settings.ParseHex(s.Color), UniqueName(s.Name), s.Traits.Clone(), Math.Clamp(s.Size, 0.4f, 3f));
-        if (f != null) f.Gear = s.Gear;
+        if (f != null)
+        {
+            f.Gear = s.Gear;
+            if (s.Style != null) f.StyleChoice = s.Style.Clone();
+        }
         return f;
     }
 
@@ -614,6 +620,7 @@ sealed class App : ApplicationContext
             Color = Settings.Hex(f.Color),
             Size = f.SizeMul,
             Gear = f.Gear,
+            Style = f.StyleChoice.Clone(),
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
         }).ToList();
@@ -628,6 +635,7 @@ sealed class App : ApplicationContext
             if (SpawnFigure(Settings.ParseHex(s.Color), UniqueName(s.Name), s.Traits, Math.Clamp(s.Size, 0.4f, 3f)) is { } f)
             {
                 f.Gear = s.Gear;
+                if (s.Style != null) f.StyleChoice = s.Style.Clone();
                 made.Add((f, s));
             }
         foreach (var (f, s) in made)
@@ -802,6 +810,45 @@ sealed class App : ApplicationContext
                     if (p.Length >= 4 && Enum.TryParse<Relation>(p[3], true, out var rel))
                         _w.Fight.Pairs[FightSettings.PairKey(p[1], p[2])] = rel;
                     break;
+                case "style":
+                    // style <Name> <Walk|Run|Idle|Climb|Jump|Fight|Celebrate> <value>
+                    if (p.Length >= 4 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sfig)
+                    {
+                        var c = sfig.StyleChoice;
+                        bool ok = p[2].ToLowerInvariant() switch
+                        {
+                            "walk" => Enum.TryParse<WalkStyle>(p[3], true, out var a1) && Set(() => c.Walk = a1),
+                            "run" => Enum.TryParse<RunStyle>(p[3], true, out var a2) && Set(() => c.Run = a2),
+                            "idle" => Enum.TryParse<IdleHabit>(p[3], true, out var a3) && Set(() => c.Idle = a3),
+                            "climb" => Enum.TryParse<ClimbStyle>(p[3], true, out var a4) && Set(() => c.Climb = a4),
+                            "jump" => Enum.TryParse<JumpStyle>(p[3], true, out var a5) && Set(() => c.Jump = a5),
+                            "fight" => Enum.TryParse<FightStyle>(p[3], true, out var a6) && Set(() => c.Fight = a6),
+                            "celebrate" => Enum.TryParse<CelebrateStyle>(p[3], true, out var a7) && Set(() => c.Celebrate = a7),
+                            _ => false,
+                        };
+                        if (!ok) result = "failed";
+                    }
+                    break;
+                case "fidget":
+                    if (p.Length >= 3 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ffig && Enum.TryParse<Fidget>(p[2], true, out var fk))
+                        ffig.StartFidget(fk);
+                    break;
+                case "mood":
+                    // mood <Name> <joy|sad|fear|annoy|stamina|hp> <value>
+                    if (p.Length >= 4 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } mf)
+                    {
+                        float v = float.Parse(p[3], inv);
+                        switch (p[2].ToLowerInvariant())
+                        {
+                            case "joy": mf.Brain.Joy = v; break;
+                            case "sad": mf.Brain.Sadness = v; break;
+                            case "fear": mf.Brain.Fear = v; break;
+                            case "annoy": mf.Brain.Annoyance = v; break;
+                            case "stamina": mf.Brain.Stamina = v; break;
+                            case "hp": mf.HP = v; break;
+                        }
+                    }
+                    break;
                 case "ko":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } kf) kf.DebugKnockOut(_w);
                     break;
@@ -842,6 +889,8 @@ sealed class App : ApplicationContext
             File.AppendAllText(Path.Combine(Path.GetTempPath(), "stickfight_cmd.log"), $"{line} -> {result}\n");
         }
     }
+
+    static bool Set(Action a) { a(); return true; }
 
     void Dump()
     {

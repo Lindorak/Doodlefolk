@@ -179,6 +179,44 @@ sealed class FigureEditor
         };
         random.Click += (_, _) => { _f.Traits.CopyFrom(Personality.Random(world.Rng)); Sync(); preset.SelectedIndex = 0; };
 
+        // ---- body language ----
+        Ui.Section(t, "Body language");
+        var styleDesc = new Label { AutoSize = true, MaximumSize = new System.Drawing.Size(360, 0), ForeColor = WinColor.DimGray, Margin = new Padding(3, 2, 3, 6) };
+        t.Controls.Add(styleDesc);
+        t.SetColumnSpan(styleDesc, 3);
+        void RefreshStyle() => styleDesc.Text = _f.Style.Describe();
+        void StyleBox<T>(string label, Func<StyleChoice, T> get, Action<StyleChoice, T> set, Func<T, string> name, string tip) where T : struct, Enum
+        {
+            var box = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 250 };
+            var values = Enum.GetValues<T>();
+            foreach (var v in values) box.Items.Add(Convert.ToInt32(v) == 0 ? "Auto (from personality)" : name(v));
+            box.SelectedIndex = Array.IndexOf(values, get(_f.StyleChoice));
+            box.SelectedIndexChanged += (_, _) => { set(_f.StyleChoice, values[box.SelectedIndex]); RefreshStyle(); };
+            tips.SetToolTip(box, tip);
+            t.Controls.Add(Ui.Label(label));
+            t.Controls.Add(box);
+            t.Controls.Add(new Label());
+        }
+        static string Words<T>(T v) where T : struct, Enum =>
+            System.Text.RegularExpressions.Regex.Replace(v.ToString(), "(?<=[a-z])(?=[A-Z])", " ");
+        StyleBox("Walk", c => c.Walk, (c, v) => c.Walk = v, Words, "How it walks: bouncy, swaggering, shuffling, tiptoeing, stiff, marching…");
+        StyleBox("Run", c => c.Run, (c, v) => c.Run = v, Words, "How it runs.");
+        StyleBox("Standing", c => c.Idle, (c, v) => c.Idle = v, Words, "What it does with its hands while standing around.");
+        StyleBox("Climbing", c => c.Climb, (c, v) => c.Climb = v, Words, "Methodical, frantic scrambling, or big leaps between holds.");
+        StyleBox("Jumping", c => c.Jump, (c, v) => c.Jump = v, Words, "Its pose in the air. Flippers throw in flips; superheroes land on one knee.");
+        StyleBox("Fighting", c => c.Fight, (c, v) => c.Fight = v, Words,
+            "Boxer: high guard, jabs, ducks. Kicker: kicks and spinning kicks. Brawler: haymakers, shrugs off hits. Acrobat: flips and flying kicks. Turtle: blocks and counters.");
+        StyleBox("Celebrating", c => c.Celebrate, (c, v) => c.Celebrate = v, Words, "What it does when it wins or something great happens.");
+        var reroll = new Button { Text = "Re-roll quirks", AutoSize = true };
+        tips.SetToolTip(reroll, "New individual quirks (bounce, stride, arm swing, posture…) and new Auto picks.");
+        reroll.Click += (_, _) => { _f.StyleChoice.Seed = world.Rng.Next(); RefreshStyle(); };
+        t.Controls.Add(new Label());
+        t.Controls.Add(reroll);
+        t.Controls.Add(new Label());
+        RefreshStyle();
+        foreach (var bar in bars) bar.ValueChanged += (_, _) => RefreshStyle();
+        preset.SelectedIndexChanged += (_, _) => RefreshStyle();
+
         // ---- live mood ----
         Ui.Section(t, "Right now");
         var state = Ui.Label("");

@@ -7,6 +7,20 @@ throw them at each other, or set them against each other by colour.
 
 > Early preview (v0.3). Windows 10/11, 64-bit.
 
+## Why this exists
+
+I grew up on stick-figure animations, especially *Animator vs. Animation*, where a little stick figure
+breaks loose on someone's desktop and starts fighting back. I always wanted one of those guys living on
+my own screen. So I set out to see whether Claude could help turn that childhood memory into real,
+working software: I described what I remembered and what I wanted it to feel like, and Claude
+designed and built it with me, from the physics and animation to the personalities and fights, while I
+played with every build and kept pushing for more life in it. StickFight is the result: a little world of
+stick figures that treats your real desktop as their playground, climbing your windows, playing with
+your cursor, and settling their differences in fights.
+
+*Inspired by Alan Becker's* Animator vs. Animation. *This is a fan-made project and isn't affiliated with
+or endorsed by him.*
+
 ## Download and run
 
 1. Grab `StickFight-v0.3.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).

@@ -233,6 +233,10 @@ sealed class Settings
     public int ContribThisWeek { get; set; }
     /// <summary>Opt-in: share this week's biggest fish, focus minutes and Doodledex with Steam friends.</summary>
     public bool ShareWeekly { get; set; }
+    /// <summary>Friends' figures may visit (Steam).</summary>
+    public bool FriendVisits { get; set; } = true;
+    /// <summary>Our figures off visiting friends.</summary>
+    public List<AwayRecord> Away { get; set; } = new();
     /// <summary>Focus minutes by ISO week (for the friends' board).</summary>
     public Dictionary<int, int> FocusByWeek { get; set; } = new();
     public int FocusMinutesWeek(int week) => FocusByWeek.GetValueOrDefault(week);

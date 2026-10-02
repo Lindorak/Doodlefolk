@@ -431,6 +431,12 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
+            Key = "postcard", Name = "Postcard", Words = new[] { "postcard", "post card" }, W = 26, H = 18, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { R(-13, 0, 13, 18, 0), R(5, 10, 11, 16, 9), L(1, 2, 1, 16, 5, 0.6f), L(4, 7, 11, 7, 5, 0.6f), L(4, 4, 11, 4, 5, 0.6f) },
+            Mass = 1, Carry = true,
+        });
+        Add(new ItemDef
+        {
             Key = "stickynote", Name = "Sticky note", Words = new[] { "sticky note", "post-it", "note", "postit" }, W = 22, H = 20, Color = M.Hex(0xFFF176),
             Shapes = new[] { R(-11, 0, 11, 20, 0), R(-11, 16, 11, 20, 1) },
             Mass = 1, Carry = true,

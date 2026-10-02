@@ -227,6 +227,8 @@ sealed partial class Item
             r.Text(l1, Local(0, l2.Length > 0 ? 11.5f : 8.5f), 4.6f * Sc, inkc, true);
             if (l2.Length > 0) r.Text(l2, Local(0, 5.5f), 4.6f * Sc, inkc, true);
         }
+        if (Def.Key == "postcard" && Label.Length > 0)
+            r.Text(Label.Length > 14 ? Label[..13] + "…" : Label, Local(-6.5f, 9), 3.6f * Sc, new Color4(0.15f, 0.14f, 0.2f, 0.9f), true);
         if (Def.Key == "memeframe" && Label.Length > 0)
         {
             var a = Local(-19, 33); var b2 = Local(19, 3);

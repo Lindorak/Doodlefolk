@@ -66,6 +66,8 @@ static class Stickers
         new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
         new("memorial", "🕯", "Remembered", "Say goodbye to someone"),
         new("toybox", "🧸", "Mad scientist", "Play with the toybox (moon gravity, a giant ball…)"),
+        new("guest", "🧳", "Guests from afar", "A friend's figure visits your desktop (Steam)"),
+        new("traveller", "✈", "Postcard home", "Send a figure to visit a friend and get it back (Steam)"),
         new("community", "🌿", "All together", "Reach a weekly community goal with everyone else (Steam)"),
         new("stream", "📺", "Chat joined in", "Someone from your stream's chat joins the town"),
         new("greenbuild", "✅", "All green", "The town cheers a passing build (reacting to your work)"),

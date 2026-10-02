@@ -25,7 +25,7 @@ sealed partial class App
 
     const double TestSpeed = 6;
 
-    string _albumFile = "", _questText = "", _memoName = "";
+    string _albumFile = "", _questText = "", _memoName = "", _travellerName = "";
     double _perfAt = 5, _scriptLag;
     bool _sawRide, _sawPrint;
     int _notified = -1;
@@ -157,7 +157,24 @@ sealed partial class App
             Check("a song can be sung", SingNow(99).Contains("singing"));
         });
         At(167, "singing", () => Check("they sing the words", _w.Figures.Any(f => f.CurrentEmote?.Contains("line") == true || f.Brain.Singing), string.Join(", ", _w.Figures.Select(f => f.CurrentEmote))));
+        At(168, "friend visit", () =>
+        {
+            // Over a loopback: we're both the sender and the friend.
+            var loop = new Queue<(ulong, byte[])>();
+            _p2pSend = (id, data) => { loop.Enqueue((42, data)); return true; };
+            _p2pReceive = () => { var l = loop.ToList(); loop.Clear(); return l; };
+            _travellerName = Fig(2)?.Name ?? "";
+            Check("a figure can set off to visit a friend", Fig(2) is { } t && SendToVisit(t, 42, "QA friend").Contains("on the way") && _away.Count == 1);
+        });
+        At(169.5, "guest arrives", () => Check("a friend's figure arrives as a guest", _guests.Count == 1, string.Join(", ", _w.Figures.Where(f => f.Visitor == VisitorKind.Guest).Select(f => f.Name))));
         At(169, "taskbar village", () => { _settings.TownLayout = "strip"; ApplyLayout(); });
+        At(178, "traveller home", () =>
+        {
+            var back = _w.Figures.FirstOrDefault(f => f.Name == _travellerName && f.Visitor == VisitorKind.None);
+            Check("…and comes home with a postcard and stories", _away.Count == 0 && back != null && back.Brain.Diary.Any(d => d.Text.StartsWith("Visited")) && _w.Items.Any(i => i.Def.Key == "postcard"),
+                  $"away {_away.Count}, back {back != null}, guests {_guests.Count}");
+            _p2pSend = SteamHub.SendTo; _p2pReceive = SteamHub.Receive;
+        });
         At(176, "village check", () =>
         {
             float top = _w.Env.BoundsAt(960).T;
@@ -234,9 +251,13 @@ sealed partial class App
             var v = _w.Figures.FirstOrDefault(f => f.Visitor == VisitorKind.Viewer);
             Check("a chatter can join the town and talk", v != null && v.Name == "QAViewer" && _viewers.ContainsKey("qaviewer"), v?.CurrentEmote ?? "nobody");
             Check("links in chat are hidden and weather isn't allowed by default", !(_w.Figures.Any(f => f.CurrentEmote?.Contains("spam.example") == true)) && !_w.Weather.Snowing);
+        });
+        At(556, "chat stays", () =>
+        {
+            Check("a chatter stays in town while they're around", _w.Figures.Any(f => f.Visitor == VisitorKind.Viewer));
             _chat.Enqueue(new ChatLine("qaviewer", "QAViewer", "", "!leave", false, false));
         });
-        At(551, "chat leaves", () => { Check("…and leave", !_w.Figures.Any(f => f.Visitor == VisitorKind.Viewer)); _settings.StreamOn = false; });
+        At(557.5, "chat leaves", () => { Check("…and leave", !_w.Figures.Any(f => f.Visitor == VisitorKind.Viewer)); _settings.StreamOn = false; });
         At(560, "voice", () =>
         {
             int items = _w.Items.Count;

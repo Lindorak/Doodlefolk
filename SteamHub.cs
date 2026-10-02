@@ -103,6 +103,89 @@ static class SteamHub
         catch (Exception e) { World.Log("steam stat: " + e.Message); }
     }
 
+    // ---------------- friend visits ----------------
+
+    const int VisitChannel = 7;
+    static Callback<SteamNetworkingMessagesSessionRequest_t>? _sessionRequest;
+
+    /// <summary>Friends who are playing Doodlefolk right now.</summary>
+    static List<(ulong id, string name)> _friendsCache = new();
+    static DateTime _friendsAt;
+
+    public static List<(ulong id, string name)> FriendsPlaying()
+    {
+        if (!Ready) return new();
+        if (DateTime.Now - _friendsAt < TimeSpan.FromSeconds(15)) return _friendsCache;
+        _friendsAt = DateTime.Now;
+        var list = _friendsCache = new List<(ulong, string)>();
+        try
+        {
+            int n = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
+            for (int i = 0; i < n && list.Count < 100; i++)
+            {
+                var id = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
+                if (SteamFriends.GetFriendGamePlayed(id, out var game) && game.m_gameID.AppID().m_AppId == AppId)
+                    list.Add((id.m_SteamID, SteamFriends.GetFriendPersonaName(id)));
+            }
+        }
+        catch (Exception e) { World.Log("steam friends: " + e.Message); }
+        return list;
+    }
+
+    /// <summary>Send a small message to a friend (reliable). Only friends' sessions are ever accepted.</summary>
+    public static bool SendTo(ulong friend, byte[] data)
+    {
+        if (!Ready || data.Length > 100_000) return false;
+        try
+        {
+            _sessionRequest ??= Callback<SteamNetworkingMessagesSessionRequest_t>.Create(req =>
+            {
+                var who = req.m_identityRemote.GetSteamID();
+                if (SteamFriends.HasFriend(who, EFriendFlags.k_EFriendFlagImmediate)) SteamNetworkingMessages.AcceptSessionWithUser(ref req.m_identityRemote);
+            });
+            var identity = new SteamNetworkingIdentity();
+            identity.SetSteamID(new CSteamID(friend));
+            var h = System.Runtime.InteropServices.GCHandle.Alloc(data, System.Runtime.InteropServices.GCHandleType.Pinned);
+            try { return SteamNetworkingMessages.SendMessageToUser(ref identity, h.AddrOfPinnedObject(), (uint)data.Length, Constants.k_nSteamNetworkingSend_Reliable, VisitChannel) == EResult.k_EResultOK; }
+            finally { h.Free(); }
+        }
+        catch (Exception e) { World.Log("steam send: " + e.Message); return false; }
+    }
+
+    /// <summary>Messages waiting from friends.</summary>
+    public static List<(ulong from, byte[] data)> Receive()
+    {
+        var list = new List<(ulong, byte[])>();
+        if (!Ready) return list;
+        try
+        {
+            _sessionRequest ??= Callback<SteamNetworkingMessagesSessionRequest_t>.Create(req =>
+            {
+                var who = req.m_identityRemote.GetSteamID();
+                if (SteamFriends.HasFriend(who, EFriendFlags.k_EFriendFlagImmediate)) SteamNetworkingMessages.AcceptSessionWithUser(ref req.m_identityRemote);
+            });
+            var ptrs = new IntPtr[8];
+            int n = SteamNetworkingMessages.ReceiveMessagesOnChannel(VisitChannel, ptrs, ptrs.Length);
+            for (int i = 0; i < n; i++)
+            {
+                var m = SteamNetworkingMessage_t.FromIntPtr(ptrs[i]);
+                try
+                {
+                    var from = m.m_identityPeer.GetSteamID();
+                    if (m.m_cbSize is > 0 and <= 100_000 && SteamFriends.HasFriend(from, EFriendFlags.k_EFriendFlagImmediate))
+                    {
+                        var bytes = new byte[m.m_cbSize];
+                        System.Runtime.InteropServices.Marshal.Copy(m.m_pData, bytes, 0, m.m_cbSize);
+                        list.Add((from.m_SteamID, bytes));
+                    }
+                }
+                finally { SteamNetworkingMessage_t.Release(ptrs[i]); }
+            }
+        }
+        catch (Exception e) { World.Log("steam receive: " + e.Message); }
+        return list;
+    }
+
     // ---------------- community goals and the friends' board ----------------
 
     static CallResult<GlobalStatsReceived_t>? _globalCall;

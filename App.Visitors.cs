@@ -3,7 +3,7 @@ using Vortice.Mathematics;
 
 namespace Doodlefolk;
 
-enum VisitorKind { None, Bard, MailCarrier, Knight, Artist, Ghost, Explorer, Chef, Gardener, Viewer }
+enum VisitorKind { None, Bard, MailCarrier, Knight, Artist, Ghost, Explorer, Chef, Gardener, Viewer, Guest }
 
 /// <summary>An entry in the Doodledex: who (or what) you've met, when first, how often.</summary>
 sealed class DexEntry

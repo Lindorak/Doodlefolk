@@ -354,7 +354,7 @@ PAGES.focus = {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(",") + "|" + (S.memorials || []).length + "|" + (S.songs || []).map(s => s.id).join(","),
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(",") + "|" + (S.memorials || []).length + "|" + (S.songs || []).map(s => s.id).join(",") + "|" + JSON.stringify([(S.friendVisits || {}).away, (S.friendVisits || {}).guests]),
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -373,6 +373,10 @@ PAGES.cast = {
       cards.push({ id: f.id, svg, name, act, feels, likes, dot });
     });
     grid.append(newFigureCard());
+    // Away visiting friends (Steam).
+    const fva = (S.friendVisits || {}).away || [], fvg = (S.friendVisits || {}).guests || [];
+    if (fva.length || fvg.length)
+      add(root, h("p", { class: "hint" }, [...fva.map(a => `🧳 ${a.name} is visiting ${a.friend} (left at ${a.since}).`), ...fvg.map(g => `👋 ${g.name} is here from ${g.owner}'s desktop.`)].join(" ")));
     // Requests from the town.
     const quests = S.quests || [];
     if (quests.length)
@@ -542,7 +546,8 @@ PAGES.figure = {
         h("div", { class: "row" },
           h("button", { class: "btn small primary", title: "Wave them over to your cursor. Whether they come depends on how they feel about you.", onclick: () => send({ t: "fig", id, op: "call" }) }, "👋 Call them over"),
           h("button", { class: "btn small", onclick: () => { send({ t: "fig", id, op: "save" }); toast(`${fig(id)?.name || "Figure"} saved to your library`); } }, "★ Save to library"),
-          armed("Erase", "Erase them? Click again", () => { send({ t: "fig", id, op: "remove" }); go("cast"); }, "btn small danger")))));
+          armed("Erase", "Erase them? Click again", () => { send({ t: "fig", id, op: "remove" }); go("cast"); }, "btn small danger")),
+        visitRow(id))));
     const tabs = h("div", { class: "subtabs" }, SUBS.map(([k, label]) =>
       h("button", { class: "subtab" + (route.sub === k ? " on" : ""), onclick: () => { route.sub = k; current = null; onState(); } }, label)));
     add(root, tabs);
@@ -1175,6 +1180,20 @@ PAGES.stickers = {
   },
 };
 
+// ---------------- Friend visits ----------------
+
+/** "Visit a friend": Steam friends playing Doodlefolk right now. */
+function visitRow(id) {
+  const fv = S.friendVisits || { friends: [] };
+  if (!fv.friends.length) return null;
+  let pick = fv.friends[0].id;
+  const sel = select(fv.friends.map(fr => ({ value: fr.id, label: fr.name })), pick, v => { pick = v; });
+  return h("div", { class: "row" }, h("span", { class: "hint" }, "🧳 Visit"), sel,
+    h("button", { class: "btn small", title: "They walk off your screen and turn up on your friend's, with a gift; back in about twenty minutes with a postcard and stories.", onclick: () => {
+      const fr = fv.friends.find(x => x.id === pick); if (fr) send({ t: "sendVisit", id, friend: fr.id, name: fr.name });
+    } }, "Send them"));
+}
+
 // ---------------- Town history ----------------
 
 let HISTORY = null, historyAsked = -1;
@@ -1743,6 +1762,7 @@ PAGES.settings = {
       h("div", { class: "field" }, h("label", null, "Stream view colour"), h("div", { class: "row tight" }, keyChips)),
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "streamView" }) }, "📺 Open the stream view"),
         h("span", { class: "hint" }, "A window of just the town on that colour: capture it in OBS and add a chroma key filter.")));
+    const fvC = check("Friends' figures can visit", "When a Steam friend sends one of their figures over, it turns up here with a gift for a while (only friends, and only while Doodlefolk runs through Steam).", () => (S.friendVisits || {}).allow !== false, v => setS("friendVisits", v));
     const reqC = check("Requests", "Now and then someone asks for something that suits them (a swing, a race, a new hat, a dog…). They're listed on the Cast page; do it within a day and they're thrilled.", () => st().requests !== false, v => setS("requests", v));
     const albumC = check("Photo album", "Big moments (a first date, a baby, a race won) are photographed for the Album: just the town, never your screen.", () => st().autoAlbum !== false, v => send({ t: "album", op: "auto", v }));
     const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
@@ -1798,7 +1818,7 @@ PAGES.settings = {
       eventsC, hapBtns, hapLine, visitC, reqC, albumC,
       h("div", { class: "field" }, h("label", null, "Old age"), h("div", { class: "row tight" }, ageChips)),
       h("p", { class: "hint" }, "Only matters when they age (Life pace). Fights are separate: see Colours & fights."), ghostsC,
-      prankC, prankBox, devC, devBox, streamC, streamBox,
+      prankC, prankBox, devC, devBox, streamC, streamBox, fvC,
       h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
@@ -1856,6 +1876,7 @@ PAGES.settings = {
       keyChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (sm().key || "green")); });
       devC.update(); devBox.style.display = st().devHooks ? "" : "none"; devLine.textContent = st().devHookStatus || "";
       devCmd.textContent = `curl -X POST http://127.0.0.1:${st().devHookPort || 47321}/event/build-failed\n"${st().exePath || "Doodlefolk.exe"}" --notify tests-passed\n\nEvents: build-passed, build-failed, tests-passed, tests-failed, commit, push, deploy, error, started, done (add ?text=… for a line to say). See docs/DEVHOOKS.md for git hooks and VS Code tasks.`;
+      fvC.update();
       prankC.update(); memeNetC.update(); memeRealC.update(); prankBox.style.display = st().pranks ? "" : "none";
       memeFolderLine.textContent = st().memeFolder ? ` ${st().memeFolder}` : " (none)";
       ageChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().mortality || "never")); });

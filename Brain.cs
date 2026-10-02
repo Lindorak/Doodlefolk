@@ -695,7 +695,7 @@ sealed partial class Brain
 
     void Choose(World w)
     {
-        if (f.Visitor != VisitorKind.None) { Go(G.Visit, 1e6f); return; }
+        if (f.Visitor is not (VisitorKind.None or VisitorKind.Viewer or VisitorKind.Guest)) { Go(G.Visit, 1e6f); return; }   // chat viewers and friends' figures live like locals
         // Still in a game (e.g. got knocked over): back to it.
         if (Match != null && w.Matches.Contains(Match) && !Match.Over) { Go(G.Sport, 600); return; }
         Match = null;

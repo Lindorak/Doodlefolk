@@ -241,7 +241,7 @@ sealed partial class App : ApplicationContext
         if (_fps > 0 && rawDt > 1.6f / _fps) _hitchAcc++;
         PushStudio(now);
 
-        if (_displayChanged)
+        if (_displayChanged && _w.Env.Staged == null)
         {
             _displayChanged = false;
             _w.Env.RefreshMonitors();
@@ -314,6 +314,7 @@ sealed partial class App : ApplicationContext
         DevHookFrame(now);
         StreamFrame(now);
         CommunityFrame(now);
+        FriendVisitFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -1028,6 +1029,7 @@ sealed partial class App : ApplicationContext
         }
         RestoreItems(_settings.Items);
         RestoreClubs();
+        RestoreAway();
         RestorePets();
         // Older saves could have two pets with the same name.
         foreach (var g in _w.Pets.GroupBy(pt => pt.Name).Where(g => g.Count() > 1))

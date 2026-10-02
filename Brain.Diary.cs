@@ -35,6 +35,9 @@ sealed partial class Brain
     };
 
     /// <summary>Write something down, unless the same kind of thing was written recently.</summary>
+    /// <summary>A diary line from outside (a trip abroad), as written.</summary>
+    public void Diarise(string text, string mood) => Write("ext:" + text.GetHashCode(), text, mood, 0);
+
     void Write(string key, string text, string mood = "", float cooldown = 300)
     {
         if (_diaryCd.TryGetValue(key, out var until) && _t0 < until) return;

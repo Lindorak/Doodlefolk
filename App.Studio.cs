@@ -171,6 +171,7 @@ sealed partial class App
         modContent = ModContentState(),
         stream = StreamState(),
         community = CommunityState(),
+        friendVisits = FriendState(),
         songs = SongState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -517,6 +518,12 @@ sealed partial class App
                     break;
                 }
                 case "streamView": ToggleStreamView(); break;
+                case "sendVisit":
+                {
+                    var who = _w.Figures.FirstOrDefault(f => f.Id == (m.TryGetProperty("id", out var vid) ? vid.GetInt32() : -1));
+                    if (who != null && ulong.TryParse(Str(m, "friend"), out var fid)) PostAll(new { t = "toast", text = SendToVisit(who, fid, Str(m, "name")) });
+                    break;
+                }
                 case "modchar": PostAll(new { t = "toast", text = SpawnModCharacter(m.TryGetProperty("index", out var mci) ? mci.GetInt32() : -1) }); break;
                 case "scenario": PostAll(new { t = "toast", text = StartScenario(Str(m, "key")) }); break;
                 case "checkmod":
@@ -870,6 +877,7 @@ sealed partial class App
                 PostAll(new { t = "toast", text = ApplyLayout() });
                 break;
             case "stripHeight": _settings.StripHeight = Math.Clamp(v.GetInt32(), 110, 400); if (_settings.TownLayout == "strip") ApplyLayout(); break;
+            case "friendVisits": _settings.FriendVisits = v.GetBoolean(); break;
             case "shareWeekly": _settings.ShareWeekly = v.GetBoolean(); _communityAt = 0; break;
             case "streamOn": _settings.StreamOn = v.GetBoolean(); _settings.Save(); StartStream(); break;
             case "streamChannel": _settings.StreamChannel = (v.GetString() ?? "").Trim(); _settings.Save(); StartStream(); break;

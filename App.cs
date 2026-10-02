@@ -80,6 +80,7 @@ sealed partial class App : ApplicationContext
         InitScreen();
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeBaby = MakeBaby;
+        _w.MakePet = k => SpawnPet(k, quiet: true);
         InitSocial();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
@@ -1184,6 +1185,24 @@ sealed partial class App : ApplicationContext
                         foreach (var wn in p.Skip(1)) if (_w.Figures.FirstOrDefault(x => x.Name == wn) is { } wf2) wf2.Brain.DebugWarm(_w, fire);
                     break;
                 case "story": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } storyF) World.Log("story: " + storyF.Brain.DebugStory(_w)); break;
+                case "snap" when p.Length > 1 && p[1] == "pets":
+                {
+                    var pets = _w.Pets.ToList();
+                    float ps2 = _w.Scale;
+                    _r.Snapshot(new RectangleF(0, 0, Math.Max(1, pets.Count) * 70 * ps2, 90 * ps2), _ =>
+                    {
+                        _clip = new RectangleF(-1e6f, -1e6f, 2e6f, 2e6f);
+                        for (int i = 0; i < pets.Count; i++)
+                        {
+                            var pt = pets[i];
+                            var saved = pt.Pos;
+                            pt.Pos = new Vector2(35 * ps2 + i * 70 * ps2, 80 * ps2);
+                            pt.Draw(_r);
+                            pt.Pos = saved;
+                        }
+                    }, Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
+                    break;
+                }
                 case "snap":
                 {
                     // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\stickfight_snap.png.

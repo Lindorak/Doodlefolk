@@ -54,6 +54,9 @@ static class Stickers
         new("trained", "🎓", "Good boy!", "Train a pet out of a bad habit (75%)"),
         new("pettalk", "🦜", "Pretty bird", "Teach a parrot a new word"),
         new("petmode", "🏡", "Pet parent", "Try pet-only mode"),
+        new("litter", "🐣", "Growing family", "A litter is born"),
+        new("trick", "🎪", "Show-off", "Teach a pet a trick"),
+        new("dressup", "🎀", "Dress-up", "Put clothes on a pet"),
     };
 
     public static StickerDef? Find(string key) => All.FirstOrDefault(s => s.Key == key) is { Key.Length: > 0 } d ? d : null;

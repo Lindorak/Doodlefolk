@@ -48,6 +48,9 @@ sealed partial class App
             if (w is "puppy" or "puppies" or "pup" or "pupper") return (PetKind.Dog, true);
             if (w is "dog" or "dogs" or "doggy" or "doggo" or "hound") return (PetKind.Dog, noun.Contains("baby"));
             if (w is "chick" or "fledgling") return (PetKind.Parrot, true);
+            if (w is "bunny" or "bunnies" or "kit") return (PetKind.Rabbit, true);
+            if (w is "rabbit" or "rabbits" or "hare") return (PetKind.Rabbit, noun.Contains("baby"));
+            if (w is "hamster" or "hamsters" or "gerbil" or "gerbils") return (PetKind.Hamster, noun.Contains("baby"));
             if (w is "parrot" or "parrots" or "bird" or "birds" or "budgie" or "parakeet" or "cockatiel" or "macaw" or "lovebird" or "cockatoo") return (PetKind.Parrot, noun.Contains("baby"));
         }
         return null;
@@ -67,8 +70,8 @@ sealed partial class App
     void StarterKit(Pet pet)
     {
         var need = new List<string> { "foodbowl", "waterbowl" };
-        need.Add(pet.Kind switch { PetKind.Cat => "litterbox", PetKind.Dog => "petbed", _ => "perch" });
-        if (pet.Kind == PetKind.Cat) need.Add("petbed");
+        need.Add(pet.Kind switch { PetKind.Cat or PetKind.Rabbit => "litterbox", PetKind.Dog => "petbed", PetKind.Hamster => "hamsterwheel", _ => "perch" });
+        if (pet.Kind is PetKind.Cat or PetKind.Rabbit or PetKind.Hamster) need.Add("petbed");
         if (pet.Kind == PetKind.Dog && pet.Young) need.Add("peepad");
         var floor = _w.Env.Platforms.Where(p => p.Solid).OrderBy(p => MathF.Abs(M.ClampIn(pet.Pos.X, p.X1, p.X2) - pet.Pos.X) + MathF.Abs(p.Y - pet.Pos.Y)).FirstOrDefault();
         if (floor == null) return;
@@ -267,6 +270,7 @@ sealed partial class App
         Log = p.CareLog.TakeLast(40).Select(l => new SavedLog { When = l.When, Text = l.Text }).ToList(),
         Sprays = p.Sprays, Treats = p.TreatsGiven,
         Health = p.Health, Clean = p.Clean, Sick = p.Sick.ToString(),
+        Temper = p.Temper.ToString(), Female = p.Female, Wear = p.Wear, WearColour = p.WearColour, Pregnant = p.Pregnant, Mother = p.MotherName, LastLitter = p.LastLitter,
     }).ToList();
 
     void RestorePets()
@@ -293,12 +297,19 @@ sealed partial class App
             pet.Sprays = sp.Sprays; pet.TreatsGiven = sp.Treats;
             pet.Health = Math.Clamp(sp.Health, 0, 1); pet.Clean = Math.Clamp(sp.Clean, 0, 1);
             if (Enum.TryParse<Illness>(sp.Sick, out var ill)) pet.Sick = ill;
+            if (Enum.TryParse<Temperament>(sp.Temper, out var tm)) pet.Temper = tm;
+            if (sp.Female is bool fem) pet.Female = fem;
+            pet.Wear = sp.Wear; if (sp.WearColour.Length == 7) pet.WearColour = sp.WearColour;
+            pet.Pregnant = sp.Pregnant; pet.MotherName = sp.Mother; pet.LastLitter = sp.LastLitter;
             if (sp.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == sp.Owner) is { } owner) { pet.Owner = owner; pet.Bond[owner.Id] = 0.5f; }
             pet.TimeAway(away);
             made.Add((pet, sp));
         }
         foreach (var (p, sp) in made)
+        {
+            if (sp.Mother.Length > 0 && made.FirstOrDefault(m => m.p.Name == sp.Mother).p is { } mum) p.MotherId = mum.Id;
             foreach (var (name, v) in sp.PetBonds)
                 if (made.FirstOrDefault(m => m.p.Name == name).p is { } o) p.SetPetBond(o, v);
+        }
     }
 }

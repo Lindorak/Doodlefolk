@@ -165,7 +165,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, lassoCursor = _settings.LassoCursor, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -610,6 +610,7 @@ sealed partial class App
             case "stamina": _settings.StaminaOn = v.GetBoolean(); break;
             case "weight": _settings.WeightOn = v.GetBoolean(); break;
             case "petHelp": _settings.PetHelp = v.GetBoolean(); break;
+            case "petBreeding": _settings.PetBreeding = v.GetBoolean(); break;
             case "lassoCursor": _settings.LassoCursor = v.GetBoolean(); break;
             case "dayNight": _settings.DayNight = v.GetBoolean(); break;
             case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;

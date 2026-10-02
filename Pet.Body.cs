@@ -25,7 +25,7 @@ sealed partial class Pet
     /// <summary>Speed multiplier from weight and stamina.</summary>
     float BodyPace => HealthPace * (WeightOn ? 1 - 0.45f * MathF.Max(0, Weight - 0.3f) / 0.7f : 1) * (StaminaOn ? 0.55f + 0.45f * MathF.Min(1, Stamina * 1.5f) : 1);
     /// <summary>How wide the body is drawn.</summary>
-    float Girth => WeightOn ? 1 + MathF.Max(0, Weight - 0.15f) * 0.75f : 1;
+    float Girth => (WeightOn ? 1 + MathF.Max(0, Weight - 0.15f) * 0.75f : 1) + (Pregnant > 0 ? 0.28f * M.Clamp01(1 - Pregnant / 1500 + 0.4f) : 0);
 
     void UpdateBody(World w, float dt)
     {

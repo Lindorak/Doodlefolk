@@ -418,6 +418,19 @@ sealed class Item
                 break;
             case "puddle": Smell(r, t, 1); break;
             case "fishtank": DrawTank(r, t); break;
+            case "hamsterwheel":
+            {
+                WheelAngle += SpinV * 0.016f;
+                SpinV *= 0.97f;
+                var c = Local(0, 13);
+                float rr = 11 * sc;
+                var rim = Col(0);
+                r.Ring(c, rr + 0.8f * sc, Ink, 1.4f * sc);
+                r.Ring(c, rr, rim, 1.8f * sc);
+                for (int i = 0; i < 8; i++) { float a = WheelAngle + i * MathF.PI / 4; r.Line(c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * rr * 0.2f, c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * rr, rim.A(0.7f), 0.7f * sc); }
+                r.Disc(c, 1.6f * sc, Col(1));
+                break;
+            }
             case "seedpatch" or "sprout" or "bud" or "tulip" or "sunflower" or "tomatoplant":
                 // Dry soil goes pale; freshly watered soil glistens.
                 if (Fill < 0.25f) r.Oval(Local(0, 1.6f), 8.5f * sc, 1.8f * sc, new Color4(0.85f, 0.75f, 0.55f, 0.45f * (1 - Fill * 4)));
@@ -491,6 +504,8 @@ sealed class Item
     public string PlantKind = "";
     public int PlanterId;
     public bool IsPlant => Def.Verbs.Contains(Verb.Tend);
+    /// <summary>A wheel's turning (set by whoever's running in it; it slows by itself).</summary>
+    public float WheelAngle, SpinV;
     public bool IsMess => Def.Key is "puddle" or "poop" or "dropping";
 
     static readonly Vector2[] _flamePoly = new Vector2[17];
@@ -632,7 +647,7 @@ sealed class Item
     /// <summary>Does this object need redrawing this frame (it moved, changed, animates, or someone's using it)?</summary>
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
     public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
-                     || Def.Key is "puddle" or "poop" or "fishtank" || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
+                     || Def.Key is "puddle" or "poop" or "fishtank" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>

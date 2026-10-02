@@ -13,7 +13,7 @@ sealed partial class Pet
     enum State
     {
         Idle, Wander, Travel, Sit, Sleep, Petted, Eat, Drink, Potty, Accident, Guilty, Ask, Play, Chase, Fetch, Pounce, Zoomies,
-        Groom, Stretch, Sniff, Follow, Stalk, PounceBird, ChasePet, Flee, Hide, Scuffle, Startled, Bath, Perch, Knock, Scratch, Noise, Trick, Walk,
+        Groom, Stretch, Sniff, Follow, Stalk, PounceBird, ChasePet, Flee, Hide, Scuffle, Startled, Bath, Perch, Knock, Scratch, Noise, Trick, Walk, Wheel,
     }
 
     enum Pose { Stand, Sit, Lie, Curl, Crouch, Air, HeadDown, Squat, LegLift, Groom, Stretch, PlayBow, Belly, Arch, Cower, Upright, Shake, Perch, Fluff }
@@ -46,7 +46,7 @@ sealed partial class Pet
         State.Flee => "Running away", State.Hide => "Hiding", State.Scuffle => _scuffleWith != null ? $"Fighting with {_scuffleWith.Name}!" : "Fighting!",
         State.Startled => "Startled", State.Bath => "Having a bath", State.Perch => _perchFig != null ? $"Perched on {_perchFig.Name}" : "Perched",
         State.Knock => "Knocking something off a ledge…", State.Scratch => _thing?.Def.Key == "scratchpost" ? "Using the scratching post" : $"Scratching the {_thing?.Def.Name.ToLowerInvariant()}",
-        State.Noise => Kind switch { PetKind.Dog => "Barking", PetKind.Cat => "Yowling", _ => "Screeching" }, State.Trick => "Doing a trick", State.Walk => "On a walk",
+        State.Noise => Kind switch { PetKind.Dog => "Barking", PetKind.Cat => "Yowling", _ => "Screeching" }, State.Trick => _trick.Length > 0 ? $"Doing a trick: {_trick}" : "Doing a trick", State.Walk => "On a walk", State.Wheel => "Running on the wheel",
         State.Travel => "On the way", _ => "Hanging out",
     };
 
@@ -285,9 +285,10 @@ sealed partial class Pet
                 if (_t > _dur) GoIdle(1);
                 return;
             case State.Trick:
-                _pose = Grounded ? Pose.Sit : Pose.Air;
-                if (Grounded && _t > 0.5f) { Go(State.Sit, 1.5f); }
+                DoTrickPose(dt);
+                if (_t > _dur) GoIdle(0.5f);
                 return;
+            case State.Wheel: DoWheel(w, dt); return;
             case State.Walk: DoWalk(w, dt); return;
             default:
                 Vel.X = 0;
@@ -312,6 +313,8 @@ sealed partial class Pet
                 FleeFrom(o, w);
                 return;
             }
+            // Small and furry: a cat creeping up is reason enough to bolt.
+            if (Small && o.Kind == PetKind.Cat && o._st is State.Stalk or State.PounceBird && o._other == this && d < 200 * _s && _rng.NextDouble() < 0.6) { DefendOrFlee(o, w); return; }
             // Being chased.
             if (o._st == State.ChasePet && o._other == this && !o._playful && d < 260 * _s) { DefendOrFlee(o, w); return; }
         }
@@ -322,6 +325,10 @@ sealed partial class Pet
         var opts = new List<(float W, string Label, Action Do)>();
         void Add(float wgt, string label, Action a) { if (wgt > 0.01f) opts.Add((wgt, label, a)); }
         bool cat = Kind == PetKind.Cat, dog = Kind == PetKind.Dog, bird = Kind == PetKind.Parrot;
+        if (Small) SmallOptions(w, (wt, l, a) => Add(wt, l, a));
+        // The young stay close to their mother.
+        if (Young && Mother(w) is { } mum && Vector2.Distance(mum.Pos, Pos) > 120 * _s && !mum.Held)
+            Add(1.6f * (1 - Age), "follow mum", () => Travel(() => w.Pets.Contains(mum) ? mum.Pos + new Vector2(-mum.Facing * mum.Length * 0.7f, 0) : null, 1.3f, 14 * _s, 15, () => Go(State.Sit, _rng.Range(2, 5))));
         float pot = MathF.Max(Bladder, Bowel);
         if (!bird && pot > 0.5f) Add(pot * pot * 7, "bathroom", () => GoPotty(w));
         if (Thirst > 0.45f) Add(Thirst * Thirst * 5, "drink", () => GoDrink(w));
@@ -329,20 +336,20 @@ sealed partial class Pet
         // Free-feeding: a full bowl is hard to resist (especially for dogs), hungry or not.
         else if (Hunger > 0.15f && w.Items.Any(i => i.Def.Key == "foodbowl" && i.Fill > 0.5f && Vector2.Distance(i.Pos, Pos) < 1500 * _s)) Add(dog ? 0.7f : 0.2f, "graze", () => GoEat(w));
         float tired = 1 - Energy;
-        if (Energy < (cat ? 0.75f : 0.5f)) Add(tired * tired * 4 * (cat ? 1.5f : 1) * (Young ? 1.6f : 1) * (1 + w.Night), "sleep", () => GoSleep(w));
-        if (Attention > 0.4f) Add(Attention * Attention * 3.5f, "attention", () => SeekAttention(w));
-        if (Boredom > 0.25f) Add(Boredom * 1.8f * (0.3f + Energy) * (Young ? 1.6f : 1), "play", () => GoPlay(w));
+        if (Energy < (cat ? 0.75f : 0.5f)) Add(tired * tired * 4 * (cat ? 1.5f : 1) * (Young ? 1.6f : 1) * (Kind == PetKind.Hamster ? 1 : 1 + w.Night) * Tm(Temperament.Lazy, 1.6f), "sleep", () => GoSleep(w));
+        if (Attention > 0.4f) Add(Attention * Attention * 3.5f * Tm(Temperament.Affectionate, 1.5f) * Tm(Temperament.Shy, 0.6f), "attention", () => SeekAttention(w));
+        if (Boredom > 0.25f && !Small) Add(Boredom * 1.8f * (0.3f + Energy) * (Young ? 1.6f : 1) * Tm(Temperament.Playful, 1.6f) * Tm(Temperament.Lazy, 0.6f), "play", () => GoPlay(w));
         if (Stress > 0.5f) Add(Stress * 2.5f, "hide", () => GoHide(w));
         if (cat) Add(0.3f, "groom", () => Go(State.Groom, _rng.Range(3, 7)));
         if (cat && Nearest(w, "fishtank") is { } tank) Add(0.25f + Boredom * 0.9f, "watch the fish", () => Travel(() => w.Items.Contains(tank) ? Beside(tank) : null, 1, 6 * S, 20, () => { Go(State.Sit, _rng.Range(8, 20)); _thing = tank; Boredom = MathF.Max(0, Boredom - 0.3f); Log("Watched the fish, intently"); }));
         if (dog) Add(0.35f, "sniff", () => Go(State.Sniff, _rng.Range(1.5f, 3.5f)));
         if (bird) { Add(0.9f, "perch", () => PerchSomewhere(w)); Add(0.25f + Boredom * 0.6f, "chatter", () => Chatter(w)); Add(0.2f, "preen", () => Go(State.Groom, _rng.Range(3, 6))); }
-        if (Energy > 0.75f && !bird) Add((Young ? 0.5f : 0.12f) * Energy, "zoomies", () => { Go(State.Zoomies, _rng.Range(4, 8)); Shout(cat ? "!!" : "woof!"); });
+        if (Energy > 0.75f && !bird && Kind != PetKind.Hamster) Add((Young ? 0.5f : 0.12f) * Energy * Tm(Temperament.Playful, 2) * Tm(Temperament.Lazy, 0.3f), "zoomies", () => { Go(State.Zoomies, _rng.Range(4, 8)); Shout(cat ? "!!" : "woof!"); });
         // Temptations (training holds them back).
         // (A hunt takes it out of them: a while between tries.)
-        if ((cat || dog) && _t0 > _huntAgain) foreach (var bp in w.Pets.Where(p => p.Kind == PetKind.Parrot && p != this && !p.Flying && !p.OnCursor && Vector2.Distance(p.Pos, Pos) < 700 * _s))
+        if ((cat || dog) && _t0 > _huntAgain) foreach (var bp in w.Pets.Where(p => (p.Kind == PetKind.Parrot || (cat && p.Kind == PetKind.Hamster)) && p != this && !p.Flying && !p.OnCursor && !p.Held && Vector2.Distance(p.Pos, Pos) < 700 * _s))
             { if (Tempted(Habit.ChaseBirds, cat ? 0.45f : 0.2f)) Add(cat ? 1.3f : 0.6f, "stalk", () => { _huntAgain = _t0 + _rng.Range(90, 240); BeginStalk(bp, w); }); break; }
-        if (dog) foreach (var cp in w.Pets.Where(p => p.Kind == PetKind.Cat && Vector2.Distance(p.Pos, Pos) < 600 * _s && PetBond(p) < 0.4f))
+        if (dog) foreach (var cp in w.Pets.Where(p => p.Kind is PetKind.Cat or PetKind.Rabbit && Vector2.Distance(p.Pos, Pos) < 600 * _s && PetBond(p) < 0.4f && !p.Held))
             { if (Tempted(Habit.ChasePets, 0.4f * Energy)) Add(1.4f, "chase cat", () => BeginChase(cp, w)); break; }
         if (cat && Boredom > 0.45f && Attention > 0.4f && Tempted(Habit.KnockingThings, 0.5f)) Add(1.2f, "knock", () => BeginKnock(w));
         if (cat && Tempted(Habit.Scratching, 0.15f + Boredom * 0.25f) || cat && w.Items.Any(i => i.Def.Key == "scratchpost") && _rng.NextDouble() < 0.15) Add(0.7f, "scratch", () => BeginScratch(w));
@@ -410,6 +417,7 @@ sealed partial class Pet
         if (Hunger < 0.03f || _t > _dur)
         {
             Log(Hunger < 0.1f ? "Ate a full meal" : "Had a snack");
+            if (Kind == PetKind.Hamster) _pouch = 1;
             Thirst = MathF.Min(1, Thirst + 0.08f);
             GoIdle(1);
             if (Kind == PetKind.Cat && _rng.NextDouble() < 0.6) Go(State.Groom, 4);
@@ -450,7 +458,7 @@ sealed partial class Pet
         float pot = MathF.Max(Bladder, Bowel);
         // Not house-trained yet: it just goes, wherever it is.
         if (_rng.NextDouble() < (1 - HouseScore) * 0.6f && pot > 0.55f && Accidents) { Accident(w); return; }
-        if (Kind == PetKind.Cat)
+        if (Kind is PetKind.Cat or PetKind.Rabbit)
         {
             var box = Nearest(w, "litterbox");
             if (box == null) { AskFor(PetNeed.Potty, w, null); return; }

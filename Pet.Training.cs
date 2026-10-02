@@ -2,10 +2,10 @@ using System.Numerics;
 namespace StickFight;
 
 /// <summary>Bad habits a pet can learn to resist.</summary>
-enum Habit { ChaseBirds, ChasePets, FightPets, Scratching, KnockingThings, Noise, Soiling }
+enum Habit { ChaseBirds, ChasePets, FightPets, Scratching, KnockingThings, Noise, Soiling, Chewing }
 
 /// <summary>Good things a pet can be taught (with treats, right after it does them).</summary>
-enum PetSkill { Housetrained, Sit, Come, ScratchPost, Talk }
+enum PetSkill { Housetrained, Sit, Come, ScratchPost, Talk, RollOver, HighFive, PlayDead, Spin }
 
 /// <summary>Training, the way it works with real animals: timing is everything. A squirt from the spray bottle within a
 /// couple of seconds of the misdeed teaches a little (sooner is better); a late one only confuses and upsets them, and
@@ -25,39 +25,44 @@ sealed partial class Pet
     {
         PetKind.Cat => new[] { Habit.ChaseBirds, Habit.FightPets, Habit.Scratching, Habit.KnockingThings, Habit.Noise, Habit.Soiling },
         PetKind.Dog => new[] { Habit.ChasePets, Habit.ChaseBirds, Habit.FightPets, Habit.Noise, Habit.Soiling },
+        PetKind.Rabbit => new[] { Habit.Chewing, Habit.Soiling, Habit.FightPets },
+        PetKind.Hamster => new[] { Habit.Chewing },
         _ => new[] { Habit.Noise, Habit.FightPets },
     };
 
     public IEnumerable<PetSkill> SkillList => Kind switch
     {
-        PetKind.Cat => new[] { PetSkill.Housetrained, PetSkill.ScratchPost, PetSkill.Come, PetSkill.Sit },
-        PetKind.Dog => new[] { PetSkill.Housetrained, PetSkill.Sit, PetSkill.Come },
-        _ => new[] { PetSkill.Talk, PetSkill.Come },
+        PetKind.Cat => new[] { PetSkill.Housetrained, PetSkill.ScratchPost, PetSkill.Come, PetSkill.Sit, PetSkill.HighFive, PetSkill.Spin },
+        PetKind.Dog => new[] { PetSkill.Housetrained, PetSkill.Sit, PetSkill.Come, PetSkill.RollOver, PetSkill.HighFive, PetSkill.PlayDead, PetSkill.Spin },
+        PetKind.Rabbit => new[] { PetSkill.Housetrained, PetSkill.Come, PetSkill.Spin },
+        PetKind.Hamster => new[] { PetSkill.Come, PetSkill.Spin },
+        _ => new[] { PetSkill.Talk, PetSkill.Come, PetSkill.HighFive, PetSkill.Spin },
     };
 
     public static string HabitGood(Habit h) => h switch
     {
         Habit.ChaseBirds => "Leaves the birds alone", Habit.ChasePets => "Doesn't chase the other pets", Habit.FightPets => "Doesn't start fights",
         Habit.Scratching => "Doesn't scratch the furniture", Habit.KnockingThings => "Doesn't knock things off", Habit.Noise => "Keeps the noise down",
+        Habit.Chewing => "Leaves the plants alone",
         _ => "Goes in the right place",
     };
 
     static string HabitDoing(Habit h) => h switch
     {
         Habit.ChaseBirds => "going after a bird", Habit.ChasePets => "chasing another pet", Habit.FightPets => "fighting", Habit.Scratching => "scratching the furniture",
-        Habit.KnockingThings => "knocking something off", Habit.Noise => "making a racket", _ => "an accident",
+        Habit.KnockingThings => "knocking something off", Habit.Noise => "making a racket", Habit.Chewing => "chewing the plants", _ => "an accident",
     };
 
     public static string SkillName(PetSkill s) => s switch
     {
         PetSkill.Housetrained => "House-trained", PetSkill.Sit => "Sits when asked", PetSkill.Come => "Comes when called",
-        PetSkill.ScratchPost => "Uses the scratching post", _ => "Learns words",
+        PetSkill.ScratchPost => "Uses the scratching post", PetSkill.RollOver => "Rolls over", PetSkill.HighFive => "High five", PetSkill.PlayDead => "Plays dead", PetSkill.Spin => "Spins", _ => "Learns words",
     };
 
     static string SkillDoing(PetSkill s) => s switch
     {
         PetSkill.Housetrained => "going in the right place", PetSkill.Sit => "sitting", PetSkill.Come => "coming when called",
-        PetSkill.ScratchPost => "using the scratching post", _ => "talking",
+        PetSkill.ScratchPost => "using the scratching post", PetSkill.RollOver => "rolling over", PetSkill.HighFive => "the high five", PetSkill.PlayDead => "playing dead", PetSkill.Spin => "spinning", _ => "talking",
     };
 
     public float R(Habit h) => Restraint.GetValueOrDefault(h);
@@ -71,7 +76,7 @@ sealed partial class Pet
     {
         bool young = Age < 0.6f;
         foreach (var h in Enum.GetValues<Habit>()) Restraint[h] = young ? _rng.Range(0, 0.1f) : _rng.Range(0.1f, 0.35f);
-        Restraint[Habit.Soiling] = young ? 0.05f : Kind == PetKind.Cat ? 0.85f : 0.7f;
+        Restraint[Habit.Soiling] = young ? 0.05f : Kind is PetKind.Cat or PetKind.Rabbit ? 0.85f : 0.7f;
         Skills[PetSkill.Housetrained] = young ? 0.1f : Kind == PetKind.Cat ? 0.9f : 0.75f;
         Skills[PetSkill.Sit] = young ? 0 : Kind == PetKind.Dog ? 0.35f : 0.05f;
         Skills[PetSkill.Come] = young ? 0.05f : Kind == PetKind.Cat ? 0.15f : 0.3f;
@@ -80,7 +85,7 @@ sealed partial class Pet
     }
 
     /// <summary>Is it going to give in? (Strong urges still win sometimes, even after a lot of training.)</summary>
-    bool Tempted(Habit h, float drive) => _rng.NextDouble() < drive * (1 - 0.93f * R(h));
+    bool Tempted(Habit h, float drive) => _rng.NextDouble() < drive * Tm(Temperament.Mischievous, 1.5f) * Tm(Temperament.Easygoing, 0.8f) * (1 - 0.93f * R(h));
 
     void Misdeed(Habit h, World w)
     {
@@ -98,7 +103,7 @@ sealed partial class Pet
         if (s == PetSkill.Housetrained) Restraint[Habit.Soiling] = MathF.Min(1, R(Habit.Soiling) + 0.01f);
     }
 
-    void Learn(Habit h, float amount) => Restraint[h] = MathF.Min(1, R(h) + amount * (1 - R(h)));
+    void Learn(Habit h, float amount) => Restraint[h] = MathF.Min(1, R(h) + amount * Tm(Temperament.Mischievous, 0.7f) * Tm(Temperament.Affectionate, 1.2f) * (1 - R(h)));
 
     void TrainingDecay(float dt)
     {

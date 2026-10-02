@@ -44,7 +44,7 @@ sealed partial class Pet
             float d = Vector2.Distance(o.Pos, Pos);
             if (d > 450 * _s) continue;
             bool calm = _st is not (State.Scuffle or State.Flee or State.Stalk or State.ChasePet) && o._st is not (State.Scuffle or State.Flee or State.Stalk or State.ChasePet);
-            if (calm) { PetBond(o, dt * 0.0015f * (Young || o.Young ? 2 : 1)); _fear[o.Id] = MathF.Max(0, Fear(o) - dt * 0.002f); }
+            if (calm) { PetBond(o, dt * 0.0015f * (Young || o.Young ? 2 : 1) * Tm(Temperament.Affectionate, 1.4f) * Tm(Temperament.Shy, 0.6f)); _fear[o.Id] = MathF.Max(0, Fear(o) - dt * 0.002f); }
         }
     }
 
@@ -55,7 +55,7 @@ sealed partial class Pet
         {
             if (f.Dead) continue;
             float d = Vector2.Distance(f.Base, Pos);
-            if (d < 220 * _s) Bond[f.Id] = M.Clamp01(BondWith(f) + dt * 0.004f * (1 + f.Tastes.Of(Thing.Pets)));
+            if (d < 220 * _s) Bond[f.Id] = M.Clamp01(BondWith(f) + dt * 0.004f * (1 + f.Tastes.Of(Thing.Pets)) * Tm(Temperament.Affectionate, 1.5f) * Tm(Temperament.Shy, 0.6f));
         }
         var best = w.Figures.Where(f => !f.Dead).OrderByDescending(BondWith).FirstOrDefault();
         if (best != null && BondWith(best) > 0.25f && best != Owner)
@@ -136,7 +136,7 @@ sealed partial class Pet
                 b.FleeFrom(this, w);
                 b.Squawk(w);
                 Log($"Caught {b.Name} (it got away)");
-                w.News("pets", $"{Name} pounced on {b.Name}! Feathers flew, but {b.Name} escaped", 2);
+                w.News("pets", b.Kind == PetKind.Parrot ? $"{Name} pounced on {b.Name}! Feathers flew, but {b.Name} escaped" : $"{Name} pounced on {b.Name}, who got away", 2);
                 Misdeed(Habit.ChaseBirds, w);
                 Go(State.Sit, 2);
                 return;
@@ -188,7 +188,7 @@ sealed partial class Pet
     void DefendOrFlee(Pet from, World w)
     {
         if (_st is State.Scuffle) return;
-        float brave = Kind == PetKind.Dog ? 0.5f : 0.3f;
+        float brave = (Kind == PetKind.Dog ? 0.5f : Small ? 0.05f : 0.3f) * Tm(Temperament.Bold, 1.6f) * Tm(Temperament.Shy, 0.4f);
         bool cornered = w.Env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { } seg && (Pos.X - seg.X1 < 40 * S || seg.X2 - Pos.X < 40 * S);
         if (Kind != PetKind.Parrot && (cornered || _rng.NextDouble() < brave * (1 - Fear(from))) && Tempted(Habit.FightPets, 0.7f))
         {
@@ -197,6 +197,8 @@ sealed partial class Pet
         }
         if (Kind == PetKind.Cat && _rng.NextDouble() < 0.5) { _pose = Pose.Arch; Shout("hsss!"); World.Play(Sfx.Hiss, Pos, 0.3f, 1, 0.5); }
         Afraid(from, 0.1f);
+        if (Kind == PetKind.Rabbit) { Shout("*thump*"); World.Play(Sfx.Thud, Pos, 0.25f, 1.6f, 0.5); }
+        if (Kind == PetKind.Hamster) World.Play(Sfx.Squeak, Pos, 0.2f, 2.2f, 0.5);
         FleeFrom(from, w);
     }
 

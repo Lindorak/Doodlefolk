@@ -3,7 +3,7 @@ using Vortice.Mathematics;
 
 namespace StickFight;
 
-enum PetKind { Cat, Dog, Parrot }
+enum PetKind { Cat, Dog, Parrot, Rabbit, Hamster }
 
 /// <summary>An animal on the desktop: a cat, a dog or a parrot. Each one has needs (food, water, the bathroom, sleep,
 /// your attention, play), moods and stress, habits that can be trained (with a spray bottle and treats), friendships and
@@ -62,6 +62,8 @@ sealed partial class Pet
 
     static readonly string[] CatNames = { "Whiskers", "Mittens", "Luna", "Pickle", "Mochi", "Pepper", "Biscuit", "Socks", "Noodle", "Tofu", "Ziggy", "Olive" };
     static readonly string[] DogNames = { "Rex", "Buddy", "Waffles", "Max", "Pudding", "Bean", "Scout", "Nugget", "Bingo", "Toast", "Pepper", "Moose" };
+    static readonly string[] RabbitNames = { "Clover", "Thumper", "Hazel", "Biscuit", "Flopsy", "Nibbles", "Willow", "Pip", "Cinnamon", "Dandelion", "Oreo", "Bun" };
+    static readonly string[] HamsterNames = { "Peanut", "Nugget", "Hammy", "Squeak", "Butterscotch", "Mochi", "Crumb", "Tiny", "Pebble", "Sesame", "Fudge", "Bean" };
     static readonly string[] BirdNames = { "Kiwi", "Mango", "Rio", "Sunny", "Pip", "Captain", "Peaches", "Zazu", "Tango", "Blu", "Polly", "Sky" };
 
     public Pet(PetKind kind, float scale, Random rng)
@@ -69,7 +71,7 @@ sealed partial class Pet
         Kind = kind;
         _s = scale;
         _rng = rng;
-        var names = kind switch { PetKind.Cat => CatNames, PetKind.Dog => DogNames, _ => BirdNames };
+        var names = kind switch { PetKind.Cat => CatNames, PetKind.Dog => DogNames, PetKind.Rabbit => RabbitNames, PetKind.Hamster => HamsterNames, _ => BirdNames };
         Name = names[rng.Next(names.Length)];
         // Coats and plumage.
         if (kind == PetKind.Parrot)
@@ -81,23 +83,30 @@ sealed partial class Pet
         }
         else
         {
-            var cols = kind == PetKind.Cat
-                ? new[] { 0x3A3A3A, 0xF2A65A, 0xE8E2D5, 0x8D8D8D, 0xC98B4F, 0x5B4636 }
-                : new[] { 0xC98B4F, 0x6D4C41, 0xEDE0C8, 0x3A3A3A, 0xD9A066, 0xF5F0E6 };
+            var cols = kind switch
+            {
+                PetKind.Cat => new[] { 0x3A3A3A, 0xF2A65A, 0xE8E2D5, 0x8D8D8D, 0xC98B4F, 0x5B4636 },
+                PetKind.Rabbit => new[] { 0xF5F2EC, 0x9C7A5B, 0x8D8D8D, 0x5D4037, 0xD7B98E },
+                PetKind.Hamster => new[] { 0xE0A458, 0xF3E3C3, 0xB0A090, 0xC88A4E, 0x8D7B6A },
+                _ => new[] { 0xC98B4F, 0x6D4C41, 0xEDE0C8, 0x3A3A3A, 0xD9A066, 0xF5F0E6 },
+            };
             Color = M.Hex((uint)cols[rng.Next(cols.Length)]);
             Accent = M.Hex(0xF5F0E6);
         }
         _walk = rng.Range(0, 6);
+        InitSpecies();
         InitMind();
     }
 
-    public float Height => Kind switch { PetKind.Cat => 15, PetKind.Dog => 18, _ => 15 } * S;
-    public float Length => Kind switch { PetKind.Cat => 22, PetKind.Dog => 26, _ => 9 } * S;
+    public float Height => Kind switch { PetKind.Cat => 15, PetKind.Dog => 18, PetKind.Rabbit => 13, PetKind.Hamster => 7, _ => 15 } * S;
+    public float Length => Kind switch { PetKind.Cat => 22, PetKind.Dog => 26, PetKind.Rabbit => 17, PetKind.Hamster => 10, _ => 9 } * S;
     Mover MyMover => new(S * 0.8f, 1900 * S, 0, Height);
     public string Species(bool young = true) => Kind switch
     {
         PetKind.Cat => young && Age < 0.6f ? "kitten" : "cat",
         PetKind.Dog => young && Age < 0.6f ? "puppy" : "dog",
+        PetKind.Rabbit => young && Age < 0.6f ? "bunny" : "rabbit",
+        PetKind.Hamster => young && Age < 0.6f ? "baby hamster" : "hamster",
         _ => young && Age < 0.6f ? "chick" : "parrot",
     };
     public Vector2 Centre => Pos + new Vector2(0, -Height * 0.5f);
@@ -260,7 +269,7 @@ sealed partial class Pet
     {
         if (Kind == PetKind.Parrot) return FlyTo(w, t, within);
         var env = w.Env;
-        float speed = (Kind == PetKind.Cat ? 70 : 85) * S * pace * (Young ? 0.85f : 1) * BodyPace;
+        float speed = Kind switch { PetKind.Cat => 70, PetKind.Rabbit => 95, PetKind.Hamster => 55, _ => 85 } * S * pace * (Young ? 0.85f : 1) * BodyPace;
         if (!Grounded) return false;
         var seg = env.SupportAt(Pos.X, Pos.Y, GroundHwnd);
         if (seg == null) return false;

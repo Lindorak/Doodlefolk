@@ -13,6 +13,7 @@ sealed partial class App
         Pet.StaminaOn = World.StaminaOn = _settings.StaminaOn;
         Pet.WeightOn = World.WeightOn = _settings.WeightOn;
         World.PetHelp = _settings.PetHelp;
+        Pet.Breeding = _settings.PetBreeding;
         if (_sprayTool && now > _sprayIdleUntil) PickUpSpray(false);
     }
 
@@ -25,6 +26,8 @@ sealed partial class App
         born = p.Born.ToString("d MMM"), weight = R2(p.Weight), weightWord = p.WeightWord, stamina = R2(p.Stamina), bond = R2(p.UserBond),
         leashed = p.Leashed, onCursor = p.OnCursor, want = p.Want.ToString(),
         health = R2(p.Health), clean = R2(p.Clean), sick = p.IllnessName, cone = p.InCone,
+        temper = p.TemperWord, female = p.Female, wear = p.Wear, wearColour = p.WearColour, expecting = p.Pregnant > 0, mother = p.MotherName,
+        tricks = Pet.TrickNames.Where(p.CanTrick),
         needs = new { food = R2(1 - p.Hunger), water = R2(1 - p.Thirst), bathroom = R2(1 - MathF.Max(p.Bladder, p.Bowel)), energy = R2(p.Energy), love = R2(1 - p.Attention), fun = R2(1 - p.Boredom), calm = R2(1 - p.Stress), comfort = R2(1 - p.Frustration) },
         habits = p.Habits.Select(h => new { key = h.ToString(), name = Pet.HabitGood(h), v = R2(p.R(h)) }),
         skills = p.SkillList.Select(s => new { key = s.ToString(), name = Pet.SkillName(s), v = R2(p.Sk(s)) }),
@@ -57,6 +60,14 @@ sealed partial class App
             case "vet": PostAll(new { t = "toast", text = p.Vet(_w) }); break;
             case "bath": PostAll(new { t = "toast", text = p.Bath(_w) }); break;
             case "brush": PostAll(new { t = "toast", text = p.Brush(_w) }); break;
+            case "trick": PostAll(new { t = "toast", text = p.DoTrick(Str(m, "v"), _w) }); break;
+            case "wear": p.Wear = Pet.Outfits.Contains(Str(m, "v")) ? Str(m, "v") : ""; if (p.Wear.Length > 0) _w.Sticker("dressup"); break;
+            case "wearColour": p.WearColour = Str(m, "v"); break;
+            case "rehome":
+                _w.Pets.Remove(p);
+                _w.News("pets", $"{p.Name} went to a loving new home", 2);
+                PostAll(new { t = "toast", text = $"{p.Name} has gone to a loving new home." });
+                break;
             case "spraynow": World.Log("spray: " + p.Sprayed(_w)); break;   // debug: a squirt without the tool
         }
     }

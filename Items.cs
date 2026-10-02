@@ -279,6 +279,13 @@ static class ItemCatalog
             Mass = 3, Surface = 30, SurfX1 = -20, SurfX2 = 20,
         });
 
+        Add(new ItemDef
+        {
+            Key = "hamsterwheel", Name = "Hamster wheel", Words = new[] { "hamster wheel", "exercise wheel", "running wheel", "wheel" }, W = 22, H = 26, Color = M.Hex(0x26C6DA),
+            Shapes = new[] { R(-11, 0, 11, 2.5f, 0), L(-8, 2, 0, 13, 5, 1.6f), L(8, 2, 0, 13, 5, 1.6f) },
+            Mass = 1,
+        });
+
         // ---------------- pet care ----------------
         Add(new ItemDef
         {

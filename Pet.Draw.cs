@@ -17,6 +17,8 @@ sealed partial class Pet
             return;
         }
         if (Kind == PetKind.Parrot) DrawParrot(r);
+        else if (Kind == PetKind.Rabbit) DrawRabbit(r);
+        else if (Kind == PetKind.Hamster) DrawHamster(r);
         else DrawBeast(r);
         DrawHealth(r);
         DrawBubbles(r);
@@ -201,6 +203,7 @@ sealed partial class Pet
             r.Line(n, n + new Vector2(f * hr * 0.6f, -hr * 0.12f), wc, 0.6f * s);
             r.Line(n, n + new Vector2(f * hr * 0.6f, hr * 0.12f), wc, 0.6f * s);
         }
+        DrawOutfit(r, hip, chest, bodyThick, head, hr, f);
         if (Leashed || Owner != null) r.Line(head + new Vector2(-f * hr * 0.55f, hr * 0.55f), head + new Vector2(f * hr * 0.2f, hr * 0.85f), new Color4(0.85f, 0.2f, 0.2f, 0.95f), 1.8f * s);   // collar
         if (Wet > 0.2f && ((int)(_t * 4) % 3 == 0)) r.Disc(P(0, -H * 0.1f + (_t * 30 % 6) * s), 1 * s, new Color4(0.55f, 0.75f, 1, 0.8f * Wet));
     }

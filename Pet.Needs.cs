@@ -36,8 +36,8 @@ sealed partial class Pet
         bool asleep = _st == State.Sleep;
         Hunger = M.Clamp01(Hunger + p / (3 * Hour) * young * (Kind == PetKind.Parrot ? 1.2f : 1));
         Thirst = M.Clamp01(Thirst + p / (2.5f * Hour) * (_st is State.Zoomies or State.Chase or State.ChasePet ? 3 : 1));
-        if (Kind != PetKind.Parrot) Bladder = MathF.Min(1, Bladder + p / ((Kind == PetKind.Cat ? 2 : 2.5f) * Hour) * young * (asleep ? 0.5f : 1));
-        Bowel = MathF.Min(1, Bowel + p / (Kind == PetKind.Parrot ? 0.7f * Hour : 6 * Hour) * young * (asleep ? 0.5f : 1));
+        if (Kind is not (PetKind.Parrot or PetKind.Hamster)) Bladder = MathF.Min(1, Bladder + p / ((Kind is PetKind.Cat or PetKind.Rabbit ? 2 : 2.5f) * Hour) * young * (asleep ? 0.5f : 1));
+        Bowel = MathF.Min(1, Bowel + p / (Kind is PetKind.Parrot or PetKind.Hamster ? 0.7f * Hour : Kind == PetKind.Rabbit ? 3 * Hour : 6 * Hour) * young * (asleep ? 0.5f : 1));
         Attention = M.Clamp01(Attention + p / (1.2f * Hour) * (Kind switch { PetKind.Dog => 1.2f, PetKind.Cat => 0.7f, _ => 1.5f }) * (asleep ? 0.2f : 1));
         Boredom = M.Clamp01(Boredom + p / (1.5f * Hour) * young * (asleep ? 0.2f : 1));
         float busy = _st is State.Zoomies or State.Chase or State.ChasePet or State.Play or State.Flee or State.Scuffle ? 4 : Flying ? 2 : 1;
@@ -47,6 +47,8 @@ sealed partial class Pet
         TrainingDecay(dt);
         UpdateBody(w, dt);
         UpdateHealth(w, dt);
+        UpdateBreeding(w, dt);
+        TickPouch(dt);
         if (Young)
         {
             float before = Age;
@@ -61,10 +63,11 @@ sealed partial class Pet
     /// <summary>Couldn't hold it any longer (or a parrot just being a parrot).</summary>
     void Accident(World w)
     {
-        bool pee = Kind != PetKind.Parrot && Bladder >= Bowel;
+        bool tiny = Kind is PetKind.Parrot or PetKind.Hamster;
+        bool pee = !tiny && Bladder >= Bowel;
         // Parrots on their perch: there's a tray for that.
         bool caught = Kind == PetKind.Parrot && Grounded && w.Items.Any(i => i.Def.Key == "perch" && MathF.Abs(i.Pos.X - Pos.X) < 30 * S);
-        if (!caught && w.MakeItem?.Invoke(Kind == PetKind.Parrot ? "dropping" : pee ? "puddle" : "poop") is { } mess)
+        if (!caught && w.MakeItem?.Invoke(tiny ? "dropping" : pee ? "puddle" : "poop") is { } mess)
         {
             float y = Grounded ? Pos.Y : w.Env.Below(Pos.X, Pos.Y)?.Y ?? Pos.Y;
             mess.Pos = new Vector2(Pos.X - Facing * Length * 0.3f, y);
@@ -72,7 +75,7 @@ sealed partial class Pet
             mess.OnGround = false;
         }
         if (pee) Bladder = 0; else Bowel = 0;
-        if (Kind == PetKind.Parrot) return;
+        if (tiny) return;
         Misdeed(Habit.Soiling, w);
         string where = w.Env.SupportAt(Pos.X, Pos.Y, GroundHwnd) is { Solid: true } ? "the floor" : "a window";
         Log(pee ? $"Had an accident on {where}" : $"Pooped on {where}");

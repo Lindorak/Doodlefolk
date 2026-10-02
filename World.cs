@@ -46,6 +46,8 @@ sealed partial class World
     public bool Babies = true;
     public static int MaxFigures = 14;
     public Action<Figure, Figure>? MakeBaby;
+    /// <summary>A new animal (for litters).</summary>
+    public Func<PetKind, Pet?>? MakePet;
     public Figure? Hover;
     public float Scale = 1;
     /// <summary>Freeze-frame on big impacts: the simulation pauses while this counts down.</summary>

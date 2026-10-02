@@ -91,6 +91,13 @@ sealed class SavedPet
     public float Health { get; set; } = 1;
     public float Clean { get; set; } = 1;
     public string Sick { get; set; } = "";
+    public string Temper { get; set; } = "";
+    public bool? Female { get; set; }
+    public string Wear { get; set; } = "";
+    public string WearColour { get; set; } = "";
+    public float Pregnant { get; set; }
+    public string Mother { get; set; } = "";
+    public DateTime? LastLitter { get; set; }
 }
 
 sealed class SavedLog
@@ -151,6 +158,8 @@ sealed class Settings
     public bool WeightOn { get; set; } = true;
     /// <summary>Figures help look after the pets (fill bowls, scoop the litter box).</summary>
     public bool PetHelp { get; set; } = true;
+    /// <summary>Bonded pairs of animals can have litters.</summary>
+    public bool PetBreeding { get; set; } = true;
     /// <summary>Figures with a lasso may rope your cursor (only when you've left the mouse alone; moving it breaks free).</summary>
     public bool LassoCursor { get; set; } = true;
     public DateTime? LastSeen { get; set; }

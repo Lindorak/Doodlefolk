@@ -861,7 +861,7 @@ PAGES.library = {
 
 const NEED_NAMES = [["food", "Food"], ["water", "Water"], ["bathroom", "Bathroom"], ["energy", "Energy"], ["love", "Attention"], ["fun", "Fun"], ["calm", "Calm"], ["comfort", "Comfort"]];
 const meterRow = (label, v, text, fill) => h("div", { class: "meter" }, h("label", null, label), h("div", { class: "bar" }, h("i", { style: { width: (Math.max(0, Math.min(1, v)) * 100) + "%", "--fill": fill || (v > 0.6 ? "var(--good)" : v > 0.3 ? "var(--meh)" : "var(--bad)") } })), h("span", { class: "n" }, text));
-const petGlyph = k => k === "Cat" ? "🐈" : k === "Dog" ? "🐕" : "🦜";
+const petGlyph = k => ({ Cat: "🐈", Dog: "🐕", Parrot: "🦜", Rabbit: "🐇", Hamster: "🐹" })[k] || "🐾";
 
 function petActions(p, close) {
   const act = (label, op, primary) => h("button", { class: "btn small" + (primary ? " primary" : ""), onclick: () => { send({ t: "pet", op, id: p.id }); if (close && (op === "spray")) close(); } }, label);
@@ -876,10 +876,10 @@ PAGES.pets = {
     add(root, h("h1", null, "Pets"),
       h("p", { class: "sub" }, "Real pets need real care: food and water, the litter box (or walks, for dogs), sleep, play and your attention. Click a bowl to fill it, a litter box to scoop it, a mess to clean it up. Kittens, puppies and chicks grow up over a few hours."),
       h("h2", null, "Adopt"),
-      h("div", { class: "row" }, [["Cat", false, "🐈 Cat"], ["Cat", true, "Kitten"], ["Dog", false, "🐕 Dog"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜 Parrot"], ["Parrot", true, "Chick"]].map(([k, y, l]) =>
+      h("div", { class: "row" }, [["Cat", false, "🐈 Cat"], ["Cat", true, "Kitten"], ["Dog", false, "🐕 Dog"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜 Parrot"], ["Parrot", true, "Chick"], ["Rabbit", false, "🐇 Rabbit"], ["Rabbit", true, "Bunny"], ["Hamster", false, "🐹 Hamster"]].map(([k, y, l]) =>
         h("button", { class: "chip", onclick: () => send({ t: "adopt", kind: k, young: y }) }, l))),
       h("h2", null, "Supplies"),
-      h("div", { class: "row" }, [["foodbowl", "Food bowl"], ["waterbowl", "Water bowl"], ["litterbox", "Litter box"], ["peepad", "Pee pad"], ["petbed", "Pet bed"], ["perch", "Bird perch"], ["scratchpost", "Scratching post"], ["chewtoy", "Chew toy"], ["yarn", "Yarn"]].map(([k, l]) =>
+      h("div", { class: "row" }, [["foodbowl", "Food bowl"], ["waterbowl", "Water bowl"], ["litterbox", "Litter box"], ["peepad", "Pee pad"], ["petbed", "Pet bed"], ["perch", "Bird perch"], ["hamsterwheel", "Hamster wheel"], ["scratchpost", "Scratching post"], ["chewtoy", "Chew toy"], ["yarn", "Yarn"]].map(([k, l]) =>
         h("button", { class: "chip", onclick: () => send({ t: "supply", key: k }) }, l))),
       h("p", { class: "hint" }, "Training works like it does with real animals: spray within a couple of seconds of a misdeed (chasing the bird, scratching the couch, a scrap) and it slowly sinks in; spray late or for nothing and they just get upset. Treats right after something good (the litter box, coming when called) reinforce it. Parrots love being sprayed: it's a bath."));
     const list = h("div");
@@ -895,14 +895,23 @@ PAGES.pets = {
       let actSig = "";
       ups.push(() => {
         const p = (S.pets || []).find(x => x.id === id); if (!p) return;
-        title.replaceChildren(h("span", { class: "dot", style: { background: p.hex } }), `${petGlyph(p.kind)} ${p.name}`, h("span", { class: "hint" }, `  ${p.species}${p.young ? ` · ${Math.round(p.age * 100)}% grown` : ""} · ${p.weightWord}`));
+        title.replaceChildren(h("span", { class: "dot", style: { background: p.hex } }), `${petGlyph(p.kind)} ${p.name}`, h("span", { class: "hint" }, `  ${p.female ? "♀" : "♂"} ${p.temper} ${p.species}${p.young ? ` · ${Math.round(p.age * 100)}% grown` : ""} · ${p.weightWord}${p.expecting ? " · expecting!" : ""}${p.mother ? ` · ${p.mother}'s` : ""}`));
         sub.textContent = `${p.activity}. ${p.mood}.${p.owner ? ` ${p.owner}'s favourite.` : ""}`;
         needs.replaceChildren(...NEED_NAMES.map(([k, l]) => meterRow(l, p.needs[k], Math.round(p.needs[k] * 100) + "%")),
           meterRow("Stamina", p.stamina, Math.round(p.stamina * 100) + "%"), meterRow("Health", p.health, p.sick ? p.sick : Math.round(p.health * 100) + "%", p.sick ? "var(--bad)" : null), meterRow("Clean", p.clean, Math.round(p.clean * 100) + "%"), meterRow("Loves you", (p.bond + 1) / 2, p.bond > 0.6 ? "adores you" : p.bond > 0.25 ? "likes you" : p.bond > -0.1 ? "warming up" : "wary"));
         train.replaceChildren(...p.habits.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--accent)")), ...p.skills.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--good)")));
         extra.textContent = [p.friends.length ? "Gets on with: " + p.friends.map(f => `${f.name} (${f.v > 0.45 ? "friends" : f.v > 0 ? "okay" : f.v > -0.4 ? "wary" : "enemies"})`).join(", ") : "", p.words ? `Says: ${p.words.map(w => "“" + w + "”").join(" ")}` : "", `Sprayed ${p.sprays}× · ${p.treats} treats · born ${p.born}`].filter(Boolean).join("  ·  ");
-        const sig = [p.leashed, p.onCursor].join();
-        if (sig !== actSig) { actSig = sig; acts.replaceChildren(...petActions(p).filter(Boolean)); }
+        const sig = [p.leashed, p.onCursor, p.wear].join();
+        if (sig !== actSig)
+        {
+          actSig = sig;
+          const wear = h("select", { class: "text", onchange: () => send({ t: "pet", op: "wear", id, v: wear.value }) }, ["", "bandana", "sweater", "bow", "raincoat"].map(o => h("option", { value: o }, o || "No clothes")));
+          wear.value = p.wear || "";
+          const wcol = h("input", { type: "color", value: p.wearColour || "#e53935", onchange: () => send({ t: "pet", op: "wearColour", id, v: wcol.value }) });
+          acts.replaceChildren(...petActions(p).filter(Boolean),
+            ...(p.tricks || []).map(tr => h("button", { class: "btn small", onclick: () => send({ t: "pet", op: "trick", id, v: tr }) }, "✨ " + tr)),
+            wear, wcol, armed("Rehome", "Sure?", () => send({ t: "pet", op: "rehome", id }), "btn small danger"));
+        }
         log.replaceChildren(...(p.log.length ? p.log.map(l => h("li", null, h("span", null, l.text), h("span", { class: "ago" }, ago(l.ago)))) : [h("li", { class: "none" }, "Nothing yet.")]));
       });
     }
@@ -1219,6 +1228,7 @@ PAGES.settings = {
     const staminaC = check("Stamina", "Everyone (figures and animals) gets out of puff with running, chasing and fighting, and needs to catch their breath.", () => st().stamina !== false, v => setS("stamina", v));
     const weightC = check("Weight", "Eating too much (and treats!) makes them chubbier, exercise slims them down. Heavier means slower and quicker to tire.", () => st().weight !== false, v => setS("weight", v));
     const lassoC = check("Figures can lasso your cursor", "A figure with a lasso may rope your cursor, spin it round and fling it. Only when you've left the mouse alone for a few seconds; move it yourself and it breaks free.", () => st().lassoCursor !== false, v => setS("lassoCursor", v));
+    const breedC = check("Pet litters", "Bonded pairs of animals can have kittens, puppies, bunnies and so on.", () => st().petBreeding !== false, v => setS("petBreeding", v));
     const petHelpC = check("Figures help with the pets", "Your figures fill empty bowls and scoop the litter box now and then.", () => st().petHelp !== false, v => setS("petHelp", v));
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
@@ -1254,7 +1264,7 @@ PAGES.settings = {
       petMode,
       h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)),
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
-      staminaC, weightC, petHelpC, lassoC,
+      staminaC, weightC, petHelpC, breedC, lassoC,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1276,7 +1286,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); lassoC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update();
       careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); });
     };
   },

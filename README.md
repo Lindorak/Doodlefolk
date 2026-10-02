@@ -57,7 +57,8 @@ panel (draw a figure, toss in a toy, hide them, quit).
   - they walk over to words they know and love them, hate them, or run from them (spiders!);
   - now and then one points out a link in a bubble (it only opens if you click it);
   - they dance when music plays and sit down to watch when a video's on.
-- **Pets that feel real**: cats, dogs and parrots (or a kitten, puppy or chick that grows up over a few hours).
+- **Pets that feel real**: cats, dogs, parrots, rabbits and hamsters (or a kitten, puppy, chick, kit or pup that
+  grows up over a few hours), each with a temperament (shy, bold, lazy, mischievous, affectionate, playful).
   - **Needs**: they get hungry, thirsty, tired, bored and lonely, and need the bathroom. Fill their bowls, scoop the
     litter box, take dogs out on a **leash** (it runs from the collar to your cursor), and clean up any accidents.
     They ask for what they need with a little thought bubble.
@@ -70,10 +71,30 @@ panel (draw a figure, toss in a toy, hide them, quit).
     fleas or a sprain. Take them to the vet, give them a bath (cats will not thank you) or a brush.
   - **A fish tank** to keep fed (drag its sides, top or a top corner to resize it like a window; bigger tanks hold
     more fish): figures find it calming, cats can't stop staring.
+  - **Families, tricks and clothes**: bonded pairs can have a litter (the young take after their parents and
+    follow their mother about). Teach tricks (roll over, high five, play dead, spin) with treats; dress them in a
+    bandana, sweater or bow (dogs put on a raincoat by themselves for a rainy walk). Rabbits binky and nibble the
+    garden; hamsters are up all night on their wheel.
   - **Pet-only mode** if you just want animals, and a care setting (relaxed, normal, realistic). The Studio's
     **Pets** tab shows needs, mood, weight, training and a care log.
 - **Weather and time of day**: now and then rain, a thunderstorm or (in winter) snow. Figures shelter, grab
   umbrellas, dance in the rain, have snowball fights and build snowmen. Late at night they get sleepy.
+  Or switch on **your real weather**: type your town and the sky follows the actual weather there (from
+  Open-Meteo; only the place name, once, and then its coordinates are ever sent). Hot days send them to the
+  pool; cold ones to the campfire.
+- **Lights after dark**: lamps, fairy lights and lanterns come on at dusk and light up whoever's near them, and
+  treehouse windows glow.
+- **Town life**: figures have **jobs** (shopkeeper, chef, entertainer, teacher, builder) and earn **coins**,
+  which they spend at the shop stall, on a meal at the food cart, or as tips for whoever's performing on the stage.
+  Kids go to **school** at the chalkboard. **Builders** put up forts and treehouses that become homes (friends
+  lend a hand). Turn on **ageing** and they count their years: elders go grey, slow down, lean on a cane and
+  retire. Moods are catching, and so is laughter. Asleep, they **dream** (a little cloud) about their own lives,
+  sometimes nightmares, and write the dreams down in the morning.
+- **Out and about**: bikes, skateboards and go-karts to ride up and down; a pond with ducks and ducklings to swim
+  in or **fish** at; a swimming pool.
+- **Town events**: every so often (or whenever you like) a **festival** (lights, dancing, fireworks after dark),
+  a **talent show** (acts take turns on stage, the best wins a trophy) or a **race day** (line up, countdown,
+  sprint for the chequered flag).
 - **Diaries**: every figure writes about its day in its own voice. Read them in the Studio.
 - **Talk to them**: right-click a figure and type. They answer in their own voice (and a little babble):
   how they feel, what they like, what they think of the others, a joke if you ask. All understood locally.

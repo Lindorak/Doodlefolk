@@ -48,7 +48,7 @@ sealed class StudioWindow : Form
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
             MinimumSize = Size.Empty;
-            Size = new Size((int)(330 * dpi), (int)(440 * dpi));
+            Size = new Size((int)(340 * dpi), (int)(520 * dpi));
             // Just above the tray, on whichever screen the cursor is.
             var c = Cursor.Position;
             var wa = Screen.FromPoint(c).WorkingArea;

@@ -815,6 +815,11 @@ sealed partial class App : ApplicationContext
                     OpenStudio(p.Length > 1 ? p[1] : null, p.Length > 2 && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } sfi ? sfi.Id : 0);
                     break;
                 case "quick": ToggleQuick(); break;
+                case "mockdump":
+                    // Dev: real Studio data for previewing the page in a browser (Studio/web/mock-*.json, not shipped).
+                    File.WriteAllText(Path.Combine(p[1], "mock-init.json"), System.Text.Json.JsonSerializer.Serialize(StudioInit(), Json));
+                    File.WriteAllText(Path.Combine(p[1], "mock-state.json"), System.Text.Json.JsonSerializer.Serialize(StudioState(), Json));
+                    break;
                 case "throwat":
                     // throwat <Name> [height 0..1] [speed]: a ball flies at the figure as if you threw it
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } taf)

@@ -5,3 +5,4 @@ dist/
 *.user
 *.log
 .vs/
+Studio/web/mock-*.json

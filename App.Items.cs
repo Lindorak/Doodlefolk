@@ -30,7 +30,11 @@ sealed partial class App
     }
 
     /// <summary>"a giant red couch" → a giant red couch. Returns what to tell the user.</summary>
-    string Summon(string text)
+    string Summon2Last = "";
+
+    string Summon(string text) => Summon2Last = SummonInner(text);
+
+    string SummonInner(string text)
     {
         var (def, size, colour, noun) = ItemCatalog.Parse(text);
         if (noun.Length == 0) return "Type the name of a thing, like \"a comfy couch\" or \"pizza\".";

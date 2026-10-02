@@ -233,7 +233,7 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Toys", settings: "Settings" };
+  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
@@ -740,45 +740,136 @@ function matrix() {
   return t;
 }
 
-// ---------------- Toys ----------------
+// ---------------- Things (objects + balls) ----------------
+
+const VERB_WORDS = { Sit: "sit on it", Lie: "nap on it", Hammock: "swing in it", Bounce: "bounce on it", Stand: "climb on it",
+  Eat: "eat it", Hide: "hide in it", Dance: "dance to it", Read: "read it", Warm: "warm up by it" };
+const GROUPS = [["Seats", ["Sit"]], ["Beds", ["Lie", "Hammock"]], ["Play & music", ["Bounce", "Dance", "Read"]], ["Food", ["Eat"]], ["Hide, climb & gather", ["Hide", "Stand", "Warm"]]];
+
+function lighten(hex, k = 0.35) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = v => Math.round(v + (255 - v) * k);
+  return `rgb(${mix(n >> 16 & 255)},${mix(n >> 8 & 255)},${mix(n & 255)})`;
+}
+
+/** Draw an object from the same shape data the desktop uses. */
+function itemSvg(def, hex, cls = "doodle") {
+  const fixed = INIT.fixedColours;
+  const col = c => c === 0 ? hex : c === 1 ? shade(hex, 0.72) : c === 2 ? lighten(hex) : fixed[c] || "#999";
+  const pad = 5;
+  const svg = s("svg", { class: cls, viewBox: `${-def.w / 2 - pad} ${-def.h - pad - 4} ${def.w + pad * 2} ${def.h + pad * 2 + 4}` });
+  const ink = { stroke: "var(--ink)", "stroke-width": 1.1, "stroke-linejoin": "round" };
+  const draw = sh => {
+    const p = sh.p, c = col(sh.c);
+    switch (sh.k) {
+      case "r": return s("rect", { x: Math.min(p[0], p[2]), y: -Math.max(p[1], p[3]), width: Math.abs(p[2] - p[0]), height: Math.abs(p[3] - p[1]), fill: c, ...ink });
+      case "o": return s("rect", { x: p[0], y: -p[3], width: p[2] - p[0], height: p[3] - p[1], rx: p[4], fill: c, ...ink });
+      case "e": return s("ellipse", { cx: p[0], cy: -p[1], rx: p[2], ry: p[3], fill: c, ...ink });
+      case "p": { const pts = []; for (let i = 0; i + 1 < p.length; i += 2) pts.push(`${p[i]},${-p[i + 1]}`); return s("polygon", { points: pts.join(" "), fill: c, ...ink }); }
+      case "l": return s("line", { x1: p[0], y1: -p[1], x2: p[2], y2: -p[3], stroke: c, "stroke-width": sh.w, "stroke-linecap": "round" });
+      case "c": { const pts = []; for (let i = 0; i + 1 < p.length; i += 2) pts.push(`${p[i]},${-p[i + 1]}`); return s("polyline", { points: pts.join(" "), fill: "none", stroke: c, "stroke-width": sh.w, "stroke-linecap": "round" }); }
+    }
+    return null;
+  };
+  for (const over of [false, true]) for (const sh of def.shapes) if (sh.over === over && !sh.used) { const e = draw(sh); if (e) svg.append(e); }
+  // Live-drawn parts.
+  if (def.verbs.includes("Hammock")) svg.append(s("path", { d: "M-44 -42 Q0 -2 44 -42 L44 -40 Q0 4 -44 -40 Z", fill: hex, ...ink }));
+  if (def.verbs.includes("Warm")) for (const [x, h] of [[-5, 13], [0, 17], [5, 12]]) svg.append(s("polygon", { points: `${x - 4.5},-3 ${x},${-h} ${x + 4.5},-3`, fill: fixed[19] }), s("polygon", { points: `${x - 2},-3 ${x},${-h * 0.6} ${x + 2},-3`, fill: fixed[20] }));
+  if (def.verbs.includes("Dance")) svg.append(s("text", { x: 4, y: -20, "font-size": 9, fill: "var(--ink)" }, "♪"));
+  return svg;
+}
+
+function catalogDef(key) { return INIT.catalog.find(c => c.key === key); }
+
+/** "Draw something…" box with suggestions. */
+function summonBox(compact = false) {
+  const input = h("input", { type: "text", class: "summon-input", placeholder: compact ? "Draw something… (try “pizza”)" : "Draw something… a comfy couch, a giant trampoline, pizza", spellcheck: "false", maxlength: 60 });
+  const list = h("div", { class: "summon-list" });
+  const go = text => { text = (text || input.value).trim(); if (!text) return; send({ t: "summon", text }); input.value = ""; list.replaceChildren(); list.classList.remove("open"); };
+  let hover = -1, matches = [];
+  const refresh = () => {
+    const q = input.value.trim().toLowerCase().replace(/^(an?|the)\s+/, "");
+    const word = q.split(/\s+/).pop() || "";
+    matches = word.length < 1 ? [] : INIT.catalog.filter(c => c.name.toLowerCase().includes(word) || c.words.some(w => w.includes(word))).slice(0, compact ? 4 : 6);
+    hover = -1;
+    list.replaceChildren(...matches.map((c, i) => h("div", { class: "summon-item", onpointerdown: e => { e.preventDefault(); const pre = q.split(/\s+/).slice(0, -1).join(" "); go((pre ? pre + " " : "") + c.words[0]); } },
+      itemSvg(c, c.hex, "doodle tiny"), h("span", null, c.name), h("small", null, c.verbs.map(v => VERB_WORDS[v]).join(" · ")))));
+    list.classList.toggle("open", matches.length > 0);
+  };
+  input.addEventListener("input", refresh);
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); if (hover >= 0 && matches[hover]) { list.children[hover].dispatchEvent(new PointerEvent("pointerdown")); } else go(); }
+    else if (e.key === "ArrowDown" && matches.length) { e.preventDefault(); hover = (hover + 1) % matches.length; [...list.children].forEach((c, i) => c.classList.toggle("hover", i === hover)); }
+    else if (e.key === "ArrowUp" && matches.length) { e.preventDefault(); hover = (hover - 1 + matches.length) % matches.length; [...list.children].forEach((c, i) => c.classList.toggle("hover", i === hover)); }
+    else if (e.key === "Escape") { list.classList.remove("open"); }
+  });
+  input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 150));
+  const pencil = s("svg", { viewBox: "0 0 24 24", class: "pencil" }, s("path", { d: "M4 20 L5.5 14.5 L16 4 L20 8 L9.5 18.5 Z M14 6 L18 10 M4 20 L9.5 18.5" }));
+  return h("div", { class: "summon" + (compact ? " compact" : "") }, pencil, input,
+    h("button", { class: "btn small primary", onclick: () => go() }, "Draw it"), list);
+}
 
 PAGES.toys = {
-  sig: () => S.props.map(p => p.id).join(","),
+  sig: () => S.items.map(i => i.id).join(",") + "|" + S.props.map(p => p.id).join(","),
   build(root) {
-    add(root, h("h1", null, "Toys"), h("p", { class: "sub" }, "Balls to kick, juggle, throw and fight over. Grab one with the mouse to throw it yourself."),
-      h("div", { class: "row" }, INIT.propKinds.map(k => h("button", { class: "btn small", onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, `+ ${k.name}`)),
-        S.props.length ? armed("Remove all", "Sure?", () => send({ t: "clear", what: "balls" }), "btn small danger") : null));
-    const list = h("div", { style: { marginTop: "16px" } });
-    const items = S.props.map(p => {
+    add(root, h("h1", null, "Things"),
+      h("p", { class: "sub" }, "Type something and it appears on your desktop. They know what to do with it: sit, nap, bounce, eat, hide, dance, read, gather round. Drag things around with the mouse."),
+      summonBox(),
+      h("div", { class: "row", style: { margin: "10px 0 4px" } }, ["a comfy couch", "trampoline", "pizza", "hammock", "campfire", "a giant beanbag", "a watching chair", "box"].map(t =>
+        h("button", { class: "chip", onclick: () => send({ t: "summon", text: t }) }, t))));
+
+    add(root, h("h2", null, "On your desktop"));
+    const list = h("div");
+    const rows = [];
+    for (const it of S.items) {
+      const def = catalogDef(it.key); if (!def) continue;
+      const sv = h("span", { class: "val" });
+      const size = range(0.3, 3.5, 0.05, it.size, v => { sv.textContent = Math.round(v * 100) + "%"; sendSoon("is" + it.id, { t: "item", op: "size", id: it.id, v }); });
+      const colour = h("input", { type: "color", value: it.hex.toLowerCase() });
+      colour.addEventListener("input", () => { touched(colour); sendSoon("ic" + it.id, { t: "item", op: "color", id: it.id, hex: colour.value }); });
+      const users = h("span", { class: "hint" });
+      const pic = h("div", { class: "toy-pic" }, itemSvg(def, it.hex));
+      add(list, h("div", { class: "toy" + (route.toy === it.id ? " sk" : "") }, pic,
+        h("div", null, h("div", { style: { font: "18px var(--hand)" } }, it.name, " ", users),
+          h("div", { class: "hint" }, "They'll " + def.verbs.map(v => VERB_WORDS[v]).join(", ")),
+          h("div", { class: "ctl" }, h("label", null, "Size"), size, sv, h("label", null, "Colour"), colour, h("button", { class: "btn small", onclick: () => send({ t: "item", op: "flip", id: it.id }) }, "Flip"))),
+        armed("Remove", "Sure?", () => send({ t: "item", op: "remove", id: it.id }), "btn small danger")));
+      rows.push({ id: it.id, size, sv, users, pic, def, colour });
+    }
+    for (const p of S.props) {
       const sv = h("span", { class: "val" }), bv = h("span", { class: "val" });
       const size = range(0.3, 5, 0.05, p.size, v => { sv.textContent = Math.round(v * 100) + "%"; sendSoon("ps" + p.id, { t: "prop", op: "size", id: p.id, v }); });
       const bounce = range(0, 0.95, 0.01, p.bounce, v => { bv.textContent = Math.round(v * 100) + "%"; sendSoon("pb" + p.id, { t: "prop", op: "bounce", id: p.id, v }); });
-      const pic = ballSvg(p.kind, p.hex);
-      const colour = h("input", { type: "color", value: p.hex.toLowerCase() });
-      colour.addEventListener("input", () => { touched(colour); sendSoon("pc" + p.id, { t: "prop", op: "color", id: p.id, hex: colour.value }); });
-      const holder = h("span", { class: "hint" });
-      const el = h("div", { class: "toy" + (route.toy === p.id ? " sk" : "") }, pic,
-        h("div", null, h("div", { style: { font: "18px var(--hand)" } }, p.name, " ", holder),
-          h("div", { class: "ctl" }, h("label", null, "Size"), size, sv, h("label", null, "Bounce"), bounce, bv,
-            p.kind === "Ball" || p.kind === "BeachBall" ? [h("label", null, "Colour"), colour, h("span")] : null)),
-        armed("Remove", "Sure?", () => send({ t: "prop", op: "remove", id: p.id }), "btn small danger"));
-      list.append(el);
-      return { id: p.id, size, bounce, sv, bv, holder };
-    });
-    if (!S.props.length) list.append(h("div", { class: "empty" }, "No toys out right now."));
-    add(root, list);
+      add(list, h("div", { class: "toy" + (route.toy === p.id ? " sk" : "") }, ballSvg(p.kind, p.hex),
+        h("div", null, h("div", { style: { font: "18px var(--hand)" } }, p.name, p.held ? h("span", { class: "hint" }, ` (${p.held} has it)`) : null),
+          h("div", { class: "ctl" }, h("label", null, "Size"), size, sv, h("label", null, "Bounce"), bounce, bv)),
+        armed("Remove", "Sure?", () => send({ t: "prop", op: "remove", id: p.id }), "btn small danger")));
+    }
+    if (!S.items.length && !S.props.length) add(list, h("div", { class: "empty" }, "Nothing out right now. Draw something!"));
+    add(root, list,
+      h("div", { class: "row", style: { marginTop: "6px" } },
+        INIT.propKinds.map(k => h("button", { class: "btn small", onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, `+ ${k.name}`)),
+        S.items.length ? armed("Clear all things", "Sure?", () => send({ t: "clear", what: "items" }), "btn small danger") : null,
+        S.props.length ? armed("Clear all balls", "Sure?", () => send({ t: "clear", what: "balls" }), "btn small danger") : null));
+
+    add(root, h("h2", null, "Everything they know how to use"));
+    for (const [title, verbs] of GROUPS) {
+      const defs = INIT.catalog.filter(c => c.verbs.some(v => verbs.includes(v)) && !GROUPS.slice(0, GROUPS.findIndex(g => g[0] === title)).some(g => c.verbs.some(v => g[1].includes(v))));
+      if (!defs.length) continue;
+      add(root, h("h3", null, title), h("div", { class: "catalog" }, defs.map(c =>
+        h("button", { class: "cat-card", title: `${c.name}: they'll ${c.verbs.map(v => VERB_WORDS[v]).join(", ")}. Also: ${c.words.join(", ")}`, onclick: () => { send({ t: "item", op: "add", key: c.key }); toast(`${c.name}!`); } },
+          itemSvg(c, c.hex), h("span", null, c.name)))));
+    }
     return () => {
-      for (const it of items) {
-        const p = S.props.find(x => x.id === it.id); if (!p) continue;
-        setRange(it.size, p.size); setRange(it.bounce, p.bounce);
-        if (idle(it.size)) it.sv.textContent = Math.round(p.size * 100) + "%";
-        if (idle(it.bounce)) it.bv.textContent = Math.round(p.bounce * 100) + "%";
-        it.holder.textContent = p.held ? `(${p.held} has it)` : "";
+      for (const r of rows) {
+        const it = S.items.find(x => x.id === r.id); if (!it) continue;
+        setRange(r.size, it.size); if (idle(r.size)) r.sv.textContent = Math.round(it.size * 100) + "%";
+        r.users.textContent = it.users.length ? `(${it.users.join(", ")} using it)` : "";
+        if (idle(r.colour) && r.colour.value !== it.hex.toLowerCase()) { r.colour.value = it.hex.toLowerCase(); r.pic.replaceChildren(itemSvg(r.def, it.hex)); }
       }
     };
   },
 };
-
 function ballSvg(kind, hex) {
   const g = s("svg", { viewBox: "-32 -32 64 64" });
   const outline = { fill: "none", stroke: "var(--ink)", "stroke-width": 2.2, filter: "var(--stroke-filter)" };
@@ -871,6 +962,7 @@ function buildQuick() {
       h("span", { class: "brand-name" }, "StickFight"), h("span", { class: "spacer" }), count),
     h("h3", null, "Draw someone"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }))),
+    h("h3", null, "Draw something"), summonBox(true),
     h("h3", null, "Toss in a toy"),
     h("div", { class: "q-toys" }, INIT.propKinds.map(k => h("button", { class: "q-toy", title: k.name, onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, ballSvg(k.key, "#E53935"), h("span", null, k.name)))),
     h("div", { class: "q-checks" }, hideC, fightC),
@@ -902,7 +994,19 @@ const Mock = {
     if (m.t === "setting") this.state.settings[m.key] = m.v;
     if (m.t === "fight") this.state.fight[m.key] = m.v;
   },
-  start() {
+  async start() {
+    try {
+      const [i, st] = await Promise.all([fetch("mock-init.json").then(r => r.ok ? r.json() : null), fetch("mock-state.json").then(r => r.ok ? r.json() : null)]);
+      if (i && st) {
+        receive(i);
+        this.state = st;
+        const q = new URLSearchParams(location.search);
+        if (q.get("theme")) st.settings.theme = q.get("theme");
+        if (q.get("page")) { route.page = q.get("page"); route.id = +(q.get("id") || (st.figures[0] && st.figures[0].id) || 0); route.sub = q.get("sub") || "personality"; }
+        setInterval(() => receive(JSON.parse(JSON.stringify(this.state))), 300);
+        return;
+      }
+    } catch (e) { }
     const things = ["PlayingBall", "Juggling", "Climbing", "Exploring", "Chatting", "HighFives", "Fighting", "Sparring", "Napping", "Tricks", "Dancing", "Sitting", "HighPlaces", "Taskbar", "Ledges", "SoccerBalls", "Basketballs", "BeachBalls", "YourCursor", "BeingPickedUp", "BeingThrown"];
     const group = k => ["HighPlaces", "Taskbar", "Ledges"].includes(k) ? "Places" : ["SoccerBalls", "Basketballs", "BeachBalls"].includes(k) ? "Toys" : ["YourCursor", "BeingPickedUp", "BeingThrown"].includes(k) ? "You" : "Things to do";
     const opts = (...l) => l.map((label, v) => ({ v, label: v === 0 ? "Auto" : label }));

@@ -93,6 +93,12 @@ sealed partial class App
             propKinds = Enum.GetValues<PropKind>().Select(k => new { key = k.ToString(), name = Prop.KindName(k) }),
             fps,
             refresh = _refresh,
+            fixedColours = ItemDef.Fixed.Select(c => Settings.Hex(c)),
+            catalog = ItemCatalog.All.Select(d => new
+            {
+                key = d.Key, name = d.Name, words = d.Words.Take(3), verbs = d.Verbs.Select(v => v.ToString()), w = d.W, h = d.H, hex = Settings.Hex(d.Color),
+                shapes = d.Shapes.Select(s => new { k = s.Kind.ToString(), p = s.P, c = s.Col, w = s.W, over = s.Over, used = s.WhenUsed }),
+            }),
         };
     }
 
@@ -100,6 +106,11 @@ sealed partial class App
     {
         t = "state",
         figures = _w.Figures.Select(FigureJson),
+        items = _w.Items.Select(i => new
+        {
+            id = i.Id, key = i.Def.Key, name = i.Def.Name, hex = Settings.Hex(i.Color), size = i.SizeMul, flip = i.Flip,
+            users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
+        }),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -231,11 +242,17 @@ sealed partial class App
                     break;
                 }
                 case "prop": PropEdit(m); break;
+                case "summon":
+                    _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = Summon(Str(m, "text")) }, Json));
+                    _quick?.Post(JsonSerializer.Serialize(new { t = "toast", text = Summon2Last }, Json));
+                    break;
+                case "item": ItemEdit(m); break;
                 case "fight": FightEdit(m); break;
                 case "setting": SettingEdit(m); break;
                 case "clear":
                     EndPress();
                     if (Str(m, "what") == "balls") foreach (var p in _w.Props.ToArray()) _w.RemoveProp(p);
+                    else if (Str(m, "what") == "items") foreach (var it in _w.Items.ToArray()) _w.RemoveItem(it);
                     else foreach (var f in _w.Figures.ToArray()) _w.RemoveFigure(f);
                     break;
                 case "quit": ExitThread(); break;
@@ -322,6 +339,25 @@ sealed partial class App
             case "heal": f.HP = 100; break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
             case "call": _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = f.Brain.CalledByUser(_w) }, Json)); break;
+        }
+    }
+
+    void ItemEdit(JsonElement m)
+    {
+        string op = Str(m, "op");
+        if (op == "add")
+        {
+            if (ItemCatalog.Find(Str(m, "key")) is { } def) SpawnItem(def, 1, null, _w.Rng.NextDouble() < 0.5);
+            return;
+        }
+        var it = _w.Items.FirstOrDefault(x => x.Id == m.GetProperty("id").GetInt32());
+        if (it == null) return;
+        switch (op)
+        {
+            case "remove": _w.RemoveItem(it); break;
+            case "size": it.SizeMul = Math.Clamp(Num(m, "v"), 0.3f, 3.5f); break;
+            case "color": it.Color = Settings.ParseHex(Str(m, "hex")); break;
+            case "flip": it.Flip = !it.Flip; break;
         }
     }
 

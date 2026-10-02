@@ -345,3 +345,31 @@ body[data-mode="quick"] { background: var(--paper-2); }
 .memories li.bad::before { content: "-"; color: var(--bad); font-weight: 700; }
 .memories li.none { color: var(--pencil); font-style: italic; }
 .memories .ago { color: var(--pencil); font: 13px var(--scrawl); white-space: nowrap; }
+
+/* ---------- things ---------- */
+.summon { position: relative; display: flex; align-items: center; gap: 10px; max-width: 720px; padding: 8px 10px 8px 12px; background: var(--card); border-radius: 12px; box-shadow: var(--shadow); }
+.summon::before { content: ""; position: absolute; inset: 0; border: 2px solid var(--ink); border-radius: 15px 10px 14px 9px / 10px 14px 9px 15px; filter: var(--stroke-filter); pointer-events: none; }
+.summon .pencil { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--accent); stroke-width: 1.7; stroke-linejoin: round; }
+.summon input.summon-input { flex: 1; border: 0; background: transparent; font: 20px var(--scrawl); width: auto; padding: 4px; }
+.summon input.summon-input:focus { background: transparent; }
+.summon.compact { padding: 4px 6px 4px 8px; gap: 6px; }
+.summon.compact input.summon-input { font-size: 16px; }
+.summon.compact .pencil { width: 20px; height: 20px; }
+.summon-list { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60; background: var(--card); border-radius: 10px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.45); padding: 6px; display: none; }
+.summon-list.open { display: block; }
+.summon-item { display: grid; grid-template-columns: 46px auto 1fr; gap: 10px; align-items: center; padding: 4px 8px; border-radius: 8px; cursor: pointer; font: 16px var(--scrawl); }
+.summon-item small { color: var(--pencil); font: 12.5px var(--body); text-align: right; }
+.summon-item:hover, .summon-item.hover { background: var(--marker); }
+svg.doodle { width: 64px; height: 48px; overflow: visible; }
+svg.doodle.tiny { width: 42px; height: 30px; }
+.toy-pic svg.doodle { width: 64px; height: 56px; }
+.catalog { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; max-width: 900px; }
+.cat-card { border: 0; background: var(--card); border-radius: 10px; padding: 8px 6px 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 14px var(--hand); color: var(--ink); box-shadow: var(--shadow); transition: transform .12s; }
+.cat-card:hover { transform: translateY(-3px) rotate(-1.5deg); }
+.cat-card svg.doodle { width: 86px; height: 56px; }
+
+/* colour pickers as round hand-drawn swatches */
+input[type=color] { -webkit-appearance: none; appearance: none; width: 30px; height: 30px; border: 0; padding: 0; background: transparent; cursor: pointer; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: 1.8px solid var(--ink); border-radius: 48% 52% 50% 46%; }
+.sw.custom input[type=color] { width: auto; height: auto; }

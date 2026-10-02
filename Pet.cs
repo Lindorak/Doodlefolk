@@ -368,8 +368,8 @@ sealed partial class Pet
 
     public System.Drawing.RectangleF Bounds()
     {
-        float up = Height * 2 + 46 * _s;
-        float wide = MathF.Max(Length, 30 * _s) + (_scuffleWith != null ? 30 * _s : 0);
+        float up = Height * 2 + 54 * _s;   // room for the thought bubble
+        float wide = MathF.Max(Length, 30 * _s) + 12 * _s + (_scuffleWith != null ? 30 * _s : 0);
         var r = System.Drawing.RectangleF.FromLTRB(Pos.X - wide, Pos.Y - up, Pos.X + wide, Pos.Y + 4 * S);
         return r;
     }

@@ -348,11 +348,19 @@ sealed partial class Pet
             return;
         }
         if (Want == PetNeed.None || _st != State.Ask) return;
-        var bc = top + new Vector2(Facing * 10 * s, -20 * s);
-        float pulse = 1 + MathF.Sin(_t * 4) * 0.05f;
-        Ui.Card(r, bc, 26 * s * pulse, 22 * s * pulse, 11 * s, s, 0.95f);
-        r.Disc(Vector2.Lerp(top, bc, 0.35f), 2.2f * s, Ui.Fill); r.Ring(Vector2.Lerp(top, bc, 0.35f), 2.2f * s, Ui.Ink.A(0.7f), 0.8f * s);
-        r.Disc(Vector2.Lerp(top, bc, 0.62f), 3 * s, Ui.Fill); r.Ring(Vector2.Lerp(top, bc, 0.62f), 3 * s, Ui.Ink.A(0.7f), 0.8f * s);
+        var bc = top + new Vector2(Facing * 14 * s, -28 * s);
+        float pulse = 1 + MathF.Sin(_t * 4) * 0.05f, bw = 26 * s * pulse, bh = 22 * s * pulse;
+        // The trail: a small puff by the head and a bigger one nearer the cloud, both in the gap between (never
+        // touching the cloud's outline), drawn first so the cloud sits over them.
+        var d = Vector2.Normalize(bc - top);
+        float edge = 1 / MathF.Sqrt(d.X * d.X / (bw * bw / 4) + d.Y * d.Y / (bh * bh / 4));
+        float gap = Vector2.Distance(top, bc) - edge;
+        foreach (var (k, pr) in new[] { (0.22f, 1.6f), (0.64f, 2.5f) })
+        {
+            var pc = top + d * gap * k;
+            r.Disc(pc, pr * s, Ui.Fill); r.Ring(pc, pr * s, Ui.Ink.A(0.75f), 0.8f * s);
+        }
+        Ui.Card(r, bc, bw, bh, 11 * s, s, 0.95f);
         DrawNeedIcon(r, bc, Want, s);
     }
 

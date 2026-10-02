@@ -26,7 +26,7 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v0.6.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+1. Grab `StickFight-v0.7.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
 2. Unzip it anywhere and run `StickFight.exe`. Nothing to install.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed yet:
    click **More info → Run anyway**.
@@ -62,14 +62,30 @@ panel (draw a figure, toss in a toy, hide them, quit).
 - **Weather and time of day**: now and then rain, a thunderstorm or (in winter) snow. Figures shelter, grab
   umbrellas, dance in the rain, have snowball fights and build snowmen. Late at night they get sleepy.
 - **Diaries**: every figure writes about its day in its own voice. Read them in the Studio.
+- **Talk to them**: right-click a figure and type. They answer in their own voice (and a little babble):
+  how they feel, what they like, what they think of the others, a joke if you ask. All understood locally.
+- **Play with them**: **hide-and-seek** (close your eyes while they hide behind the furniture, then click
+  the hiders; they giggle when you're close), **tag** (touch one with the cursor, then run) and **catch**
+  (touch the ball to catch it and send it back). Or hold a **tournament**: a sparring bracket on the floor,
+  the others cheering, and a crown for the champion.
+- **Photo mode**: everyone squeezes in, says cheese, and you get an instant-photo-style picture in
+  `Pictures\StickFight` (if your Pictures folder syncs to OneDrive, so do the photos).
+- **Life**: skills that grow with practice (juggling, climbing, fighting, ball games, dancing, drawing),
+  favourite places (and spots they avoid), birthdays with a cake and a song, Halloween costumes, Christmas
+  hats and New Year fireworks, and a welcome when you come back after a while away.
+- **Homes and families**: a figure that naps somewhere twice makes it home (with a little flag); they go home
+  at night and visit each other. Sweethearts who've been together a long while can have a **baby**, who
+  toddles after its parents and grows up over a few hours.
 - **They notice the desktop**: they ride windows you drag (and fly off if you shake them), react when a
   window closes under them, look over at notifications, and fans cheer when you finish a long stretch of typing
   (only the timing is noticed, never what you type).
 - **Sound**: footsteps, punches, boings, a radio, rain and thunder, barks and purrs, all synthesised on the fly.
 - **Colours & fights**: decide how colours get along (friends, rivals who spar, enemies who really fight),
   how hard they hit, health bars, and what happens at zero health (up to **permanent death**).
-- **Settings**: frame rate, paper or chalkboard look (the whole app follows it, bubbles included), sound,
-  screen features, romance, wishes, and remembering everyone between runs.
+- **Graphics**: presets from low to ultra, or set each part yourself: soft shadows, shadows cast on the
+  window behind, shading, faces, motion smears, and a simple or detailed look for objects.
+- **Settings**: frame rate, paper or chalkboard look (the whole app follows it, bubbles included), sound and
+  voices, screen features, romance, babies, wishes, celebrations, and remembering everyone between runs.
 
 ## How they behave
 
@@ -90,7 +106,8 @@ personality (climbers like climbing, the timid avoid big drops), and moves that 
 from fights, and bystanders who take sides when someone's mistreated. **Romance**: each figure is a girl, a
 boy or nonbinary and has its own attraction (all editable). Crushes make them blush, show off and seek the
 other out; eventually they confess. Couples hold hands, spend time together, defend each other and get
-jealous; love that runs out ends in a breakup and some heartbreak. **With you**: they remember what you did
+jealous; love that runs out ends in a breakup and some heartbreak. Grudges fade with time, and the
+forgiving go and say sorry. **With you**: they remember what you did
 (throwing them around, petting, playing ball, giving them what they asked for). Fans come to say hi; those
 who can't stand you glare, run, or box your cursor. Cursor **hunters** never forgive you.
 
@@ -122,6 +139,9 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true 
 | `App.cs` | Frame loop, input, tray, dirty-region rendering, save/restore |
 | `App.Studio.cs` | Bridge between the world and the Studio (state out, edits in) |
 | `App.Items.cs`, `App.Screen.cs`, `App.Wish.cs` | Summoning objects, the screen reader's ledges and link bubbles, wish bubbles |
+| `App.Games.cs`, `Tournament.cs` | Games with you (hide-and-seek, tag, catch), photo mode, tournaments |
+| `App.Family.cs` | Babies arriving and growing up, home flags, the tournament board |
+| `Gfx.cs` | Graphics presets and shadow helpers |
 | `Studio/` | The Studio window (WebView2) and its hand-drawn web UI (`Studio/web`) |
 | `Overlay.cs` | Transparent, click-through, topmost window |
 | `Renderer.cs` | Direct2D/DirectWrite on a DirectComposition swap chain |
@@ -139,7 +159,7 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true 
 | `BodyStyle.cs` | Per-figure body language (walk, run, idle, climb, jump, fight, celebrate, rope styles) |
 | `Tastes.cs` | Likes and dislikes |
 | `Ragdoll.cs` | Verlet ragdoll physics |
-| `Brain*.cs` | Needs, decisions (`Brain.Mind`), route following, social life, romance, wishes, screen reactions, tastes, feelings about you, ball play, sports, fighting |
+| `Brain*.cs` | Needs, decisions (`Brain.Mind`), route following, social life, romance, wishes, screen reactions, tastes, feelings about you, ball play, sports, fighting, skills and celebrations (`Brain.Life`), games, talking, homes and families |
 | `Fight.cs` | Colour relationships, gear, and the move list |
 | `Prop.cs` | Ball physics and drawing |
 | `Settings.cs` | Persisted preferences, cast and library (`%APPDATA%\StickFight\settings.json`) |
@@ -154,7 +174,9 @@ line), e.g. `spawn blue hothead`, `ball SoccerBall`, `rel Red Blue Enemies`, `Re
 `ko Red`, `deathrule Permanent`, `studio figure Red`, `summon a red couch`, `screen` (what the reader
 sees), `screengo Red word|link|watch|groove`, `wish Red`, `love Red Blue 0.8`, `pop item 3`,
 `tracejumps` (log every jump, landing and route), `weather rain|storm|snow|clear`, `pet a cat`,
-`testwin open 1300 1500` / `testwin shake` / `testwin close`, `clear`, `exit`.
+`testwin open 1300 1500` / `testwin shake` / `testwin close`, `talk Red how are you?`,
+`game catch|tag|hideseek [Name] [quick]` / `game stop`, `photo`, `tourney`, `party Red`, `holiday halloween|none`,
+`back 3600` (pretend you were away), `home Red`, `baby Red Blue`, `grow Red 0.5`, `remove Red`, `clear`, `exit`.
 `tools\burst.ps1` captures a contact sheet of frames around a figure; `tools\winshot.ps1` captures
 one of the app's windows; `tools\printwin.ps1` captures the Studio even when it's covered.
 

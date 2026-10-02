@@ -1,0 +1,88 @@
+Trading card: card01-town
+  Title: Doodlefolk
+  Description: Little people who live on your desktop.
+
+Profile background: background01-desktop
+  Title: A whole town
+  Description: They live on your windows.
+
+Trading card: card02-sweethearts
+  Title: Sweethearts
+  Description: Crushes, confessions, dates, and sometimes a little one.
+
+Trading card: card03-pets
+  Title: Pets with Real Needs
+  Description: Feed them, walk them, brush them, teach them tricks.
+
+Trading card: card04-fishing
+  Title: Gone Fishing
+  Description: What's biting changes with the month, the hour and the rain.
+
+Profile background: background02-pond
+  Title: The pond
+  Description: Ducks, ripples, and something golden under the surface.
+
+Trading card: card05-bard
+  Title: The Travelling Bard
+  Description: Visitors drop by now and then, and leave something behind.
+
+Trading card: card06-moon
+  Title: Moon Gravity
+  Description: The toybox: moon gravity, giant balls, earthquakes, slow motion.
+
+Trading card: card07-race
+  Title: Race Day
+  Description: Festivals, talent shows and races, whenever the town feels like it.
+
+Trading card: card08-festival
+  Title: Festival Night
+  Description: Lights, lanterns, dancing, and fireworks after dark.
+
+Profile background: background03-night
+  Title: Festival night
+  Description: The town, lit up.
+
+Trading card: card09-dreams
+  Title: Sweet Dreams
+  Description: Late at night they get sleepy, and they dream.
+
+Trading card: card10-crate
+  Title: Special Delivery
+  Description: The mail carrier brings gift crates with rare hats inside.
+
+Badge level 1: badge-level1.png
+  Title: Doodler
+
+Badge level 2: badge-level2.png
+  Title: Sketcher
+
+Badge level 3: badge-level3.png
+  Title: Town Founder
+
+Badge level 4: badge-level4.png
+  Title: Neighbourhood
+
+Badge level 5: badge-level5.png
+  Title: Mayor of the Desktop
+
+Badge foil: badge-foil.png
+  Title: Golden Doodle
+
+Emoticon: emoticon-doodleheart-18.png / -54.png
+  Name: doodleheart
+
+Emoticon: emoticon-doodlefolk-18.png / -54.png
+  Name: doodlefolk
+
+Emoticon: emoticon-doodlepencil-18.png / -54.png
+  Name: doodlepencil
+
+Emoticon: emoticon-goldenkoi-18.png / -54.png
+  Name: goldenkoi
+
+Emoticon: emoticon-doodleghost-18.png / -54.png
+  Name: doodleghost
+
+Logo: logo-206x44.png
+Card border colour: #E53935
+

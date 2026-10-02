@@ -47,7 +47,8 @@ sealed partial class App : ApplicationContext
     {
         _debug = args.Contains("--debug");
         _selfTest = args.Contains("--selftest");
-        _trailer = args.Contains("--trailer");
+        _cardArt = args.Contains("--cardart");
+        _trailer = args.Contains("--trailer") || _cardArt;
         World.Debug = _debug;
         if (_selfTest) SelfTestPrepare();
         if (_trailer) TrailerPrepare(args);
@@ -79,7 +80,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
         if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; SelfTestStage(); }
-        if (_trailer) { _tray.Visible = false; TrailerStage(); }
+        if (_trailer) { _tray.Visible = false; if (_cardArt) CardArtStage(); else TrailerStage(); }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;

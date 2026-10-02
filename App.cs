@@ -115,6 +115,7 @@ sealed partial class App : ApplicationContext
         _w.OnNews = OnNewsForHistory;
         _w.FishCaught = OnFishCaught;
         _w.NoteFor = NoteText;
+        _w.SongFor = SongFor;
         _w.PrankLeft = PrankLeft;
         _w.MemeReady = () => _memeReady != null;
         _w.TakeMeme = TakeMeme;

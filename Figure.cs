@@ -145,6 +145,8 @@ sealed partial class Figure
     public readonly Brain Brain;
     public readonly Ragdoll Rag;
 
+    /// <summary>While singing: the note this line is on (multiplies the babble voice's pitch).</summary>
+    public float SingPitch = 1;
     public readonly float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW;
     readonly float _gravity;
     /// <summary>How fast it falls (the toybox can change gravity, and every jump is planned with it).</summary>

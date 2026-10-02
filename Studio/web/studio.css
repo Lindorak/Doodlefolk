@@ -502,3 +502,8 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .hist { padding: 2px 0; }
 .hist.w4, .hist.w5 { font-weight: 600; }
 .big-only .hist.w2, .big-only .hist.w3 { display: none; }
+
+/* Songs */
+.songs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+.song { border: 1.5px solid var(--faint); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.song textarea { font: inherit; resize: vertical; }

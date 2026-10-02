@@ -20,7 +20,7 @@ sealed partial class Brain
         var h = w.Happening;
         _hapX = h != null ? rng.Range(h.Left, h.Right) : f.Base.X;
         _pace = 0.95f + P.Energy * 0.15f + rng.Range(-0.06f, 0.06f);
-        if (role == "act") _hapAct = BestAct();
+        if (role == "act") { _stageSong = w.SongFor?.Invoke(f); _songLine = 0; _hapAct = _stageSong != null ? "song" : BestAct(); }
         Go(G.Happening, 1e6f);
         f.Emote(role switch
         {
@@ -141,6 +141,11 @@ sealed partial class Brain
             case "comedy":
                 f.SetAction(Act.Talk);
                 if (rng.NextDouble() < World.Dt * 0.35) f.Emote(new[] { "why did the chicken…", "knock knock!", "so a pencil walks in…", "ba-dum tss!", "I'm on a roll!", "ha… ha?" }[rng.Next(6)], 1.8f);
+                break;
+            case "song" when _stageSong != null:
+                if (_song == null && _songLine == 0) StartSinging(_stageSong);
+                SingStep(w);
+                if (_song == null) _stageSong = null;   // sung; just bow from here
                 break;
             case "song":
                 f.SetAction(_t % 2 < 1.3f ? Act.Cheer : Act.Stand);

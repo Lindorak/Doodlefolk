@@ -38,6 +38,7 @@ sealed partial class App
                 {
                     print.Pos = f.Base + new Vector2(0, -0.5f); print.Vel = Vector2.Zero; print.OnGround = false; print.Flip = f.Facing < 0;
                     PrankLeft(print, 10);
+                    _sawPrint = true;
                 }
         }
         // Whoopee cushions go off when someone sits on them.

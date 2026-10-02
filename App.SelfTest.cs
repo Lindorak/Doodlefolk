@@ -27,7 +27,7 @@ sealed partial class App
 
     string _albumFile = "", _questText = "", _memoName = "";
     double _perfAt = 5, _scriptLag;
-    bool _sawRide;
+    bool _sawRide, _sawPrint;
 
     void Check(string name, bool pass, string detail = "")
     {
@@ -145,6 +145,12 @@ sealed partial class App
             string saved = ExportHistory();
             Check("the town's history is kept and exports", _settings.History.Count > 0 && saved.StartsWith("Saved") && Directory.GetFiles(AppPaths.PicturesDir, "*history*.html").Length > 0, $"{_settings.History.Count} events; {saved}");
         });
+        At(164, "song", () =>
+        {
+            _settings.Songs.Add(new Song { Id = 99, Title = "QA song", Lyrics = "first line of the song\nsecond line" });
+            Check("a song can be sung", SingNow(99).Contains("singing"));
+        });
+        At(167, "singing", () => Check("they sing the words", _w.Figures.Any(f => f.CurrentEmote?.Contains("line") == true || f.Brain.Singing), string.Join(", ", _w.Figures.Select(f => f.CurrentEmote))));
         At(162, "request granted", () => Check("a request is granted when you do it", _settings.Quests.LastOrDefault()?.Done == true, _questText));
         At(158, "album saved", () =>
         {
@@ -220,12 +226,13 @@ sealed partial class App
             _w.Weather.Intensity = 1;
             MakeMemeSoon();
         });
+        At(605, "walk in the mud", () => { Fig(2)?.Brain.DebugTown(_w, "walk", "500"); Fig(3)?.Brain.DebugTown(_w, "walk", "-500"); });
         At(604, "rain stops", () => { _w.Weather.Start(WeatherKind.Clear, _clock.Elapsed.TotalSeconds, _w.Rng, _w); _w.Weather.Intensity = 0; });
         At(612, "pranks happen", () =>
         {
             Check("a meme from your folder is ready", _memeReady != null, _memeReady?.Text ?? "");
             if (TakeMeme() is { } path && ItemCatalog.Find("memeframe") is { } fd && SpawnItem(fd) is { } frame) { frame.Label = path; PrankLeft(frame, 1); }
-            Check("muddy footprints after the rain", _w.Items.Any(i => i.Def.Key == "mudprint"), $"{_w.Figures.Count(f => f.Mode == Mode.Control && MathF.Abs(f.Vel.X) > 40)} walking");
+            Check("muddy footprints after the rain", _sawPrint || _w.Items.Any(i => i.Def.Key == "mudprint"), $"{_w.Figures.Count(f => f.Mode == Mode.Control && MathF.Abs(f.Vel.X) > 40)} walking");
         });
         At(616, "pranks off", () => { _settings.Pranks = false; _settings.MemeFolder = ""; });
         At(654, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });

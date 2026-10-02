@@ -84,6 +84,7 @@ sealed partial class World
     /// <summary>Prank mode is on (and nobody's focusing).</summary>
     public static bool Pranks;
     public Func<Figure, string>? NoteFor;
+    public Func<Figure, Song?>? SongFor;
     public Action<Item, double>? PrankLeft;
     public Func<bool>? MemeReady;
     public Func<string?>? TakeMeme;

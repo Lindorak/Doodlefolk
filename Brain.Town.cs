@@ -321,6 +321,15 @@ sealed partial class Brain
             case "swim": if (w.Items.FirstOrDefault(i => i.IsWater && (arg == "" || i.Def.Key == arg)) is { } pool) GoSwim(pool, w); break;
             case "fish": if (w.Items.FirstOrDefault(i => i.Def.Verbs.Contains(Verb.Fish)) is { } pond) GoFish(pond, w); break;
             case "bite": _biteAt = 0; break;
+            case "walk":
+            {
+                float tx = f.Base.X + (float.TryParse(arg, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dx) ? dx : 400) * S;
+                var floor = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+                if (floor != null) tx = Math.Clamp(tx, floor.X1 + 10 * S, floor.X2 - 10 * S);
+                float ty = f.Base.Y;
+                Navigate(() => new System.Numerics.Vector2(tx, ty), 10 * S, false, () => Go(G.Idle, 1), WalkPurpose.Other);
+                break;
+            }
             case "befriend": if (w.Figures.FirstOrDefault(o => o.Name == arg) is { } bf) { AddAffinity(bf, 0.5f); bf.Brain.AddAffinity(f, 0.5f); } break;
             case "boost":
             {

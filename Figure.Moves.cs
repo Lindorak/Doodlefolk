@@ -51,8 +51,8 @@ sealed partial class Figure
                 if (text.Length >= 2 && text.Any(char.IsLetter) && _time > _babbleUntil)
                 {
                     // Their own voice: higher for girls, lower for boys and big figures; quick when energetic, soft when shy.
-                    float vp = (Gender switch { Gender.Girl => 1.35f, Gender.Boy => 0.88f, _ => 1.1f }) / MathF.Sqrt(SizeMul) * (0.92f + (Id % 7) * 0.025f);
-                    float speed = 0.85f + Traits.Energy * 0.35f;
+                    float vp = (Gender switch { Gender.Girl => 1.35f, Gender.Boy => 0.88f, _ => 1.1f }) / MathF.Sqrt(SizeMul) * (0.92f + (Id % 7) * 0.025f) * SingPitch;
+                    float speed = (0.85f + Traits.Energy * 0.35f) * (SingPitch != 1 ? 0.7f : 1);
                     float vol = 0.3f + Traits.Sociability * 0.15f;
                     World.Babble(text, at, vp, vol, speed);
                     _babbleUntil = _time + MathF.Min(2.2f, 0.12f * text.Length / speed);

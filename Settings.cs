@@ -220,6 +220,7 @@ sealed class Settings
     public List<Memorial> Memorials { get; set; } = new();
     /// <summary>Everything notable that's happened (kept for good, unlike the three-week newspaper).</summary>
     public List<HistoryEvent> History { get; set; } = new();
+    public List<Song> Songs { get; set; } = new();
     public List<Quest> Quests { get; set; } = new();
     public int QuestsDone { get; set; }
     /// <summary>Background sound (rain, birds, the pond, the town talking…): off until you turn it on.</summary>

@@ -168,6 +168,7 @@ sealed partial class App
         memorials = MemorialState(),
         historyCount = _settings.History.Count + _settings.Memorials.Count * 1000 + _w.Figures.Count * 100000,
         toybox = ToyboxState(),
+        songs = SongState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
@@ -453,6 +454,30 @@ sealed partial class App
                     }
                     _settings.Save();
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
+                    break;
+                }
+                case "song":
+                {
+                    int sid = m.TryGetProperty("id", out var sidv) ? sidv.GetInt32() : 0;
+                    var song = _settings.Songs.FirstOrDefault(x => x.Id == sid);
+                    switch (Str(m, "op"))
+                    {
+                        case "new":
+                            _settings.Songs.Add(new Song { Id = _settings.Songs.Count == 0 ? 1 : _settings.Songs.Max(x => x.Id) + 1, Title = "A new song", Lyrics = "la la la\nthe desktop is my home\nla la la" });
+                            break;
+                        case "edit":
+                            if (song != null)
+                            {
+                                string title = Str(m, "title").Trim(), lyr = Str(m, "lyrics");
+                                if (title.Length > 0) song.Title = title.Length > 60 ? title[..60] : title;
+                                song.Lyrics = lyr.Length > 3000 ? lyr[..3000] : lyr;
+                                song.Singer = Str(m, "singer");
+                            }
+                            break;
+                        case "delete": if (song != null) _settings.Songs.Remove(song); break;
+                        case "sing": PostAll(new { t = "toast", text = SingNow(sid) }); break;
+                    }
+                    _settings.Save();
                     break;
                 }
                 case "history":

@@ -353,7 +353,7 @@ PAGES.focus = {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(",") + "|" + (S.memorials || []).length,
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(",") + "|" + (S.memorials || []).length + "|" + (S.songs || []).map(s => s.id).join(","),
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -383,6 +383,23 @@ PAGES.cast = {
           !q.done && q.kind === "Thing" ? h("button", { class: "btn small", onclick: () => send({ t: "quest", op: "grant", id: q.id }) }, "Put one out") : null,
           !q.done ? h("button", { class: "btn small ghost", title: "Not this time", onclick: () => send({ t: "quest", op: "decline", id: q.id }) }, "✕") : null))));
     add(root, grid);
+    // Songs you've written for them.
+    const songs = S.songs || [];
+    add(root, h("h2", null, "Songs"),
+      h("p", { class: "sub" }, "Write the words and they'll sing them: at the talent show (as their act), or right now. Each song gets its own little tune."),
+      h("div", { class: "songs" }, songs.map(s => {
+        const title = h("input", { type: "text", value: s.title, maxlength: 60, style: { width: "100%" } });
+        const lyr = h("textarea", { rows: 5, style: { width: "100%" } }); lyr.value = s.lyrics;
+        let who = s.singer;
+        const save = () => sendSoon("song" + s.id, { t: "song", op: "edit", id: s.id, title: title.value, lyrics: lyr.value, singer: who }, 400);
+        const singer = select([{ value: "", label: "Whoever's on" }, ...S.figures.map(f => ({ value: f.name, label: f.name }))], s.singer, v => { who = v; save(); });
+        [title, lyr].forEach(el => el.addEventListener("input", () => { touched(el); save(); }));
+        return h("div", { class: "song" }, title, lyr,
+          h("div", { class: "row" }, h("label", null, "Sung by"), singer, h("span", { class: "spacer" }),
+            h("button", { class: "btn small primary", onclick: () => { send({ t: "song", op: "edit", id: s.id, title: title.value, lyrics: lyr.value, singer: who }); send({ t: "song", op: "sing", id: s.id }); } }, "🎤 Sing it now"),
+            armed("Delete", "Sure?", () => send({ t: "song", op: "delete", id: s.id }), "btn small danger")),
+          s.sung ? h("div", { class: "hint" }, `Sung ${s.sung}×.`) : null);
+      }), h("div", null, h("button", { class: "btn small", onclick: () => send({ t: "song", op: "new" }) }, "✎ Write a song"))));
     // Those the town has lost.
     const gone = S.memorials || [];
     if (gone.length)
@@ -2075,6 +2092,7 @@ const Mock = {
         if (q.get("theme")) st.settings.theme = q.get("theme");
         // Newer parts of the state an older mock dump may not have.
         st.albumCount = st.albumCount || 3;
+        st.songs = st.songs || [{ id: 1, title: "Ode to the Taskbar", lyrics: "oh taskbar, my taskbar\nyou hold up all my friends\nla la la", singer: "", sung: 2 }];
         st.quests = st.quests || [
           { id: 2, by: "Mo", text: "CAN WE GET A TRAMPOLINE?! PLEASE!!", kind: "Thing", target: "trampoline", done: false, left: 20.5, how: "Put one out from Things (or just say it)." },
           { id: 1, by: "Bea", text: "Play hide-and-seek with me?", kind: "Game", target: "HideSeek", done: true, left: 3, how: "" },

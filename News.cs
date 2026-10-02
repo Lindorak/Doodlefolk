@@ -66,6 +66,7 @@ static class Stickers
         new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
         new("memorial", "🕯", "Remembered", "Say goodbye to someone"),
         new("toybox", "🧸", "Mad scientist", "Play with the toybox (moon gravity, a giant ball…)"),
+        new("song", "🎤", "Songwriter", "Have someone sing a song you wrote"),
         new("history", "📜", "Historian", "Export the family tree or the town's history"),
         new("prank", "🤡", "Gotcha!", "Someone pulls a prank (prank mode)"),
         new("meme", "😂", "Meme lord", "Someone hangs up a meme (prank mode)"),

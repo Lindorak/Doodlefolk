@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- WebView2 brings a newer WindowsBase than WinForms references; harmless, and it buries real warnings. -->
@@ -13,7 +13,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>StickFight</RootNamespace>
     <AssemblyName>StickFight</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <PublishDocumentationFiles>false</PublishDocumentationFiles>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <!-- Precompiled code starts faster; the small managed heap does not need a background GC thread. -->

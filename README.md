@@ -1,4 +1,4 @@
-# StickFight
+﻿# StickFight
 
 Stick figures that live on your Windows desktop. They walk along your taskbar, jump between windows,
 climb window edges (or throw a grappling hook up them), nap, chat, dance and high-five each other, play
@@ -26,12 +26,12 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v1.0.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+1. Grab `StickFight-v1.1.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
 2. Unzip it anywhere and run `StickFight.exe`. It runs from wherever you put it; if you'd like it in the Start menu
-   (and in Installed apps, to remove it the usual way), click **Install StickFight** in Studio → Settings. No admin
+   (and in Installed apps, to remove it the usual way), click **Install StickFight** in Studio â†’ Settings. No admin
    rights needed, and your figures come along.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed (that needs a paid code-signing
-   certificate): click **More info → Run anyway**.
+   certificate): click **More info â†’ Run anyway**.
 
 StickFight checks GitHub once a day for a newer version and offers it in the Studio; updating is one click (you can
 switch the check off).
@@ -111,7 +111,7 @@ panel (draw a figure, toss in a toy, hide them, quit).
   `Pictures\StickFight` (if your Pictures folder syncs to OneDrive, so do the photos).
 - **Record a clip**: ten seconds of everyone as an animated GIF (just them and their things, drawn on paper; never
   what's on your screen), saved to `Pictures\StickFight`.
-- **Talk out loud** (opt-in): press 🎤 and speak. Say a name and what to tell them ("Sparky, come here"), ask for
+- **Talk out loud** (opt-in): press ðŸŽ¤ and speak. Say a name and what to tell them ("Sparky, come here"), ask for
   something ("make a pizza"), or call for a race, a photo or some snow. Windows' own speech recognition, on your PC.
 - **AI conversations** (opt-in, your own OpenAI key): figures answer what you say with a language model, in
   character. Off, they answer the usual way, all locally.

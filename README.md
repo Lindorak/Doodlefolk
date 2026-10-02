@@ -26,7 +26,7 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v0.5.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+1. Grab `StickFight-v0.6.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
 2. Unzip it anywhere and run `StickFight.exe`. Nothing to install.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed yet:
    click **More info → Run anyway**.

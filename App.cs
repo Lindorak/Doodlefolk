@@ -52,7 +52,8 @@ sealed partial class App : ApplicationContext
         var boot = System.Diagnostics.Stopwatch.StartNew();
         var marks = new List<string>();
         void Mark(string what) { marks.Add($"{what} {boot.ElapsedMilliseconds}"); }
-        Mods.Load();
+        if (!_selfTest) SteamHub.Init();
+        Mods.Load(SteamHub.WorkshopFolders());
         Mark("mods");
         CleanUpOldVersion();
         if (Migration.NeedsStartupEntry) { _settings.StartWithWindows = true; SetStartWithWindows(true); }
@@ -112,6 +113,7 @@ sealed partial class App : ApplicationContext
         else if (!_settings.PetMode) Spawn(null);
         if (_settings.PetMode) { _settings.PetMode = false; SetPetMode(true); }
         CatchUpAgeing();
+        if (SteamHub.Ready) foreach (var k in _settings.Stickers.Keys) SteamHub.Achieve(k);
         Mark("cast");
         World.Log("startup steps (ms): " + string.Join(", ", marks));
     }
@@ -275,6 +277,7 @@ sealed partial class App : ApplicationContext
         DesktopFrame(now);
         WelcomeFrame(now);
         BreakFrame(now);
+        SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
         PowerFrame(now);
         UpdateFrame(now);
@@ -1492,6 +1495,7 @@ sealed partial class App : ApplicationContext
             _w.Sound?.Dispose();
             _downloads?.Dispose();
             _sre?.Dispose();
+            SteamHub.Shutdown();
             _w.Screen?.Dispose();
         }
         base.Dispose(disposing);

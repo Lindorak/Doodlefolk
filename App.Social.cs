@@ -52,7 +52,9 @@ sealed partial class App
 
     void Sticker(string key)
     {
-        if (_settings.Stickers.ContainsKey(key) || Stickers.Find(key) is not { } def) return;
+        if (Stickers.Find(key) is not { } def) return;
+        SteamHub.Achieve(key);   // also catches up stickers earned before Steam
+        if (_settings.Stickers.ContainsKey(key)) return;
         _settings.Stickers[key] = DateTime.Now;
         _stickerToast = def.Title;
         _stickerUntil = _clock.Elapsed.TotalSeconds + 5;

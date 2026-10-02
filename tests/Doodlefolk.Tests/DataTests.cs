@@ -32,9 +32,15 @@ public class ModsTests
         File.WriteAllText(Path.Combine(Mods.Dir, "bad.json"), """{ "items": [ { "key": "BAD KEY", "w": 5, "h": 5, "shapes": [] } ] }""");
         File.WriteAllText(Path.Combine(Mods.Dir, "sneaky.json"), """{ "items": [ { "key": "sneaky", "w": 5, "h": 5, "svg": "../../secret.svg" } ] }""");
         File.WriteAllText(Path.Combine(Mods.Dir, "taken.json"), """{ "items": [ { "key": "couch", "w": 5, "h": 5, "shapes": [ { "k": "e", "p": [0, 2, 2, 2] } ] } ] }""");
+        // A subscribed Workshop item: its own folder somewhere else.
+        string workshop = Path.Combine(dir, "workshop-item");
+        Directory.CreateDirectory(workshop);
+        File.WriteAllText(Path.Combine(workshop, "from-workshop.json"), """{ "jokes": ["a workshop joke"] }""");
         try
         {
-            Mods.Load();
+            Mods.Load(new[] { workshop });
+            Assert.Contains("Workshop: from-workshop.json", Mods.Loaded);
+            Assert.Contains("a workshop joke", Mods.Jokes);
             var lamp = ItemCatalog.Find("ut-lamp");
             Assert.NotNull(lamp);
             Assert.Equal(4, lamp!.Shapes.Length);

@@ -1373,6 +1373,9 @@ PAGES.settings = {
     const updBtn = h("button", { class: "btn small primary", onclick: () => send({ t: "applyUpdate" }) }, "Update now");
     const installBtn = h("button", { class: "btn small", title: "Copies Doodlefolk to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install Doodlefolk");
     const modsLine = h("p", { class: "hint" });
+    const steamLine = h("p", { class: "hint" });
+    const workshopBox = h("div");
+    let workshopSig = null;
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
@@ -1432,7 +1435,7 @@ PAGES.settings = {
       h("div", { class: "row" }, batChips),
       h("h2", null, "Mods"),
       h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names and jokes with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart Doodlefolk after changing them."),
-      modsLine,
+      modsLine, steamLine, workshopBox,
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "openMods" }) }, "Open the mods folder"),
         h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/Doodlefolk/blob/main/docs/MODDING.md") }, "Modding guide")),
       h("h2", null, "Problems"),
@@ -1472,12 +1475,25 @@ PAGES.settings = {
       batChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().batterySaver || "battery")); });
       updLine.textContent = `Version ${st().version || ""}${st().installed ? " (installed)" : ""}. ${st().updateStatus || ""}`;
       updBtn.style.display = st().updateReady ? "" : "none";
-      installBtn.style.display = st().installed ? "none" : "";
+      installBtn.style.display = st().installed || (st().steam && st().steam.ready) ? "none" : "";
       const probs = st().problems || [];
       const ps = JSON.stringify(probs);
       if (ps !== probSig) {
         probSig = ps;
         probList.replaceChildren(...(probs.length ? probs.map(p => h("div", { class: "hint" }, `${p.at} · ${p.kind}: ${p.message}${p.where ? ` (${p.where.replace(/^at /, "").replace(/ in .*$/, "")})` : ""}`)) : [h("p", { class: "hint" }, "No problems. 🎉")]));
+      }
+      const sm = st().steam || { ready: false, status: "" };
+      steamLine.textContent = sm.ready ? `Steam: ${sm.status} Mods you subscribe to on the Steam Workshop load by themselves (restart after subscribing).` : "";
+      const ws = JSON.stringify([sm.ready, sm.publishing, st().modFiles || []]);
+      if (ws !== workshopSig) {
+        workshopSig = ws;
+        workshopBox.replaceChildren(...(sm.ready && (st().modFiles || []).length ? (st().modFiles || []).map(file => h("div", { class: "row tight" },
+          h("span", null, file),
+          h("button", { class: "btn small", disabled: sm.publishing || null, onclick: () => {
+            const title = prompt("A title for the Workshop", file.replace(/\.json$/, "")); if (title == null) return;
+            const description = prompt("A short description", "") ?? "";
+            send({ t: "publishMod", file, title, description });
+          } }, "Publish to the Workshop"))) : []));
       }
       const md = st().mods || { loaded: [], errors: [] };
       modsLine.textContent = (md.loaded.length ? `Loaded: ${md.loaded.join(", ")} (${md.items} objects, ${md.hats} hats, ${md.jokes} jokes).` : "No mods yet.") + (md.errors.length ? ` Problems: ${md.errors.join("; ")}` : "");

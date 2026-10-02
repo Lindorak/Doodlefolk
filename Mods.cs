@@ -17,7 +17,10 @@ static class Mods
     public static readonly Dictionary<PetKind, List<string>> PetNames = new();
     public static int ItemCount, HatCount;
 
-    public static void Load()
+    public static void Load() => Load(Array.Empty<string>());
+
+    /// <summary>The mods folder, plus any extra folders (subscribed Steam Workshop items).</summary>
+    public static void Load(IReadOnlyList<string> extraDirs)
     {
         try
         {
@@ -28,9 +31,11 @@ static class Mods
         catch (Exception e) { Errors.Add("Couldn't open the mods folder: " + e.Message); return; }
         var items = new List<ItemDef>();
         var hats = new List<LookPart>();
-        foreach (var file in Directory.GetFiles(Dir, "*.json").OrderBy(f => f))
+        var files = Directory.GetFiles(Dir, "*.json").OrderBy(f => f).Select(f => (f, workshop: false))
+            .Concat(extraDirs.Where(Directory.Exists).SelectMany(d => Directory.GetFiles(d, "*.json").Select(f => (f, workshop: true))));
+        foreach (var (file, workshop) in files)
         {
-            string name = Path.GetFileName(file);
+            string name = (workshop ? "Workshop: " : "") + Path.GetFileName(file);
             try
             {
                 using var doc = JsonDocument.Parse(File.ReadAllText(file), new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });

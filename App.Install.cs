@@ -114,7 +114,7 @@ sealed partial class App
 
     void UpdateFrame(double now)
     {
-        if (!_settings.CheckUpdates || now < _updateCheckAt) return;
+        if (!_settings.CheckUpdates || SteamHub.Ready || now < _updateCheckAt) return;
         _updateCheckAt = now + 6 * 3600;
         if (_settings.LastUpdateCheck is DateTime last && (DateTime.Now - last).TotalHours < 20 && _update == null) return;
         _ = CheckForUpdate();

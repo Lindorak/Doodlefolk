@@ -311,7 +311,7 @@ function crumbs() {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name).join(",") : ""),
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind,
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -366,21 +366,38 @@ function importIcs(input) {
   reader.onload = () => {
     const text = String(reader.result).replace(/\r?\n[ \t]/g, "");
     const events = [];
+    const now = new Date(), horizon = now.getTime() + 31 * 86400000;
+    const pad = n => String(n).padStart(2, "0");
+    const local = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let skipped = 0;
     for (const block of text.split("BEGIN:VEVENT").slice(1)) {
       const body = block.split("END:VEVENT")[0];
-      const summary = (body.match(/^SUMMARY[^:]*:(.*)$/m) || [])[1];
-      const start = body.match(/^DTSTART([^:]*):(\d{8})(T(\d{6})(Z?))?/m);
-      if (!summary || !start) continue;
-      const d = start[2], t = start[4] || "090000", utc = start[5] === "Z";
-      const iso = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}${utc ? "Z" : ""}`;
-      const when = new Date(iso);
+      const rawSummary = (body.match(/^SUMMARY[^:]*:(.*)$/m) || [])[1];
+      // DTSTART;TZID="…":20261002T140000 (parameters may be quoted and contain colons), or ;VALUE=DATE:20261002 for all-day.
+      const start = body.match(/^DTSTART((?:;[^:;"]*(?:"[^"]*")?)*):(\d{8})(T(\d{6})(Z?))?/m);
+      if (!rawSummary || !start) continue;
+      const summary = rawSummary.replace(/\\([\\;,nN])/g, (_, c) => /n/i.test(c) ? " " : c).trim().slice(0, 100);
+      const d = start[2], allDay = !start[3], t = start[4] || "090000", utc = start[5] === "Z";
+      let when = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}${utc ? "Z" : ""}`);
       if (isNaN(when)) continue;
-      const remindAt = new Date(when.getTime() - 10 * 60000);
-      if (remindAt < new Date() || remindAt - new Date() > 31 * 86400000) continue;
-      const pad = n => String(n).padStart(2, "0");
-      events.push({ text: summary.replace(/\\,/g, ",").replace(/\\n/g, " ").trim().slice(0, 100) + ` at ${pad(when.getHours())}:${pad(when.getMinutes())}`,
-        when: `${remindAt.getFullYear()}-${pad(remindAt.getMonth() + 1)}-${pad(remindAt.getDate())}T${pad(remindAt.getHours())}:${pad(remindAt.getMinutes())}` });
+      // Simple repeats (daily / weekly / monthly / yearly, with an interval): the next one from now.
+      const rule = (body.match(/^RRULE:(.*)$/m) || [])[1];
+      if (rule) {
+        const freq = (rule.match(/FREQ=(\w+)/) || [])[1], every = +((rule.match(/INTERVAL=(\d+)/) || [])[1] || 1);
+        const until = (rule.match(/UNTIL=(\d{8})/) || [])[1];
+        const step = { DAILY: dt => dt.setDate(dt.getDate() + every), WEEKLY: dt => dt.setDate(dt.getDate() + 7 * every),
+                       MONTHLY: dt => dt.setMonth(dt.getMonth() + every), YEARLY: dt => dt.setFullYear(dt.getFullYear() + every) }[freq];
+        if (!step) { skipped++; continue; }
+        for (let i = 0; i < 5000 && when < now; i++) step(when);
+        if (until && local(when).replace(/-/g, "").slice(0, 8) > until) continue;
+      }
+      if (when < now || when.getTime() > horizon) continue;
+      // Ten minutes before (or straight away, if it's sooner than that); all-day events in the morning.
+      let remindAt = allDay ? when : new Date(Math.max(when.getTime() - 10 * 60000, now.getTime() + 60000));
+      if (allDay && remindAt < now) remindAt = new Date(now.getTime() + 60000);
+      events.push({ text: allDay ? `${summary} (today)` : `${summary} at ${pad(when.getHours())}:${pad(when.getMinutes())}`, when: local(remindAt) });
     }
+    if (skipped) toast(`${skipped} repeating event${skipped > 1 ? "s" : ""} with an unusual pattern skipped.`);
     send({ t: "reminder", op: "import", items: events.slice(0, 100) });
     input.value = "";
   };
@@ -1380,9 +1397,9 @@ PAGES.settings = {
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
       eventsC, hapBtns, hapLine,
-      h("p", { class: "hint" }, "With ageing on, figures count their years: kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
+      h("p", { class: "hint" }, "With ageing on, figures count their years (while StickFight is running): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
-      h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month. Everything stays on this PC."),
+      h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
       remList, dlC, frC, voiceC, aiC, aiBox,
       h("h2", null, "Accessibility & quiet hours"),
@@ -1483,7 +1500,7 @@ function buildQuick() {
       s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
       h("span", { class: "brand-name" }, "StickFight"), h("span", { class: "spacer" }), count),
     h("h3", null, "Draw someone"),
-    h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }))),
+    h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex, color: "#111", "font-size": "11px", "text-shadow": "0 0 2px #fff" }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }, S.settings.colourBlind ? TEAM_SYM[p.name] || "" : ""))),
     h("h3", null, "Draw something"), summonBox(true),
     h("h3", null, "Toss in a toy"),
     h("div", { class: "q-toys" }, INIT.propKinds.map(k => h("button", { class: "q-toy", title: k.name, onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, ballSvg(k.key, "#E53935"), h("span", null, k.name)))),
@@ -1493,14 +1510,14 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Tag" }) }, "🏃 Tag"),
       h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Catch" }) }, "⚾ Catch"),
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
-      h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
-      h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\StickFight", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
+      h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
+      h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\StickFight", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,
     h("h3", null, "Pets"),
     h("div", { class: "row tight q-games" },
-      [["Cat", false, "🐈"], ["Cat", true, "Kitten"], ["Dog", false, "🐕"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜"]].map(([k, y, l]) => h("button", { class: "btn small", title: `Adopt a ${y ? (k === "Cat" ? "kitten" : "puppy") : k.toLowerCase()}`, onclick: () => send({ t: "adopt", kind: k, young: y }) }, l)),
+      [["Cat", false, "🐈"], ["Cat", true, "Kitten"], ["Dog", false, "🐕"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜"], ["Rabbit", false, "🐇"], ["Hamster", false, "🐹"]].map(([k, y, l]) => h("button", { class: "btn small", title: `Adopt a ${y ? (k === "Cat" ? "kitten" : "puppy") : k.toLowerCase()}`, onclick: () => send({ t: "adopt", kind: k, young: y }) }, l)),
       h("button", { class: "btn small", onclick: () => send({ t: "spray" }) }, "💦 Spray bottle")),
     h("div", { class: "q-checks" }, petModeC, hideC, fightC, soundC),
     h("div", { class: "row q-foot" },

@@ -35,6 +35,7 @@ sealed class SavedFigure
     public string Hobby { get; set; } = "";
     public string Job { get; set; } = "";
     public int? Coins { get; set; }
+    public float AgeBank { get; set; }
     public List<string> Collection { get; set; } = new();
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>

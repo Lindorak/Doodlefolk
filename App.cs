@@ -261,7 +261,8 @@ sealed partial class App : ApplicationContext
         _w.Babies = _settings.Babies;
         PhotoFrame(now);
         WeatherFrame(dt, now);
-        HappeningFrame(dt, now);
+        try { HappeningFrame(dt, now); }
+        catch (Exception e) { World.Log("happening failed: " + e.Message); if (_w.Happening is { } hx) { _w.Happening = null; foreach (var f in hx.Who.Concat(hx.Crowd)) f.Brain.LeaveHappening(); } }
         DesktopFrame(now);
         RecordFrame(now);
         PowerFrame(now);
@@ -789,7 +790,9 @@ sealed partial class App : ApplicationContext
         f.PlaceAt(plat, M.ClampIn(old.Base.X, plat.X1 + 4, plat.X2 - 4));
         f.SpawnT = 0.999f;
         old.DropCarried(Vector2.Zero);
+        old.Brain.LeaveOutdoors();
         _w.Figures[_w.Figures.IndexOf(old)] = f;
+        SwapInHappening(old, f);
         return f;
     }
 
@@ -861,6 +864,8 @@ sealed partial class App : ApplicationContext
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
         if (Enum.TryParse<Job>(s.Job, out var job)) f.Brain.Job = job;
         if (s.Coins is int coins) f.Brain.Coins = Math.Max(0, coins);
+        f.Brain.AgeBank = Math.Clamp(s.AgeBank, 0, 200);
+        f.Brain.AgeLoaded();
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -920,7 +925,7 @@ sealed partial class App : ApplicationContext
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
-            Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins,
+            Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins, AgeBank = MathF.Round(f.Brain.AgeBank, 3),
         }).ToList();
         _settings.Items = SaveItems();
         SaveSocial();

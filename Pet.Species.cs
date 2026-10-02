@@ -68,6 +68,7 @@ sealed partial class Pet
     {
         var dad = w.Pets.FirstOrDefault(o => o.Id == _mateId);
         int n = Kind switch { PetKind.Cat => _rng.Next(2, 5), PetKind.Dog => _rng.Next(2, 6), PetKind.Rabbit => _rng.Next(3, 7), PetKind.Hamster => _rng.Next(3, 7), _ => _rng.Next(1, 3) };
+        // The cap is soft: a pregnancy only starts with room to spare, but if others arrived meanwhile one baby still comes.
         n = Math.Max(1, Math.Min(n, MaxPets - w.Pets.Count));
         var names = new List<string>();
         for (int i = 0; i < n; i++)

@@ -43,6 +43,14 @@ sealed partial class Brain
             f.Emote(V("phew, hot!", "SO HOT!!", "too hot.", "it's so warm…", "the sun presses down"), 1.3f);
     }
 
+    /// <summary>Off the bike, out of the water, rod away (knocked down, picked up, removed).</summary>
+    public void LeaveOutdoors()
+    {
+        if (f.Riding != null) Dismount();
+        if (f.Swimming) StopSwim();
+        if (f.FishingIn != null) StopFish();
+    }
+
     /// <summary>Leave whatever outdoors activity it was in the middle of, if the goal has moved on.</summary>
     void TidyOutdoors(World w)
     {
@@ -129,6 +137,7 @@ sealed partial class Brain
     void GoSwim(Item water, World w)
     {
         _swimCd = _t0 + rng.Range(240, 600);
+        if (f.Swimming) StopSwim();
         _water = water;
         float half = water.Def.W * water.Sc * 0.5f * water.ScaleX;
         float off = rng.Range(-1, 1) * MathF.Max(0, half - (MathF.Max(f.Leg, f.Torso + f.HeadR * 2) + 2 * S));

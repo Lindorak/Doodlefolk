@@ -114,6 +114,7 @@ sealed partial class Brain
         Gifts.AddRange(o.Gifts);
         Collection.AddRange(o.Collection);
         _hobby = o._hobby;
+        Job = o.Job; Coins = o.Coins; AgeBank = o.AgeBank; _toldOld = o._toldOld; HapRole = o.HapRole;
         _datingSince = o._datingSince - o._t0 + _t0;
     }
 
@@ -130,8 +131,8 @@ sealed partial class Brain
     // ================= hooks from the body =================
 
     public void OnSpawned() => Go(G.Idle, rng.Range(0.6f, 1.4f));
-    public void OnRagdoll() { EndSocial(); _g = G.Busy; }
-    public void OnGrabbed() { EndSocial(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - (f.Tastes.Likes(Thing.BeingPickedUp) ? 0 : 0.08f)); FeelAboutBeingPickedUp(); }
+    public void OnRagdoll() { EndSocial(); LeaveOutdoors(); _g = G.Busy; }
+    public void OnGrabbed() { EndSocial(); LeaveOutdoors(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - (f.Tastes.Likes(Thing.BeingPickedUp) ? 0 : 0.08f)); FeelAboutBeingPickedUp(); }
     public void OnLanded(float impact) { if (impact > 1200 * S) Stamina = MathF.Max(0, Stamina - 0.02f); }
     public void OnUnexpectedFall() { if (_g != G.Busy) Go(G.Idle, 1.2f); }
 

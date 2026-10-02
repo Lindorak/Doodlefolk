@@ -78,6 +78,7 @@ sealed partial class App
         name = name.Trim();
         if (name.Length is 0 or > 40) return "Give it a name (up to 40 letters).";
         if (PetMode) return "Switch off pet-only mode first.";
+        if (name != _settings.CastName && File.Exists(CastFile(name))) return $"There's already a cast called \"{name}\". Pick another name.";
         var c = CurrentCast();
         c.Name = name;
         _settings.CastName = name;
@@ -93,6 +94,7 @@ sealed partial class App
         if (name.Length is 0 or > 40) return "Give it a name (up to 40 letters).";
         if (PetMode) return "Switch off pet-only mode first.";
         if (name == _settings.CastName) return "That's the cast you're on.";
+        if (fresh && File.Exists(CastFile(name))) return $"There's already a cast called \"{name}\". Pick another name, or switch to it.";
         SavedCast? next = null;
         if (!fresh)
         {

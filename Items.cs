@@ -689,8 +689,9 @@ static class ItemCatalog
 
     public static ItemDef? Find(string noun)
     {
-        foreach (var d in All)
-            if (d.Key == noun || d.Words.Contains(noun)) return d;
+        // An exact key wins over a word another object also answers to ("fish" is a fish, not the fish tank).
+        foreach (var d in All) if (d.Key == noun) return d;
+        foreach (var d in All) if (d.Words.Contains(noun)) return d;
         return null;
     }
 

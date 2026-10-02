@@ -59,14 +59,23 @@ sealed partial class Brain
     // ---------------- ageing ----------------
 
     /// <summary>Years of age: figures born here count up from childhood, everyone else from twenty, at the life pace.</summary>
-    public float AgeYears => ParentIds.Count > 0 && Baby ? 3 + Grown * 15
-        : (ParentIds.Count > 0 ? 18 : 20) + (float)(DateTime.Now - Born).TotalDays * World.LifePace;
+    public float AgeYears => ParentIds.Count > 0 && Baby ? 3 + Grown * 15 : (ParentIds.Count > 0 ? 18 : 20) + AgeBank;
+    /// <summary>Years lived since it grew up (or since ageing was switched on): counted while StickFight runs.</summary>
+    public float AgeBank;
+    DateTime _ageTick = DateTime.Now;
+
+    /// <summary>After loading: elders have already been announced.</summary>
+    public void AgeLoaded() => _toldOld = IsElder;
     public bool IsElder => World.LifePace > 0 && AgeYears >= 62;
     public string LifeStage => Baby ? (Grown < 0.4f ? "Little one" : "Kid") : IsElder ? "Elder" : AgeYears < 26 ? "Young adult" : "Adult";
     bool _toldOld;
 
     void UpdateAge(World w)
     {
+        var now = DateTime.Now;
+        float days = (float)Math.Clamp((now - _ageTick).TotalDays, 0, 1);
+        _ageTick = now;
+        if (!Baby) AgeBank += days * World.LifePace;
         f.Elder = IsElder;
         if (IsElder && !_toldOld)
         {

@@ -26,10 +26,15 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v0.8.2-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
-2. Unzip it anywhere and run `StickFight.exe`. Nothing to install.
-3. Windows may show "Windows protected your PC" because the app isn't code-signed yet:
-   click **More info → Run anyway**.
+1. Grab `StickFight-v1.0.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+2. Unzip it anywhere and run `StickFight.exe`. It runs from wherever you put it; if you'd like it in the Start menu
+   (and in Installed apps, to remove it the usual way), click **Install StickFight** in Studio → Settings. No admin
+   rights needed, and your figures come along.
+3. Windows may show "Windows protected your PC" because the app isn't code-signed (that needs a paid code-signing
+   certificate): click **More info → Run anyway**.
+
+StickFight checks GitHub once a day for a newer version and offers it in the Studio; updating is one click (you can
+switch the check off).
 
 A figure appears and sketches itself onto your screen. Everything else lives in the **tray icon**
 (bottom-right, near the clock): **left-click** it for the **StickFight Studio**, **right-click** for a quick
@@ -104,6 +109,18 @@ panel (draw a figure, toss in a toy, hide them, quit).
   the others cheering, and a crown for the champion.
 - **Photo mode**: everyone squeezes in, says cheese, and you get an instant-photo-style picture in
   `Pictures\StickFight` (if your Pictures folder syncs to OneDrive, so do the photos).
+- **Record a clip**: ten seconds of everyone as an animated GIF (just them and their things, drawn on paper; never
+  what's on your screen), saved to `Pictures\StickFight`.
+- **Talk out loud** (opt-in): press 🎤 and speak. Say a name and what to tell them ("Sparky, come here"), ask for
+  something ("make a pizza"), or call for a race, a photo or some snow. Windows' own speech recognition, on your PC.
+- **AI conversations** (opt-in, your own OpenAI key): figures answer what you say with a language model, in
+  character. Off, they answer the usual way, all locally.
+- **Reminders**: set one (once, daily, weekdays, weekly), or import a calendar file (.ics), and a figure brings it to
+  your cursor when it's due. They also cheer when a download finishes (only the file's kind is noticed) and come to
+  check on you if you seem frustrated (rage-clicking, slamming windows shut).
+- **Several casts**: save your cast under a name, start a fresh one, switch back whenever you like.
+- **Mods**: add your own objects (as SVG or shapes), hats, names and jokes with JSON files. See
+  [docs/MODDING.md](docs/MODDING.md).
 - **Life**: skills that grow with practice (juggling, climbing, fighting, ball games, dancing, drawing),
   favourite places (and spots they avoid), birthdays with a cake and a song, Halloween costumes, Christmas
   hats and New Year fireworks, and a welcome when you come back after a while away.
@@ -133,6 +150,10 @@ panel (draw a figure, toss in a toy, hide them, quit).
   window behind, shading, faces, motion smears, and a simple or detailed look for objects.
 - **Settings**: frame rate, paper or chalkboard look (the whole app follows it, bubbles included), sound and
   voices, screen features, romance, babies, wishes, celebrations, and remembering everyone between runs.
+- **Accessibility and comfort**: a **calm mode** (no fights, tournaments, cursor hunting, lightning or freeze-frames),
+  **colour-blind badges** (each colour team wears its own shape), **quiet hours** (hidden on the days and times you
+  choose), and a **battery saver** (lighter frame rate and graphics when unplugged, or always). It starts in about a
+  second and uses about 150 MB.
 
 ## How they behave
 

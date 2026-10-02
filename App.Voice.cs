@@ -96,7 +96,7 @@ sealed partial class App
             }
         // Things to do.
         if (low.Contains("photo") || low.Contains("cheese")) { TakePhoto(); return "Say cheese!"; }
-        if (low.Contains("record")) return StartRecording();
+        if (low.Contains("record") || low.Contains("clip") || low.Contains("video")) return StartRecording();
         if (low.Contains("festival")) return StartHappening("festival");
         if (low.Contains("talent")) return StartHappening("talent");
         if (low.Contains("race")) return StartHappening("race");

@@ -53,9 +53,15 @@ sealed partial class App
         if ((int)(h.T * 2) != (int)((h.T - dt) * 2))
             foreach (var f in h.Who.Concat(h.Crowd).ToList())
             {
-                if (!_w.Figures.Contains(f)) { h.Who.Remove(f); h.Crowd.Remove(f); continue; }
+                if (!_w.Figures.Contains(f) || f.Brain.HapRole.Length == 0) { LeftHappening(h, f); continue; }
                 f.Brain.KeepInHappening(_w);
             }
+        // Everyone gone (removed, or wandered off for good): call it off.
+        if (h.Who.Count + h.Crowd.Count == 0 || (h.Kind != "festival" && (h.Who.Count == 0 || (h.Kind == "talent" && h.Phase == 0 && h.Who.Count < 2))))
+        {
+            EndHappening(h, false);
+            return;
+        }
         switch (h.Kind)
         {
             case "festival": FestivalStep(h, now); break;
@@ -127,6 +133,33 @@ sealed partial class App
         _w.Happening = h;
         World.Log($"happening: {kind} with {string.Join(", ", h.Who.Concat(h.Crowd).Select(f => f.Name))}");
         return "started " + h.Title;
+    }
+
+    /// <summary>Someone's no longer taking part: keep the running order straight.</summary>
+    void LeftHappening(Happening h, Figure f)
+    {
+        int i = h.Who.IndexOf(f);
+        if (i >= 0)
+        {
+            h.Who.RemoveAt(i);
+            if (h.Kind == "talent" && h.Phase == 1)
+            {
+                if (i < h.Turn) h.Turn--;
+                else if (i == h.Turn) h.PhaseT = 0;
+            }
+        }
+        h.Crowd.Remove(f);
+        if (_w.Figures.Contains(f)) f.Brain.LeaveHappening();
+    }
+
+    /// <summary>A figure was rebuilt (resized): it keeps its place in the event.</summary>
+    void SwapInHappening(Figure old, Figure f)
+    {
+        if (_w.Happening is not { } h) return;
+        int i = h.Who.IndexOf(old); if (i >= 0) h.Who[i] = f;
+        int j = h.Crowd.IndexOf(old); if (j >= 0) h.Crowd[j] = f;
+        if (h.Winner == old) h.Winner = f;
+        int k = h.Finished.IndexOf(old); if (k >= 0) h.Finished[k] = f;
     }
 
     void EndHappening(Happening h, bool done)
@@ -210,7 +243,8 @@ sealed partial class App
                 break;
             case 1: // countdown
             {
-                var starter = h.Crowd.FirstOrDefault() ?? h.Who[0];
+                var starter = h.Crowd.FirstOrDefault() ?? h.Who.FirstOrDefault();
+                if (starter == null) break;
                 int n = (int)h.PhaseT, prev = (int)(h.PhaseT - World.Dt);
                 if (n != prev && n <= 3) starter.Emote(n < 3 ? (3 - n).ToString() : "GO!", 0.9f);
                 if (n != prev && n <= 3) World.Play(Sfx.Pip, starter.Base, 0.4f, n < 3 ? 1 : 1.6f);

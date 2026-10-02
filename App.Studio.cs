@@ -202,7 +202,7 @@ sealed partial class App
             fond = R(b.UserFondness),
             hunter = f.Hunter,
             family = FamilyLine(f), weightWord = f.WeightWord,
-            job = (int)b.Job >= 0 ? b.Job.ToString() : "None", coins = b.Coins, stage = b.LifeStage, ageYears = World.LifePace > 0 || b.ParentIds.Count > 0 ? (int)b.AgeYears : 0, retired = b.IsElder,
+            job = (int)b.Job >= 0 ? b.Job.ToString() : "None", coins = b.Coins, stage = World.LifePace > 0 || b.Baby ? b.LifeStage : "", ageYears = World.LifePace > 0 || b.ParentIds.Count > 0 ? (int)b.AgeYears : 0, retired = b.IsElder,
             skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
@@ -356,7 +356,14 @@ sealed partial class App
                     break;
                 }
                 case "weatherPlace": SetWeatherPlace(Str(m, "v")); break;
-                case "happening": World.Log("happening: " + (Str(m, "kind") == "stop" ? (_w.Happening is { } hp ? "stopped" : "none") : StartHappening(Str(m, "kind")))); if (Str(m, "kind") == "stop" && _w.Happening is { } hs) EndHappening(hs, false); break;
+                case "happening":
+                {
+                    string hr;
+                    if (Str(m, "kind") == "stop") { if (_w.Happening is { } hs) { EndHappening(hs, false); hr = "Stopped."; } else hr = "Nothing's on."; }
+                    else { hr = StartHappening(Str(m, "kind")); hr = hr.StartsWith("started") ? char.ToUpper(hr[0]) + hr[1..] + "!" : "Can't start it: " + hr + "."; }
+                    PostAll(new { t = "toast", text = hr });
+                    break;
+                }
                 case "sky":
                     if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk)) _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
                     break;

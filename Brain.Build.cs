@@ -66,6 +66,8 @@ sealed partial class Brain
         if ((int)(_t / 0.6f) != (int)((_t - World.Dt) / 0.6f)) World.Play(Sfx.Clank, f.Jt[J.HandN], 0.18f, 1.4f, 0.2);
         // Each builder adds; the more hands, the faster.
         site.Growth += World.Dt / 120f;
+        // Builders are paid for their time (and helpers chip in for free).
+        if (Job == Job.Builder) { _earnT += World.Dt; if (_earnT > 15) { _earnT = 0; Coins++; } }
         Stamina = MathF.Max(0, Stamina - World.Dt * 0.004f);
         if (site.Growth < 1) return;
         // Done!
@@ -84,6 +86,7 @@ sealed partial class Brain
         }
         f.Emote(V("finished!", "IT'S DONE!!!", "built. obviously.", "w-we did it!", "the work is complete"), 1.8f);
         Cheered(0.4f);
+        if (Job == Job.Builder) Coins += 5;
         Write("built:" + kind, V($"Finished building the {kind}!", $"THE {kind.ToUpperInvariant()} IS DONE!!!", $"The {kind}'s done. Solid work.", $"We finished the {kind}. I'm so proud.", $"The {kind} stands."), "★", 0);
         _site = null;
         Go(G.Cheer, 1.5f);

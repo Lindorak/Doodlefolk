@@ -29,7 +29,7 @@ sealed partial class Item
     bool StepRidden(float dt)
     {
         if (Rider is not { } rd) return false;
-        if (!World.Current!.Figures.Contains(rd) || rd.Riding != this) { Rider = null; return false; }
+        if (!World.Current!.Figures.Contains(rd) || rd.Riding != this || rd.Mode != Mode.Control) { Rider = null; if (rd.Riding == this) rd.Riding = null; return false; }
         Pos = rd.Base;
         GroundHwnd = rd.GroundHwnd;
         Vel = rd.Vel;

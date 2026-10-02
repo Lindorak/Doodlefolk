@@ -85,6 +85,7 @@ sealed partial class World
     public void RemoveFigure(Figure f)
     {
         f.DropCarried(Vector2.Zero);
+        f.Brain.LeaveOutdoors();
         Figures.Remove(f);
     }
 

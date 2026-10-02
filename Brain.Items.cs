@@ -66,6 +66,7 @@ sealed partial class Brain
                     Verb.Read => it.Holder == null ? (P.Curiosity * (1 - E) * 0.7f + 0.05f) * Taste(Thing.Reading) : 0,
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
+                    Verb.Wield or Verb.Shoot => WeaponWant(it, v),
                     _ => 0,
                 };
                 float score = wgt * like * near;
@@ -114,6 +115,8 @@ sealed partial class Brain
     {
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
+        if (_verb is Verb.Wield or Verb.Shoot) { Equipped(it); return; }
+        if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {
             Verb.Sit => rng.Range(8, 25) * (0.6f + it.Def.Comfort),
@@ -304,6 +307,7 @@ sealed partial class Brain
     public void OnItemGone(Item it)
     {
         if (f.CarryingItem == it) { f.CarryingItem = null; it.Holder = null; it.Open = false; }
+        if (f.Weapon == it) { f.Weapon = null; f.AimAt = null; it.Holder = null; }
         if (_item != it) return;
         LeaveItem();
         if (_g == G.UseItem) { f.Emote("?", 1); Go(G.Idle, 1); }

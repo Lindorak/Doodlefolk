@@ -35,6 +35,7 @@ sealed partial class Brain
             return;
         }
         Stamina = MathF.Max(0, Stamina - World.Dt * 0.004f);
+        if (ShootCursor(w)) return;
         _huntPlanT -= World.Dt;
         if (_huntPlanT > 0) { HuntStep(w, cur); return; }
         _huntPlanT = 0.5f;
@@ -43,6 +44,13 @@ sealed partial class Brain
         float rel = f.Base.Y - cur.Y;
         bool reachable = rel > -4 * S && rel < f.Height * 1.05f;
         bool canHit = Rules.Enabled && Rules.PunchCursor;
+
+        // A blaster lying around? Even better.
+        if (canHit && !f.Armed && w.Items.FirstOrDefault(i => i.Def.Ranged && i.Free && i.OnGround && Vector2.Distance(i.Pos, f.Base) < 800 * S) is { } gun)
+        {
+            UseItem(gun, Verb.Shoot, w);
+            return;
+        }
 
         // Close enough to box it.
         if (canHit && reachable && d < 220 * S) { BeginCursorFight(); return; }

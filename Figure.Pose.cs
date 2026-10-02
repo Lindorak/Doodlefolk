@@ -189,6 +189,7 @@ sealed partial class Figure
         }
 
         AimAtCursor(ref hN, ref hF, ref handW);
+        WeaponArms(ref hN, ref handW, ref eN);
         CarryArms(ref hN, ref hF, ref eN, ref eF, ref handW);
         GrapplePose(ref hN, ref hF, ref eN, ref eF, ref handW, ref leanT);
 

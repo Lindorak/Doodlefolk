@@ -48,6 +48,7 @@ sealed partial class Brain
     void Go(G g, float dur)
     {
         _snub = false;
+        f.AimAt = null;
         if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
         if (g != G.Walk) _itemPending = false;
         if (g != G.Throw) _fastball = false;

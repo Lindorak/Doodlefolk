@@ -13,6 +13,7 @@ sealed partial class World
     public readonly List<Figure> Figures = new();
     public readonly List<Prop> Props = new();
     public readonly List<Item> Items = new();
+    public readonly List<Projectile> Projectiles = new();
     public readonly Fx Fx = new();
     public readonly Random Rng = new();
     public FightSettings Fight = new();
@@ -51,7 +52,7 @@ sealed partial class World
     {
         Items.Remove(it);
         foreach (var f in Figures) f.Brain.OnItemGone(it);
-        if (it.Holder != null) it.Holder.CarryingItem = null;
+        if (it.Holder != null) { if (it.Holder.CarryingItem == it) it.Holder.CarryingItem = null; if (it.Holder.Weapon == it) it.Holder.Weapon = null; }
     }
 }
 

@@ -252,6 +252,7 @@ sealed partial class Brain
         if (f.Atk != null || f.Blocking || f.JumpPending || f.DuckT > 0) { f.DesiredVX = 0; return; }
 
         // ---- offence ----
+        if (ShootFoe(o, d, dx, w)) return;
         if (f.LastAttackLanded) { _landed++; f.LastAttackLanded = false; }
         if (_counter && o.Atk == null)
         {
@@ -273,7 +274,7 @@ sealed partial class Brain
             return;
         }
         var def = AttackDef.Get(_plan!.Value);
-        float want = def.Range * S * 0.92f * style.Spacing;
+        float want = def.Range * S * 0.92f * style.Spacing + (def.Foot ? 0 : f.WeaponReach * 0.8f);
         _atkCd -= World.Dt;
         float err = d - want;
         if (d < 18 * S) f.DesiredVX = -MathF.Sign(dx) * f.WalkSpeed * 1.3f;   // too close: give ourselves room
@@ -315,7 +316,13 @@ sealed partial class Brain
         // The figure's fighting style shapes its move choice.
         var bias = StyleBias[(int)f.Style.Fight];
         for (int i = 0; i < opts.Count; i++) opts[i] = (opts[i].w * bias[(int)opts[i].k], opts[i].k);
-        if (f.Gear != Gear.None)
+        if (f.Melee)
+        {
+            // Holding a sword/bat/pan: swing it (the arm attacks), kick less.
+            for (int i = 0; i < opts.Count; i++)
+                opts[i] = (opts[i].w * (AttackDef.Get(opts[i].k).Foot ? 0.35f : opts[i].k is AttackKind.Haymaker or AttackKind.Cross ? 2.2f : 1.4f), opts[i].k);
+        }
+        else if (f.Gear != Gear.None)
         {
             // Gear on the fists: box more, kick less (gloves especially).
             float punch = f.Gear == Gear.BoxingGloves ? 1.8f : 1.4f, kick = f.Gear == Gear.BoxingGloves ? 0.35f : 0.7f;

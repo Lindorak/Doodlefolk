@@ -219,6 +219,7 @@ sealed partial class App : ApplicationContext
             foreach (var p in _w.Props.ToArray()) p.Step(World.Dt, _w);
             if (_pressItem != null) _pressItem.PinTarget = pin;
             foreach (var it in _w.Items.ToArray()) it.Step(World.Dt, _w);
+            _w.Projectiles.RemoveAll(pr => !pr.Step(World.Dt, _w));
             foreach (var f in _w.Figures.Where(f => f.Gone).ToArray())
             {
                 if (_pressFig == f) { _pressFig = null; _dragging = false; }
@@ -396,6 +397,7 @@ sealed partial class App : ApplicationContext
             if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
         }
         foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
+        foreach (var pr in _w.Projectiles) _regNow.Add(ToRect(pr.Bounds()));
         foreach (var it in _w.Items)
         {
             _regNow.Add(ToRect(it.Bounds()));
@@ -441,7 +443,13 @@ sealed partial class App : ApplicationContext
         _w.Fx.Draw(_r);
         foreach (var f in _w.Figures) f.Draw(_r);
         DrawItems(true);
-        foreach (var it in _w.Items) if (it.Holder != null) it.Draw(_r, false, _clock.Elapsed.TotalSeconds);   // carried things in front
+        foreach (var it in _w.Items)
+        {
+            if (it.Holder == null) continue;
+            if (it.Holder.Weapon == it) it.Holder.SyncWeapon(it);   // follows the (interpolated) hand
+            it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
+        }
+        foreach (var pr in _w.Projectiles) pr.Draw(_r);
         foreach (var p in _w.Props) p.Draw(_r);
     }
 

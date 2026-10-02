@@ -132,8 +132,9 @@ sealed partial class Figure
         if (Atk is not AttackDef a || _atkHit || Mode != Mode.Control) return;
         bool active = a.Kind == AttackKind.FlyingKick ? !Grounded && !JumpPending && AtkT > 0.04f : AttackActive;
         if (!active) return;
-        Vector2 p = StrikePoint(a);
-        var (dmgMul, knockMul, poiseMul) = a.Foot ? (1f, 1f, 1f) : GearInfo.Punch(Gear);
+        bool swing = Melee && !a.Foot && a.Kind != AttackKind.FlyingKick;
+        Vector2 p = swing ? WeaponTip() : StrikePoint(a);
+        var (dmgMul, knockMul, poiseMul) = swing ? (Weapon!.Def.Damage, Weapon.Def.Knock, 1.3f) : a.Foot ? (1f, 1f, 1f) : GearInfo.Punch(Gear);
         Vector2 knock = new Vector2(a.Knock.X * Facing, a.Knock.Y) * S * w.Fight.Strength * knockMul;
 
         // The cursor counts as hit anywhere along the striking forearm or shin, not just at the tip.
@@ -142,7 +143,7 @@ sealed partial class Figure
         {
             int tip = a.Foot ? J.FootN : a.Kind is AttackKind.Cross or AttackKind.Uppercut or AttackKind.Haymaker ? J.HandF : J.HandN;
             int mid = a.Foot ? J.KneeN : tip == J.HandF ? J.ElbowF : J.ElbowN;
-            cursorHit = Vector2.Distance(p, cur0) < 14 * S || M.DistToSegment(cur0, Jt[mid], Jt[tip]) < 8 * S;
+            cursorHit = Vector2.Distance(p, cur0) < 14 * S || M.DistToSegment(cur0, swing ? Jt[J.HandN] : Jt[mid], swing ? p : Jt[tip]) < 8 * S;
         }
         if (PunchTarget is Vector2 cur && cursorHit)
         {
@@ -157,7 +158,10 @@ sealed partial class Figure
         {
             if (o == this || o.Mode == Mode.Spawning || (CanHit != null && !CanHit(o))) continue;
             if (o.DuckT > 0 && a.Height == HitHeight.High) continue;   // it sails over their head
-            if (o.BodyDistance(p) > LineW * 0.5f + 3 * S) continue;
+            // A swung weapon connects anywhere along its length (sampled), a fist or foot at its tip.
+            bool touch = o.BodyDistance(p) <= LineW * 0.5f + 3 * S ||
+                         (swing && (o.BodyDistance(Vector2.Lerp(Jt[J.HandN], p, 0.6f)) <= LineW * 0.5f + 3 * S || o.BodyDistance(Vector2.Lerp(Jt[J.HandN], p, 0.3f)) <= LineW * 0.5f + 3 * S));
+            if (!touch) continue;
             _atkHit = LastAttackLanded = true;
             // Always knock the victim away from us (a spinning kick faces the other way).
             float dir = MathF.Sign(o.Jt[J.Pelvis].X - Jt[J.Pelvis].X);

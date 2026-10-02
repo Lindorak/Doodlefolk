@@ -18,7 +18,11 @@ enum Verb
     Dance,      // radio: plays music; dancers come over
     Read,       // book: sit and read
     Warm,       // campfire: sit around it, hands out
+    Wield,      // sword, bat, frying pan: carry it and swing it in fights
+    Shoot,      // toy blaster, water gun: carry it and fire it
 }
+
+enum Ammo { Dart, Water }
 
 /// <summary>How seated figures face.</summary>
 enum SeatFacing { Side, Out, In }
@@ -43,6 +47,11 @@ sealed class ItemDef
     public SeatFacing Facing;
     public bool Carry;                         // small enough to carry around (food, books)
     public int Bites = 4;                      // food portions
+    // Weapons: held by the grip (origin), pointing along +y.
+    public float Reach, Damage = 1, Knock = 1, FireRate = 0.4f;
+    public Ammo Ammo;
+    public bool Weapon => Verbs.Contains(Verb.Wield) || Verbs.Contains(Verb.Shoot);
+    public bool Ranged => Verbs.Contains(Verb.Shoot);
     /// <summary>Which tastes decide whether a figure likes this thing.</summary>
     public Thing[] Likes = Array.Empty<Thing>();
     public string Article => "aeiou".Contains(char.ToLowerInvariant(Name[0])) ? "an" : "a";
@@ -220,7 +229,46 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "pillow", Name = "Pillow", Words = new[] { "pillow", "cushion" }, W = 16, H = 7, Color = M.Hex(0xF7F5EF),
-            Shapes = new[] { O(-8, 0, 8, 7, 3, 0) }, Verbs = new[] { Verb.Lie }, Surface = 7, SurfX1 = -7, SurfX2 = 7, Comfort = 0.6f, Carry = true, Likes = new[] { Thing.Napping },
+            Shapes = new[] { O(-8, 0, 8, 7, 3, 0) }, Verbs = new[] { Verb.Lie, Verb.Wield }, Surface = 7, SurfX1 = -7, SurfX2 = 7, Comfort = 0.6f, Carry = true,
+            Reach = 10, Damage = 0.1f, Knock = 0.7f, Likes = new[] { Thing.Napping, Thing.Sparring },
+        });
+
+        // ---------------- weapons (grip at the origin, pointing up +y) ----------------
+        Add(new ItemDef
+        {
+            Key = "sword", Name = "Sword", Words = new[] { "sword", "katana", "blade", "saber", "sabre", "lightsaber", "light saber" }, W = 10, H = 40, Color = M.Hex(0x9AA3AD),
+            Shapes = new[] { L(0, -2, 0, 4, 4, 2.6f), L(-4.5f, 4, 4.5f, 4, 15, 2.2f), P(0, -1.6f, 4.5f, 1.6f, 4.5f, 1.2f, 36, 0, 40, -1.2f, 36), L(0, 7, 0, 34, 2, 0.6f) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 40, Damage = 1.6f, Knock = 1.2f, Likes = new[] { Thing.Fighting },
+        });
+        Add(new ItemDef
+        {
+            Key = "bat", Name = "Baseball bat", Words = new[] { "bat", "baseball bat", "club", "cricket bat" }, W = 6, H = 34, Color = M.Hex(0xA0703C),
+            Shapes = new[] { P(0, -1, -2, 1, -2, 2.4f, 30, 0, 33, -2.4f, 30), L(-1, 0, 1, 0, 8, 1.6f) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 33, Damage = 1.3f, Knock = 1.9f, Likes = new[] { Thing.Fighting, Thing.PlayingBall },
+        });
+        Add(new ItemDef
+        {
+            Key = "pan", Name = "Frying pan", Words = new[] { "frying pan", "pan", "skillet", "wok" }, W = 15, H = 27, Color = M.Hex(0x2A2A2A),
+            Shapes = new[] { L(0, -2, 0, 12, 8, 2.2f), E(0, 19, 7.5f, 7.5f, 0), E(0, 19, 5.6f, 5.6f, 6) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 26, Damage = 1.2f, Knock = 1.5f, Likes = new[] { Thing.Fighting, Thing.Eating },
+        });
+        Add(new ItemDef
+        {
+            Key = "stick", Name = "Stick", Words = new[] { "stick", "branch", "twig", "staff", "pole", "broom" }, W = 6, H = 32, Color = M.Hex(0x7B5134),
+            Shapes = new[] { C(0, 2, 0, -2, 0.5f, 14, -0.5f, 32), C(0, 1.2f, 0.3f, 18, 3.5f, 23) },
+            Verbs = new[] { Verb.Wield }, Carry = true, Reach = 30, Damage = 0.8f, Knock = 1, Likes = new[] { Thing.Exploring, Thing.Sparring },
+        });
+        Add(new ItemDef
+        {
+            Key = "blaster", Name = "Toy blaster", Words = new[] { "blaster", "toy blaster", "gun", "pistol", "nerf gun", "toy gun", "ray gun", "laser gun", "dart gun", "revolver" }, W = 8, H = 19, Color = M.Hex(0xFB8C00),
+            Shapes = new[] { O(-2, -2, 2.5f, 5, 1, 1), O(-3, 4, 3.5f, 11, 1.5f, 0), R(-1.4f, 10, 1.4f, 19, 11), R(-1.6f, 17, 1.6f, 19, 8), L(2.5f, 3, 4, 5, 8, 1) },
+            Verbs = new[] { Verb.Shoot }, Carry = true, Reach = 19, Damage = 0.5f, Knock = 0.6f, FireRate = 0.38f, Ammo = Ammo.Dart, Likes = new[] { Thing.Fighting, Thing.Tricks },
+        });
+        Add(new ItemDef
+        {
+            Key = "watergun", Name = "Water gun", Words = new[] { "water gun", "watergun", "squirt gun", "super soaker", "water pistol" }, W = 10, H = 20, Color = M.Hex(0x00ACC1),
+            Shapes = new[] { O(-2, -2, 2.5f, 6, 1, 1), O(-4, 5, 4, 13, 3, 0), E(0, 9, 2.5f, 2.5f, 11), R(-1, 12, 1, 20, 1) },
+            Verbs = new[] { Verb.Shoot }, Carry = true, Reach = 20, Damage = 0.05f, Knock = 0.3f, FireRate = 0.1f, Ammo = Ammo.Water, Likes = new[] { Thing.PlayingBall, Thing.Tricks },
         });
         return list.ToArray();
     }

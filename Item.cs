@@ -72,6 +72,12 @@ sealed class Item
             SwingAmp = M.MoveTowards(SwingAmp, User != null ? 1 : 0, dt * 0.5f);
             SwingT += dt * 1.6f;
         }
+        if (Holder != null && Holder.Weapon == this)
+        {
+            Holder.SyncWeapon(this);
+            OnGround = false;
+            return;
+        }
         if (Holder != null)
         {
             Pos = Holder.HoldPoint + new Vector2(0, Def.H * Sc * 0.4f);

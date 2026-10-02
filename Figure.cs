@@ -253,6 +253,7 @@ sealed partial class Figure
         _time += dt;
         TickMoves(dt);
         TickCombat(dt);
+        TickWeapon(dt);
         Array.Copy(Jt, _jtPrev, J.Count);
         switch (Mode)
         {

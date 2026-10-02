@@ -42,6 +42,7 @@ sealed partial class Figure
         _atkHit = false;
         LastAttackLanded = false;
         SetAction(Act.Fight);
+        World.Play(Sfx.Whoosh, Jt[J.Neck], 0.25f + (Melee ? 0.15f : 0), Melee ? 0.8f : 1.25f, 0.08);
     }
 
     /// <summary>A punch thrown in mid-air (jumping at the cursor).</summary>
@@ -149,6 +150,7 @@ sealed partial class Figure
         {
             _atkHit = LastAttackLanded = true;
             World.Log($"{Name} {a.Kind} hit the cursor");
+            World.Play(Sfx.Bonk, cur, 0.6f);
             w.Fx.Spark(cur, S, w.Rng, 0.8f + a.Damage * 0.03f, new Color4(1, 1, 1, 1));
             w.HitStop = MathF.Max(w.HitStop, 0.04f);
             w.CursorPush += Vector2.Normalize(knock) * (25 + a.Damage * 3.5f) * S;
@@ -200,6 +202,7 @@ sealed partial class Figure
         DuckT = 0;
         if (blocked)
         {
+            World.Play(Sfx.Block, at, 0.6f);
             HP -= a.Damage * 0.15f * str * mult;
             Poise -= a.Poise * 0.3f;
             knock *= 0.35f;
@@ -208,6 +211,7 @@ sealed partial class Figure
         }
         else
         {
+            World.Play(a.Foot ? Sfx.Kick : Sfx.Punch, at, M.Clamp01(0.4f + a.Damage * dmgMul * 0.04f), a.Foot ? 0.9f : 1);
             HP -= a.Damage * str * mult;
             Poise -= a.Poise * (0.7f + 0.3f * w.Fight.Strength) * mult * poiseMul / Style.Toughness;
             w.Fx.Spark(at, S, w.Rng, 0.9f + a.Damage * dmgMul * 0.04f, sparkColor);

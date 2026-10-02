@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Vortice.Direct2D1;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -99,7 +99,11 @@ sealed class Renderer : IDisposable
 
     /// <summary>Repaints only the given screen-space regions (cleared, then drawn into) and presents
     /// them as dirty rects, so neither we nor the compositor touch the rest of the screen.</summary>
-    public void Frame(List<Rectangle> regions, Action draw)
+    public void Frame(List<Rectangle> regions, Action draw) => Frame(regions, _ => draw());
+
+    /// <summary>As above, telling the drawing code which screen rectangle is being repainted, so it can skip
+    /// everything that doesn't touch it (the scene is drawn once per region).</summary>
+    public void Frame(List<Rectangle> regions, Action<System.Drawing.RectangleF> draw)
     {
         var rects = new List<Vortice.RawRect>(regions.Count);
         foreach (var r in regions)
@@ -116,7 +120,7 @@ sealed class Renderer : IDisposable
             _ctx.PushAxisAlignedClip(new Rect(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top), AntialiasMode.Aliased);
             _ctx.Clear(new Color4(0, 0, 0, 0));
             _ctx.Transform = Matrix3x2.CreateTranslation(-_bounds.X, -_bounds.Y);
-            draw();
+            draw(new System.Drawing.RectangleF(r.Left + _bounds.X, r.Top + _bounds.Y, r.Right - r.Left, r.Bottom - r.Top));
             _ctx.Transform = Matrix3x2.Identity;
             _ctx.PopAxisAlignedClip();
         }

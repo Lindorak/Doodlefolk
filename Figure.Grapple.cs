@@ -111,6 +111,7 @@ sealed partial class Figure
                 Facing = -_gSide;
                 float rate = Style.Spin == GrappleSpin.QuickToss ? 5 : 9 + 6 * M.Clamp01(_gT / _spinDur);
                 _spinA += rate * dt;
+                World.Play(Sfx.Whirr, hand, 0.25f, 0.9f + rate * 0.03f, 0.2);
                 _hook = SpinHookPos(hand);
                 if (_gT < _spinDur) return false;
 
@@ -149,6 +150,7 @@ sealed partial class Figure
                         _gWallX = r.Left + (_gSide > 0 ? r.Width : 0);
                         _gT = 0;
                         w.Fx.Spark(_hook, S * 0.7f, w.Rng, 0.6f);
+                        World.Play(Sfx.Clank, _hook, 0.6f);
                         Brain.OnHookCaught();
                     }
                     else Missed(w);

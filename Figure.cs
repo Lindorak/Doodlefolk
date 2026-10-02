@@ -223,6 +223,7 @@ sealed partial class Figure
         Mode = Mode.Spawning;
         SpawnT = 0;
         ResetPose();
+        World.Play(Sfx.Scribble, Base - new Vector2(0, Height * 0.5f), 0.35f, 1, 0.1);
     }
 
     public void SetAction(Act a)
@@ -376,6 +377,7 @@ sealed partial class Figure
 
     void Launch(Vector2 v)
     {
+        World.Play(Sfx.Jump, Base, M.Clamp01(-v.Y / (900 * S)) * 0.5f, 1.1f / MathF.Sqrt(SizeMul));
         _jumpVel = null;
         Vel = v;
         Grounded = false;
@@ -388,6 +390,7 @@ sealed partial class Figure
         if (p.Bounce > 0 && impact > 700 * S)
         {
             // Boing.
+            World.Play(Sfx.Boing, Base, M.Clamp01(impact / (1500 * S)), 1);
             Base.Y = p.Y;
             Vel.Y = -impact * p.Bounce;
             Vel.X *= 0.85f;
@@ -401,6 +404,7 @@ sealed partial class Figure
         Vel.X *= 0.3f;
         Flailing = false;
         KeepFacing = false;
+        World.Play(Sfx.Land, Base, M.Clamp01(impact / (1400 * S)) * 0.8f, 1 / MathF.Sqrt(SizeMul));
         w.Fx.Dust(Base, S, (int)Math.Clamp(impact / (300 * S), 2, 10), impact / (1500 * S), w.Rng);
         if (impact > 3000 * S) { World.Log($"{Name} knocked down by landing {impact / S:F0}S/s"); GoRagdoll(Vector2.Zero); return; }
         _hipV -= impact * 0.06f;
@@ -450,6 +454,7 @@ sealed partial class Figure
         if (_fF.Stepping && _fF.T < 0.75f) _fF.To.X = M.Lerp(_fF.To.X, tF + LeadAt(_fF.T), 0.2f);
 
         bool landed = Advance(_fN, dt) | Advance(_fF, dt);
+        if (landed && !idle) World.Play(Sfx.Step, Base, (run > 0.5f ? 0.35f : 0.18f) * (0.6f + SizeMul * 0.4f) * (1 + st.Stomp), 1.15f / MathF.Sqrt(SizeMul), 0.035);
         if (landed && !idle)
         {
             // Heavy-footed (or angry) walkers stomp: the body drops on each footfall.

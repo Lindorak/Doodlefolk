@@ -133,6 +133,7 @@ sealed partial class App
         settings = new
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
+            sound = _settings.SoundOn, volume = _settings.SoundVolume,
         },
         fpsNow = _fps,
     };
@@ -446,6 +447,8 @@ sealed partial class App
             case "platforms": _showPlatforms = v.GetBoolean(); break;
             case "hidden": _paused = v.GetBoolean(); break;
             case "theme": _settings.Theme = v.GetString() ?? "auto"; break;
+            case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
+            case "volume": _settings.SoundVolume = Math.Clamp(v.GetSingle(), 0, 1); if (_w.Sound != null) _w.Sound.Volume = _settings.SoundVolume; break;
         }
         _settings.Save();
     }

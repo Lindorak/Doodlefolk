@@ -83,6 +83,7 @@ sealed class Prop
         OnGround = false;
         LastTouch = by;
         if (by != null && ThrownByUser && SinceTouch < 6) by.Brain.GotBallFromUser(this);
+        World.Play(Kind is PropKind.TennisBall or PropKind.Shuttlecock ? Sfx.BounceTennis : Sfx.BallKick, Pos, M.Clamp01(vel.Length() / (1200 * _s)) * 0.6f, 1 / MathF.Sqrt(SizeMul), 0.05);
         CursorThrow = null;
         ThrownByUser = by == null;
         SinceTouch = 0;
@@ -239,6 +240,8 @@ sealed class Prop
     void Bounced(World w, float speed)
     {
         SinceBounce = 0;
+        var sfx = Kind switch { PropKind.SoccerBall => Sfx.BounceSoccer, PropKind.Basketball => Sfx.BounceBasket, PropKind.TennisBall or PropKind.Shuttlecock => Sfx.BounceTennis, PropKind.BeachBall => Sfx.BounceBeach, _ => Sfx.BounceBall };
+        World.Play(sfx, Pos, M.Clamp01(speed / (1600 * _s)) * 0.7f, 1 / MathF.Sqrt(SizeMul), 0.05);
         if (speed > 900 * _s) w.Fx.Dust(Pos + new Vector2(0, Radius), _s * 0.7f, 3, speed / (2500 * _s), w.Rng);
     }
 

@@ -73,7 +73,8 @@ sealed partial class App
     void DrawItems(bool over)
     {
         double t = _clock.Elapsed.TotalSeconds;
-        foreach (var it in _w.Items) if (it.Holder == null) it.Draw(_r, over, t);
+        if (_skipItems) return;
+        foreach (var it in _w.Items) if (it.Holder == null && Dirty(it.Bounds())) it.Draw(_r, over, t);
     }
 
     List<SavedItem> SaveItems() => _w.Items.Where(i => i.Holder == null && i.BitesLeft == i.Def.Bites)

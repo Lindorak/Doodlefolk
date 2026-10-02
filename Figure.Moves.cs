@@ -21,8 +21,25 @@ sealed partial class Figure
     public bool Flipping => _flipT >= 0;
 
     Emote? _emote;
-    public void Emote(string text, float dur = 1.4f, Color4? ink = null) =>
+    public void Emote(string text, float dur = 1.4f, Color4? ink = null)
+    {
+        bool fresh = _emote?.Text != text;
         _emote = new Emote { Text = text, Dur = dur, Ink = ink ?? new Color4(0.12f, 0.12f, 0.14f, 1) };
+        if (!fresh || Mode == Mode.Spawning) return;
+        // A little voice for each kind of reaction (pitched by size: big figures sound deeper).
+        float pitch = 1.1f / MathF.Sqrt(SizeMul) * (0.9f + (Id % 5) * 0.05f);
+        Vector2 at = Jt[J.Head];
+        switch (text)
+        {
+            case "!": case "!!": World.Play(Sfx.Pip, at, 0.35f, pitch * (text == "!!" ? 1.3f : 1), 0.12); break;
+            case "?": World.Play(Sfx.Pip, at, 0.25f, pitch * 0.75f, 0.12); break;
+            case "♥": World.Play(Sfx.Chime, at, 0.3f, pitch, 0.2); break;
+            case "#@!": World.Play(Sfx.Grumble, at, 0.4f, pitch, 0.2); break;
+            case "ha": World.Play(Sfx.Laugh, at, 0.35f, pitch, 0.2); break;
+            case "♪": case "♫": World.Play(Sfx.Tune, at, 0.25f, pitch, 0.3); break;
+            case "z": World.Play(Sfx.Snore, at, 0.25f, pitch * 0.8f, 2.5); break;
+        }
+    }
     public string? CurrentEmote => _emote?.Text;
 
     public void RequestFlip(float height)

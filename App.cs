@@ -26,7 +26,7 @@ sealed partial class App : ApplicationContext
     double _last, _acc, _nextTopmost, _nextDump, _fpsT;
     int _frames, _fps, _hitches, _hitchAcc;
     float _maxDt, _maxDtAcc;
-    double _tRefresh, _tRender, _msRefresh, _msRender;
+    double _tRefresh, _tRender, _msRefresh, _msRender, _tSim, _msSim;
     bool _paused, _showPlatforms, _hiddenCleared, _displayChanged, _disposed;
     readonly List<Rectangle> _regNow = new(), _regPrev = new(), _regPrev2 = new(), _regAll = new();
     Vector2 _prevCursor;
@@ -66,6 +66,12 @@ sealed partial class App : ApplicationContext
         Application.Idle += OnIdle;
 
         _w.Env.Refresh(_overlay.Handle);
+        try
+        {
+            _w.Sound = new Sound(_settings.SoundVolume) { Enabled = _settings.SoundOn };
+            _w.Sound.SetScreen(_w.Env.Virtual.Left, _w.Env.Virtual.Width);
+        }
+        catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
@@ -201,6 +207,7 @@ sealed partial class App : ApplicationContext
             n = 0;
             _acc = 0;
         }
+        long ts0 = Stopwatch.GetTimestamp();
         for (int i = 0; i < n; i++)
         {
             Vector2 pin = Vector2.Lerp(_prevCursor, _w.Cursor, (i + 1f) / n);
@@ -230,6 +237,9 @@ sealed partial class App : ApplicationContext
             }
             _w.Fx.Step(World.Dt);
         }
+        _tSim += Stopwatch.GetElapsedTime(ts0).TotalMilliseconds;
+        var radio = _w.Items.FirstOrDefault(it => it.Def.Verbs.Contains(Verb.Dance) && it.Playing && it.OnGround && it.Free);
+        _w.Sound?.Radio(radio != null && !_paused, radio?.Pos.X ?? 0);
         _prevCursor = _w.Cursor;
         ShoveCursor();
 
@@ -248,7 +258,7 @@ sealed partial class App : ApplicationContext
         _tRender += Stopwatch.GetElapsedTime(tr1).TotalMilliseconds;
 
         _frames++;
-        if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _tRefresh = _tRender = 0; _frames = 0; _fpsT = now; }
+        if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
         if (_debug && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
     }
 
@@ -263,6 +273,7 @@ sealed partial class App : ApplicationContext
     Vector2 _shove;
     /// <summary>Debug: pretend the cursor is here (tests without moving the real mouse).</summary>
     Vector2? _fakeCursor;
+    bool _skipItems;
 
     /// <summary>Figures punching the cursor knock it across the screen over a few frames.
     /// Never while the user is holding a mouse button.</summary>
@@ -404,6 +415,8 @@ sealed partial class App : ApplicationContext
         foreach (var m in _w.Matches) _regNow.Add(ToRect(m.Bounds()));
         foreach (var it in _w.Items)
         {
+            // Still objects stay on screen as they are; only moving/animated/changed ones are redrawn.
+            if (!it.Changed()) continue;
             _regNow.Add(ToRect(it.Bounds()));
             it.Shadow(_w.Env, out var sc, out float srx, out float sry, out _);
             if (srx > 0) _regNow.Add(ToRect(RectangleF.FromLTRB(sc.X - srx, sc.Y - sry, sc.X + srx, sc.Y + sry)));
@@ -419,13 +432,19 @@ sealed partial class App : ApplicationContext
         _regPrev2.Clear(); _regPrev2.AddRange(_regPrev);
         _regPrev.Clear(); _regPrev.AddRange(_regNow);
         if (_regAll.Count == 0) return false;
-        _r.Frame(_regAll, DrawScene);
+        _r.Frame(_regAll, (Action<RectangleF>)DrawScene);
         return true;
     }
 
-    void DrawScene()
+    RectangleF _clip;
+
+    /// <summary>Does this rectangle touch the region being repainted right now? (Skip drawing what doesn't.)</summary>
+    bool Dirty(RectangleF b) => b.Right >= _clip.Left && b.Left <= _clip.Right && b.Bottom >= _clip.Top && b.Top <= _clip.Bottom;
+
+    void DrawScene(RectangleF clip)
     {
-        if (_showPlatforms)
+        _clip = clip;
+        if (_showPlatforms && clip.Width >= _r.Bounds.Width - 1)
         {
             foreach (var p in _w.Env.Platforms)
                 _r.Line(new(p.X1, p.Y), new(p.X2, p.Y), p.Solid ? new Color4(1, 0.6f, 0, 0.8f) : new Color4(0.2f, 1, 0.3f, 0.8f), 3);
@@ -434,28 +453,31 @@ sealed partial class App : ApplicationContext
         }
         foreach (var it in _w.Items)
         {
+            if (!Dirty(it.Bounds())) continue;
             it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
             if (ia > 0) _r.Oval(ic, irx, iry, new Color4(0, 0, 0, ia));
         }
         DrawItems(false);
-        foreach (var f in _w.Figures)
-            if (Shadow(f, out var c, out float rx, out float ry, out float a))
+        var figVisible = new bool[_w.Figures.Count];
+        for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
+        for (int i = 0; i < _w.Figures.Count; i++)
+            if (figVisible[i] && Shadow(_w.Figures[i], out var c, out float rx, out float ry, out float a))
                 _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
         foreach (var p in _w.Props)
-            if (p.Shadow(_w.Env, out var c, out float rx, out float ry, out float a))
+            if (Dirty(p.Bounds(_w.Env)) && p.Shadow(_w.Env, out var c, out float rx, out float ry, out float a))
                 _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
-        _w.Fx.Draw(_r);
-        foreach (var f in _w.Figures) f.Draw(_r);
+        if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
+        for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].Draw(_r);
         DrawItems(true);
         foreach (var it in _w.Items)
         {
             if (it.Holder == null) continue;
             if (it.Holder.Weapon == it) it.Holder.SyncWeapon(it);   // follows the (interpolated) hand
-            it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
+            if (Dirty(it.Bounds())) it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
         }
-        foreach (var pr in _w.Projectiles) pr.Draw(_r);
-        foreach (var m in _w.Matches) m.Draw(_r);
-        foreach (var p in _w.Props) p.Draw(_r);
+        foreach (var pr in _w.Projectiles) if (Dirty(pr.Bounds())) pr.Draw(_r);
+        foreach (var m in _w.Matches) if (Dirty(m.Bounds())) m.Draw(_r);
+        foreach (var p in _w.Props) if (Dirty(p.Bounds(_w.Env))) p.Draw(_r);
     }
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
@@ -889,6 +911,15 @@ sealed partial class App : ApplicationContext
                         mi.Vel = default; mi.OnGround = false; mi.Angle = 0;
                     }
                     break;
+                case "perf":
+                    // perf looks|items|all|none: skip drawing parts (debug)
+                    Figure.SkipLooks = p[1] is "looks" or "all";
+                    _skipItems = p[1] is "items" or "all";
+                    break;
+                case "sfxpeaks": World.Log("sfx peaks: " + _w.Sound?.Peaks()); break;
+                case "sfx":
+                    if (p.Length >= 2 && Enum.TryParse<Sfx>(p[1], true, out var sx)) _w.Sound?.Play(sx, _w.Cursor, 0.8f);
+                    break;
                 case "duck":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } dkf) dkf.DuckT = 1.2f;
                     break;
@@ -946,6 +977,7 @@ sealed partial class App : ApplicationContext
             msRefresh = _msRefresh,
             msRender = _msRender,
             maxFrameMs = _maxDt * 1000,
+            msSim = _msSim,
             hitches = _hitches,
             windows = _w.Env.WindowCount,
             platforms = _w.Env.Platforms.Select(p => new[] { p.X1, p.X2, p.Y, p.Solid ? 1 : 0 }),
@@ -996,6 +1028,7 @@ sealed partial class App : ApplicationContext
             World.Log("dispose: renderer");
             _overlay.Dispose();
             World.Log("dispose: overlay");
+            _w.Sound?.Dispose();
         }
         base.Dispose(disposing);
     }

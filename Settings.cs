@@ -47,6 +47,8 @@ sealed class Settings
     public bool RememberCast { get; set; } = true;
     /// <summary>Studio look: "auto" (follow Windows), "paper" or "chalk".</summary>
     public string Theme { get; set; } = "auto";
+    public bool SoundOn { get; set; } = true;
+    public float SoundVolume { get; set; } = 0.55f;
     public FightSettings Fight { get; set; } = new();
     public List<SavedFigure> Figures { get; set; } = new();
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>

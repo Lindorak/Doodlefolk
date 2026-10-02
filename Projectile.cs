@@ -52,6 +52,7 @@ sealed class Projectile
             else
             {
                 f.TakeHit(Vel * 0.35f, Owner, w);
+                World.Play(Sfx.DartHit, Pos, 0.5f);
                 if (f.Mode == Mode.Control) { f.HP -= 3 * w.Fight.Strength; f.HitStun = MathF.Max(f.HitStun, 0.12f); }
                 w.Fx.Spark(Pos, _s * 0.6f, w.Rng, 0.5f);
             }

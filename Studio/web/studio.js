@@ -1003,6 +1003,9 @@ PAGES.settings = {
       c.key = k;
       return c;
     });
+    const vv = h("span", { class: "val" });
+    const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
+    const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
     const checks = [
       check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
       check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
@@ -1012,6 +1015,7 @@ PAGES.settings = {
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
       h("div", { class: "row" }, chips),
       h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
+      h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
       h("h2", null, "About"),
@@ -1024,6 +1028,7 @@ PAGES.settings = {
       setRange(custom, st().fps > 0 ? st().fps : 60);
       if (idle(custom)) cv.textContent = st().fps > 0 ? st().fps : "–";
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
+      soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
     };
   },
@@ -1051,6 +1056,7 @@ function buildQuick() {
   const root = $("#quick");
   const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
+  const soundC = check("Sound", null, () => S.settings.sound, v => send({ t: "setting", key: "sound", v }));
   const count = h("span", { class: "hint" });
   add(root,
     h("div", { class: "q-head" },
@@ -1061,13 +1067,13 @@ function buildQuick() {
     h("h3", null, "Draw something"), summonBox(true),
     h("h3", null, "Toss in a toy"),
     h("div", { class: "q-toys" }, INIT.propKinds.map(k => h("button", { class: "q-toy", title: k.name, onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, ballSvg(k.key, "#E53935"), h("span", null, k.name)))),
-    h("div", { class: "q-checks" }, hideC, fightC),
+    h("div", { class: "q-checks" }, hideC, fightC, soundC),
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
       h("span", { class: "spacer" }),
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
-    hideC.update(); fightC.update();
+    hideC.update(); fightC.update(); soundC.update();
     const n = S.figures.length;
     count.textContent = `${n} figure${n === 1 ? "" : "s"} · ${S.fpsNow || 0} fps`;
   };

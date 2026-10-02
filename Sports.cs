@@ -118,7 +118,7 @@ sealed class Match
                 ServeTeam = 1 - hitter;
                 Celebrate(1 - hitter, "OUT!", w);
             }
-            else { Shout = "OUT!"; ShoutT = 1.2f; }
+            else { Shout = "OUT!"; ShoutT = 1.2f; World.Play(Sfx.Whistle, b.Pos, 0.5f); }
             Reset(w, 1.2f);
             return true;
         }
@@ -160,6 +160,7 @@ sealed class Match
                         Points[who] += pts;
                         Scorer = who;
                         Shout = pts == 3 ? "THREE!" : b.SinceBounce > 1 ? "SWISH!" : "SCORE!";
+                        World.Play(Sfx.Swish, b.Pos, 0.6f); World.Play(Sfx.TaDa, b.Pos, 0.4f);
                         ShoutT = 1.5f;
                         who.Brain.OnScored(this, w);
                         if (Points[who] >= Target) { Over = true; }
@@ -191,6 +192,7 @@ sealed class Match
 
     void Celebrate(int team, string shout, World w)
     {
+        World.Play(shout == "OUT!" ? Sfx.Whistle : Sfx.TaDa, Ball.Pos, 0.6f);
         Shout = shout;
         ShoutT = 1.6f;
         foreach (var p in Players) p.Brain.OnMatchMoment(this, Team.GetValueOrDefault(p) == team, w);

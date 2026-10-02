@@ -69,6 +69,7 @@ sealed partial class Figure
         // Aim a touch high to make up for the drop, with a little wobble.
         Vector2 v = d / t + new Vector2(0, -0.5f * g * t) + new Vector2(0, _rng.Range(-40, 40) * S);
         w.Projectiles.Add(new Projectile(gun.Def.Ammo, muzzle, v, this, S, atCursor));
+        World.Play(water ? Sfx.Squirt : Sfx.Pew, muzzle, water ? 0.25f : 0.4f, 1, water ? 0.09 : 0.05);
         _recoil = water ? 0.2f : 1;
         if (!water) w.Fx.Spark(muzzle, S * 0.5f, w.Rng, 0.4f);
         return true;

@@ -236,6 +236,7 @@ sealed partial class Brain
                 {
                     _nextBite = 1.2f;
                     it.BitesLeft--;
+                    World.Play(Sfx.Munch, f.Jt[J.Head], 0.45f, 1.1f / MathF.Sqrt(f.SizeMul));
                     Hunger = MathF.Max(0, Hunger - 0.35f / it.Def.Bites * 2);
                     Cheered(0.05f + MathF.Max(0, f.Tastes.Of(Thing.Eating)) * 0.05f);
                     w.Fx.Dust(f.Jt[J.Head] + new Vector2(f.Facing * 3 * S, 2 * S), S * 0.4f, 2, 0.2f, w.Rng);

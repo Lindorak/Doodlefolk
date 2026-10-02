@@ -69,8 +69,11 @@ sealed partial class Figure
     }
 
     /// <summary>Behind the body: cape, long hair/afro, hood, headband tails.</summary>
+    public static bool SkipLooks;   // debug: performance bisecting
+
     void DrawLookBack(Renderer r, float alpha)
     {
+        if (SkipLooks) return;
         var look = Look;
         if (look.Back == "cape" && _clothInit) DrawCape(r, Hex(look.BackColour, Color), alpha);
         var (h, up, fwd) = HeadFrame();
@@ -97,6 +100,7 @@ sealed partial class Figure
     /// <summary>Over the torso (after the body lines): top, neckwear, waist.</summary>
     void DrawLookBody(Renderer r, float alpha)
     {
+        if (SkipLooks) return;
         var look = Look;
         Vector2 neck = Jt[J.Neck], pel = Jt[J.Pelvis];
         Vector2 down = pel - neck;
@@ -164,6 +168,7 @@ sealed partial class Figure
     /// <summary>On the head (after the head disc): hair, beard, glasses, hat. And shoes on the feet.</summary>
     void DrawLookFront(Renderer r, float alpha)
     {
+        if (SkipLooks) return;
         var look = Look;
         var (h, up, fwd) = HeadFrame();
         float hr = HeadR;

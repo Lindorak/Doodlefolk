@@ -119,6 +119,7 @@ sealed class Item
             Spin = 0;
             Angle = 0;
             if (impact > 500 * _s) w.Fx.Dust(Pos, _s, (int)Math.Clamp(impact / (250 * _s), 2, 12), impact / (1500 * _s), w.Rng);
+            if (impact > 300 * _s) World.Play(Sfx.Thud, Pos, M.Clamp01(impact / (2000 * _s)) * (Def.Carry ? 0.3f : 0.8f), Def.Carry ? 1.6f : 0.8f);
         }
     }
 
@@ -304,6 +305,22 @@ sealed class Item
         r.FillPolygon(left, ItemDef.Fixed[7]); r.FillPolygon(right, ItemDef.Fixed[7]);
         for (int i = 0; i < 4; i++) { r.Line(left[i], left[(i + 1) % 4], Col(1), 1.2f * sc); r.Line(right[i], right[(i + 1) % 4], Col(1), 1.2f * sc); }
         for (int i = 0; i < 3; i++) { r.Line(Local(-7, 4 + i * 2.5f), Local(-2, 3.6f + i * 2.5f), Ink, 0.6f * sc); r.Line(Local(2, 3.6f + i * 2.5f), Local(7, 4 + i * 2.5f), Ink, 0.6f * sc); }
+    }
+
+    // ---------------- redraw tracking ----------------
+
+    int _lastKey;
+
+    /// <summary>Does this object need redrawing this frame (it moved, changed, animates, or someone's using it)?</summary>
+    public bool Changed()
+    {
+        bool animated = Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
+                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
+        int key = HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
+                                   User?.Id ?? 0, Seated.Count(s => s != null));
+        bool changed = key != _lastKey;
+        _lastKey = key;
+        return animated || changed;
     }
 
     // ---------------- bounds + hit testing ----------------

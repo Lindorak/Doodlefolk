@@ -27,7 +27,7 @@ sealed partial class Brain
         {
             case 0:   // arrive
                 if (!MoveToward(_visitX, 40 * S)) return;
-                f.Emote(Gestures ? "👋" : _visit switch
+                f.Emote(Gestures ? "👋" : f.Spirit ? V("hello again", "I'M BACK! SORT OF!", "…hey. missed you.", "I m-missed you all…", "I came back to see you") : _visit switch
                 {
                     VisitorKind.Bard => "hello, good folk! a song?",
                     VisitorKind.MailCarrier => "special delivery!",
@@ -38,7 +38,7 @@ sealed partial class Brain
                     VisitorKind.Chef => "who's hungry?!",
                     _ => "what lovely soil!",
                 }, 2.4f);
-                if (_visit == VisitorKind.Ghost) foreach (var o in w.Figures.Where(o => o != f && Vector2.Distance(o.Base, f.Base) < 400 * S)) { o.Emote("!", 1); o.Brain.Fear = M.Clamp01(o.Brain.Fear + 0.25f); }
+                if (_visit == VisitorKind.Ghost && !f.Spirit) foreach (var o in w.Figures.Where(o => o != f && Vector2.Distance(o.Base, f.Base) < 400 * S)) { o.Emote("!", 1); o.Brain.Fear = M.Clamp01(o.Brain.Fear + 0.25f); }
                 _visitStep = 1; _t = 0;
                 return;
             case 1:   // the visit itself

@@ -741,6 +741,7 @@ sealed partial class Brain
         OutdoorOptions(w, opts);
         BoostOptions(w, opts);
         VisitorOptions(w, opts);
+        MemorialOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

@@ -25,7 +25,7 @@ sealed partial class App
 
     const double TestSpeed = 6;
 
-    string _albumFile = "", _questText = "";
+    string _albumFile = "", _questText = "", _memoName = "";
     double _perfAt = 5;
     bool _sawRide;
 
@@ -99,23 +99,27 @@ sealed partial class App
             for (int i = 0; i < 4 && Fig(i) is { } f; i++) f.Brain.DebugTown(_w, "work", "");
             Fig(4)?.Brain.DebugTown(_w, "build", "");
         });
-        At(40, "outdoors", () =>
+        At(36, "line up", () =>
         {
-            // Riders and their rides side by side on the ground, so it's about riding, not about finding the bike.
+            // Riders and their rides side by side on the ground (and fresh, and off shift, or work calls them back),
+            // so this is about riding, not about finding the bike. Placing someone redraws them, so it's done early.
             foreach (var (i, key, x) in new[] { (0, "bike", 300f), (1, "gokart", 1500f) })
                 if (Fig(i) is { } rider && _w.Items.FirstOrDefault(it => it.Def.Key == key) is { } veh && _w.Env.Below(x, 1000) is { } ground)
                 {
-                    rider.Brain.DebugTown(_w, "job", "None");   // off shift, or work calls them back
-                    rider.Brain.Stamina = 1;                     // fresh, not worn out from the shift
+                    rider.Brain.DebugTown(_w, "job", "None");
+                    rider.Brain.Stamina = 1;
                     rider.PlaceAt(ground, x - 50);
                     veh.Pos = new Vector2(x + 40, ground.Y - 2); veh.Vel = Vector2.Zero; veh.OnGround = false;
                 }
-            World.Log($"selftest ride: {Fig(0)?.Brain.DebugTown(_w, "ride", "bike")} / {Fig(1)?.Brain.DebugTown(_w, "ride", "gokart")}");
+        });
+        At(40, "outdoors", () =>
+        {
+            Fig(0)?.Brain.DebugTown(_w, "ride", "bike");
+            Fig(1)?.Brain.DebugTown(_w, "ride", "gokart");
             Fig(2)?.Brain.DebugTown(_w, "swim", "pond");
             Fig(3)?.Brain.DebugTown(_w, "fish", "");
             Fig(5)?.Brain.DebugTown(_w, "dream", "");
         });
-        At(44, "ride check-in", () => World.Log("selftest riders: " + string.Join(", ", new[] { Fig(0), Fig(1) }.Where(f => f != null).Select(f => $"{f!.Name} {f.Brain.Activity} at {f.Base.X:0},{f.Base.Y:0} emote {f.CurrentEmote}")) + " | " + string.Join(", ", _w.Items.Where(i => i.IsVehicle).Select(i => $"{i.Def.Key} at {i.Pos.X:0},{i.Pos.Y:0} free {i.Free} rider {i.Rider?.Name}"))));
         At(52, "someone rides", () => Check("figures ride vehicles", _sawRide || _w.Figures.Any(f => f.Riding != null), string.Join(", ", _w.Figures.Select(f => f.Brain.Activity))));
         At(53, "knock riders off", () =>
         {
@@ -194,6 +198,14 @@ sealed partial class App
             foreach (var f in _w.Figures.Take(3)) f.Brain.DebugTown(_w, "ride", "");
             _w.Weather.Start(WeatherKind.Storm, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
         });
+        At(660, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });
+        At(671, "remembered", () =>
+        {
+            Check("someone who dies is remembered (headstone and memorial)", _settings.Memorials.Any(m => m.Name == _memoName)
+                  && _w.Items.Any(i => i.Def.Key == "memorial" && i.Label == _memoName) && !_w.Figures.Any(f => f.Name == _memoName), _memoName);
+            if (_settings.Memorials.LastOrDefault() is { } m) GhostOf(m);
+        });
+        At(673, "ghost", () => Check("their ghost can come back to visit", _w.Figures.Any(f => f.Spirit && f.Name == _memoName)));
         At(680, "mass removal", () => { foreach (var f in _w.Figures.ToList()) _w.RemoveFigure(f); });
         At(690, "empty world", () => Check("an event ends when everyone's gone", _w.Happening == null));
         At(695, "done", FinishSelfTest);

@@ -243,6 +243,7 @@ sealed partial class App : ApplicationContext
             _nextTopmost = now + 2; _overlay.KeepOnTop(); Ui.Update(_settings.Theme);
             Seasons.South = _settings.Hemisphere == "south" || (_settings.Hemisphere == "auto" && _settings.WeatherLat is < 0);
             Fishes.RefreshPond(_w.Weather.Raining);
+            World.OldAge = _settings.Mortality == "oldage";
         }
         // Save every couple of minutes, so a crash or a forced shutdown loses little.
         if (now > _nextAutosave) { _nextAutosave = now + 120; if (_settings.RememberCast && _w.Figures.Count > 0) SaveCast(); }
@@ -297,6 +298,7 @@ sealed partial class App : ApplicationContext
         FocusFrame(now);
         VisitorFrame(now);
         QuestFrame(now);
+        GhostFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -352,6 +354,7 @@ sealed partial class App : ApplicationContext
             _w.Matches.RemoveAll(m => !m.Step(World.Dt, _w));
             foreach (var f in _w.Figures.Where(f => f.Gone).ToArray())
             {
+                if (f.Dead) OnFigureDied(f);
                 if (_pressFig == f) { _pressFig = null; _dragging = false; }
                 _w.RemoveFigure(f);
             }
@@ -1339,6 +1342,8 @@ sealed partial class App : ApplicationContext
                     _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
                     break;
                 }
+                case "ghost": World.Log("ghost: " + (_settings.Memorials.LastOrDefault() is { } gm ? GhostOf(gm) : "nobody to remember")); break;
+                case "passaway": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } paf) paf.PassAway(_w); break;
                 case "quest": World.Log("quest: " + NewQuest(null, p.Length > 1 && Enum.TryParse<QuestKind>(p[1], true, out var qk) ? qk : null)); break;
                 case "album": World.Log("album: " + TakeAlbumPhoto("snapshot", p.Length > 1 ? string.Join(' ', p.Skip(1)) : "A debug snapshot", _w.Figures.ToList(), _w.Pets.ToList())); break;
                 case "snappet":

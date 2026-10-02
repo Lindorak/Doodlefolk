@@ -72,9 +72,9 @@ sealed partial class Brain
 
     void Mount(Item v, World w)
     {
-        if (v.Rider != null || !v.Free || !w.Items.Contains(v)) { Go(G.Idle, 1); return; }
+        if (v.Rider != null || !v.Free || !w.Items.Contains(v)) { World.Log($"{f.Name} can't ride the {v.Def.Key}: taken"); Go(G.Idle, 1); return; }
         if (World.StaminaOn && Stamina < 0.15f) { f.Emote(V("too tired to ride…", "TOO… TIRED…", "too tired.", "m-maybe later…", "my legs are sleeping"), 1.4f); Go(G.Idle, 1); return; }
-        if (w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd) is not { } floor || floor.Item != null || floor.X2 - floor.X1 < 160 * S) { f.Emote(V("no room to ride…", "NOWHERE TO RIDE!", "no room.", "it's too small here…", "no road here"), 1.2f); Go(G.Idle, 1); return; }
+        if (w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd) is not { } floor || floor.Item != null || floor.X2 - floor.X1 < 160 * S) { World.Log($"{f.Name} can't ride the {v.Def.Key}: no room here"); f.Emote(V("no room to ride…", "NOWHERE TO RIDE!", "no room.", "it's too small here…", "no road here"), 1.2f); Go(G.Idle, 1); return; }
         v.Rider = f; f.Riding = v;
         _vehicle = v;
         var seg = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);

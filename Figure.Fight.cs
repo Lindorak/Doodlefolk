@@ -16,7 +16,26 @@ sealed partial class Figure
     public bool Gone { get; private set; }
     public Figure? KilledBy { get; private set; }
     float _koT, _fadeT;
-    public float Fade => (Dead ? M.Clamp01(1 - (_fadeT - 2.5f) / 1.2f) : 1) * (1 - Camo * 0.8f);
+    public float Fade => (Dead ? M.Clamp01(1 - (_fadeT - (Peaceful ? 5 : 2.5f)) / (Peaceful ? 2.5f : 1.2f)) : 1) * (1 - Camo * 0.8f) * (Spirit ? 0.55f : 1);
+    /// <summary>A ghost: see-through.</summary>
+    public bool Spirit;
+    /// <summary>Died of old age, quietly.</summary>
+    public bool Peaceful { get; private set; }
+
+    /// <summary>Old age: lies down and is gone, gently (no "x_x", a slower fade).</summary>
+    public void PassAway(World w)
+    {
+        if (Dead) return;
+        Peaceful = true;
+        KO = Dead = true;
+        _koT = _fadeT = 0;
+        KilledBy = null;
+        _emote = null;
+        Emote("…", 4);
+        if (Riding != null) { Riding.Rider = null; Riding = null; }
+        if (Mode != Mode.Ragdoll) GoRagdoll(Vector2.Zero);   // sinks down where they are
+        World.Log($"{Name} passed away peacefully");
+    }
     public AttackDef? Atk { get; private set; }
     public float AtkT;
     public bool LastAttackLanded;
@@ -321,8 +340,8 @@ sealed partial class Figure
         if (Dead)
         {
             _fadeT += dt;
-            if (_fadeT > 2.6f && !_ghosted) { w.Fx.Ghost(Jt[J.Pelvis], Color, S); _ghosted = true; }
-            if (_fadeT > 3.8f) Gone = true;
+            if (_fadeT > (Peaceful ? 5.5f : 2.6f) && !_ghosted) { w.Fx.Ghost(Jt[J.Pelvis], Color, S); _ghosted = true; }
+            if (_fadeT > (Peaceful ? 7.6f : 3.8f)) Gone = true;
         }
         else if (_koT > w.Fight.ReviveSeconds || w.Fight.OnZeroHealth == DeathRule.KnockdownOnly) Revive(null);
     }

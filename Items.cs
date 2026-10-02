@@ -431,6 +431,12 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
+            Key = "memorial", Name = "Headstone", Words = new[] { "headstone", "gravestone", "memorial", "grave" }, W = 22, H = 26, Color = M.Hex(0xA3A8AD),
+            Shapes = new[] { E(0, 1, 13, 2.6f, 10), R(-9, 1, 9, 19, 0), E(0, 19, 9, 6, 0), R(-9, 1, -6.5f, 19, 1), L(6, 1, 7.5f, 7, 10, 0.8f), E(7.5f, 7.6f, 1.7f, 1.7f, 14), L(-5, 1, -6.5f, 6, 10, 0.8f), E(-6.5f, 6.5f, 1.5f, 1.5f, 11) },
+            Mass = 3,
+        });
+        Add(new ItemDef
+        {
             Key = "pennant", Name = "Knight's pennant", Words = new[] { "pennant", "banner", "flag pole" }, W = 18, H = 40, Color = M.Hex(0x1E88E5),
             Shapes = new[] { E(0, 1, 5, 1.2f, 6), L(0, 0, 0, 40, 5, 1.4f), P(0, 0, 38, 16, 33, 0, 28), E(0, 40.5f, 1.2f, 1.2f, 15), P(15, 4, 31, 8, 33, 4, 35) },
             Mass = 1,

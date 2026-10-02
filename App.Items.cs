@@ -127,6 +127,7 @@ sealed partial class App
         .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI),
                                      Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name,
                                      ScaleX = i.ScaleX, ScaleY = i.ScaleY, Fill = MathF.Round(i.Fill, 3), Dirt = i.Dirt, Growth = MathF.Round(i.Growth, 3), PlantKind = i.PlantKind,
+                                     Label = i.Label.Length > 0 ? i.Label : null, LabelColour = i.Label.Length > 0 ? Settings.Hex(i.OwnerColour) : null,
                                      Planter = _w.Figures.FirstOrDefault(f => f.Id == i.PlanterId)?.Name }).ToList();
 
     void RestoreItems(List<SavedItem> items)
@@ -139,6 +140,7 @@ sealed partial class App
                     if (s.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == s.Owner) is { } owner) { it.OwnerId = owner.Id; it.OwnerName = owner.Name; it.OwnerColour = owner.Color; }
                     it.ScaleX = Math.Clamp(s.ScaleX, 0.5f, 4); it.ScaleY = Math.Clamp(s.ScaleY, 0.5f, 3);
                     it.Fill = Math.Clamp(s.Fill, 0, 1); it.Dirt = Math.Max(0, s.Dirt); it.Growth = s.Growth; it.PlantKind = s.PlantKind;
+                    if (s.Label != null) { it.Label = s.Label; if (s.LabelColour != null && it.OwnerId == 0) it.OwnerColour = Settings.ParseHex(s.LabelColour); }
                     if (s.Planter != null && _w.Figures.FirstOrDefault(f => f.Name == s.Planter) is { } planter) it.PlanterId = planter.Id;
                 }
     }

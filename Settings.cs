@@ -62,6 +62,8 @@ sealed class SavedItem
     public float Growth { get; set; }
     public string PlantKind { get; set; } = "";
     public string? Planter { get; set; }
+    public string? Label { get; set; }
+    public string? LabelColour { get; set; }
 }
 
 sealed class SavedClub
@@ -201,6 +203,11 @@ sealed class Settings
     public bool AutoAlbum { get; set; } = true;
     /// <summary>Figures ask for things now and then (a swing, a race, a new hat…), listed in the Studio.</summary>
     public bool Requests { get; set; } = true;
+    /// <summary>"never" (nobody dies of old age) or "oldage" (very old elders pass away peacefully, with ageing on).</summary>
+    public string Mortality { get; set; } = "never";
+    /// <summary>On dark nights, someone remembered may come back as a ghost for a minute.</summary>
+    public bool Ghosts { get; set; } = true;
+    public List<Memorial> Memorials { get; set; } = new();
     public List<Quest> Quests { get; set; } = new();
     public int QuestsDone { get; set; }
     /// <summary>Background sound (rain, birds, the pond, the town talking…): off until you turn it on.</summary>

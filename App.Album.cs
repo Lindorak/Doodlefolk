@@ -54,7 +54,7 @@ sealed partial class App
     /// moment is on screen (a hug, a cheer). One at a time; quieter moments wait a few minutes after the last.</summary>
     void OnMilestone(string kind, string text, int weight, Figure[] who)
     {
-        if (!_settings.AutoAlbum || _selfTest || _trailer || kind is "app" or "club") return;
+        if (!_settings.AutoAlbum || _selfTest || _trailer || kind is "app" or "club" or "memorial") return;
         double now = _clock.Elapsed.TotalSeconds;
         if (weight < 5 && now - _albumLast < 240) return;
         if (_albumPending is { } p && p.weight >= weight) return;

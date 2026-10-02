@@ -216,6 +216,12 @@ sealed partial class Item
         if (over) return;
         if (Def.Verbs.Contains(Verb.Hammock)) DrawHammock(r);
         if (Def.Verbs.Contains(Verb.Warm)) DrawFire(r, time);
+        if (Def.Key == "memorial" && Label.Length > 0)
+        {
+            string n = Label.Length > 9 ? Label[..8] + "…" : Label;
+            r.Text(n, Local(0, 15.5f), MathF.Min(5.2f, 44f / Math.Max(4, n.Length)) * Sc, new Color4(0.25f, 0.25f, 0.27f, 0.9f), true);
+            r.Line(Local(-4, 10.5f), Local(4, 10.5f), new Color4(OwnerColour.R, OwnerColour.G, OwnerColour.B, 0.9f), 1.4f * Sc);
+        }
         if (Def.Verbs.Contains(Verb.Dance) && Playing && Free && OnGround) DrawNotes(r, time);
         DrawCare(r, time);
     }
@@ -684,6 +690,8 @@ sealed partial class Item
     /// <summary>Put out by a figure for a while (a campfire for the night) or a seasonal decoration: not saved.</summary>
     public bool Temporary;
     public string OwnerName = "";
+    /// <summary>Words that belong to this one thing (a headstone's name), saved with it.</summary>
+    public string Label = "";
     public Color4 OwnerColour;
     public float Scale => _s;
 

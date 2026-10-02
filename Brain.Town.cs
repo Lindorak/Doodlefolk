@@ -77,6 +77,12 @@ sealed partial class Brain
         _ageTick = now;
         if (!Baby) AgeBank += days * World.LifePace;
         f.Elder = IsElder;
+        // Very old, and old age is allowed to take them: quietly, some time past their own span (78 to 94).
+        if (World.OldAge && IsElder && AgeYears > 78 + (int)((uint)(f.Id * 7919) % 17) && f.Mode == Mode.Control && f.Grounded && rng.NextDouble() < 0.25)
+        {
+            f.PassAway(w);
+            return;
+        }
         if (IsElder && !_toldOld)
         {
             _toldOld = true;

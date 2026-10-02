@@ -352,7 +352,7 @@ PAGES.focus = {
 // ---------------- Cast ----------------
 
 PAGES.cast = {
-  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(","),
+  sig: () => S.figures.map(f => f.id).join(",") + "|" + (S.casts ? S.casts.current + S.casts.others.map(c => c.name + c.saved).join(",") : "") + "|" + S.settings.colourBlind + "|" + (S.quests || []).map(q => q.id + ":" + q.done).join(",") + "|" + (S.memorials || []).length,
   build(root) {
     const n = S.figures.length;
     add(root, h("div", { class: "row" },
@@ -382,6 +382,19 @@ PAGES.cast = {
           !q.done && q.kind === "Thing" ? h("button", { class: "btn small", onclick: () => send({ t: "quest", op: "grant", id: q.id }) }, "Put one out") : null,
           !q.done ? h("button", { class: "btn small ghost", title: "Not this time", onclick: () => send({ t: "quest", op: "decline", id: q.id }) }, "✕") : null))));
     add(root, grid);
+    // Those the town has lost.
+    const gone = S.memorials || [];
+    if (gone.length)
+      add(root, h("h2", null, "Remembered"),
+        h("div", { class: "memorials" }, gone.map(m => h("div", { class: "memorial" },
+          h("div", { class: "mem-head" }, h("span", { class: "dot", style: `background:${m.colour}` }), h("b", null, m.name), h("span", { class: "hint" }, ` ${m.age} · died ${m.died}`)),
+          h("div", { class: "mem-epitaph" }, `“${m.epitaph}”`),
+          h("div", { class: "hint" }, `Died ${m.cause}.`
+            + (m.partner ? ` Sweetheart: ${m.partner}.` : "")
+            + (m.children.length ? ` Children: ${m.children.join(", ")}.` : "")
+            + (m.friends.length ? ` Loved by ${m.friends.join(", ")}.` : "")
+            + (m.ghost ? ` Seen as a ghost ${m.ghost}×.` : "")),
+          m.diary.length ? h("ul", { class: "mem-diary" }, m.diary.map(d => h("li", null, d))) : null))));
     // Save slots.
     const casts = S.casts || { current: "", others: [] };
     const nameIn = h("input", { type: "text", placeholder: "Name", maxlength: 40, style: { width: "180px" } });
@@ -1502,8 +1515,10 @@ PAGES.settings = {
     let probSig = null;
     const hemiChips = [["auto", "Automatic"], ["north", "Northern"], ["south", "Southern"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("hemisphere", k); } }, l); c.key = k; return c; });
     const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
+    const ageChips = [["never", "Nobody dies of old age"], ["oldage", "Very old elders pass away peacefully"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("mortality", k); } }, l); c.key = k; return c; });
+    const ghostsC = check("Ghost visits", "On dark nights, someone the town has lost may come back for a minute to wave at old friends (a headstone and a page on the Cast page remember them).", () => st().ghosts !== false, v => setS("ghosts", v));
     const reqC = check("Requests", "Now and then someone asks for something that suits them (a swing, a race, a new hat, a dog…). They're listed on the Cast page; do it within a day and they're thrilled.", () => st().requests !== false, v => setS("requests", v));
-    const albumC = check("Photo album", "Big moments (a first date, a baby, a race won) are photographed for the Album: just the town, never your screen.", () => !ALBUM || ALBUM.auto, v => send({ t: "album", op: "auto", v }));
+    const albumC = check("Photo album", "Big moments (a first date, a baby, a race won) are photographed for the Album: just the town, never your screen.", () => st().autoAlbum !== false, v => send({ t: "album", op: "auto", v }));
     const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
@@ -1552,6 +1567,8 @@ PAGES.settings = {
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
       eventsC, hapBtns, hapLine, visitC, reqC, albumC,
+      h("div", { class: "field" }, h("label", null, "Old age"), h("div", { class: "row tight" }, ageChips)),
+      h("p", { class: "hint" }, "Only matters when they age (Life pace). Fights are separate: see Colours & fights."), ghostsC,
       h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
@@ -1602,7 +1619,8 @@ PAGES.settings = {
       ambOn.update(); ambFollow.update(); lofiC.update(); focusLofiC.update(); ambRows.forEach(r => r.update());
       ambBox.style.display = amb().on ? "" : "none";
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update(); ghostsC.update();
+      ageChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().mortality || "never")); });
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
       hemiChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().hemisphere || "auto")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";

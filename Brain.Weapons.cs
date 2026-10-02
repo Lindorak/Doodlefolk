@@ -23,7 +23,8 @@ sealed partial class Brain
     void Equipped(Item it)
     {
         f.Equip(it);
-        f.Emote(it.Def.Ranged ? (it.Def.Ammo == Ammo.Water ? "♪" : "!") : P.Aggression > 0.6f ? "#@!" : "!", 0.9f);
+        if (it.Def.Verbs.Contains(Verb.Create)) { _pencilSince = _t0; _nextCreate = _t0 + rng.Range(3, 8); f.Emote(rng.NextDouble() < 0.5 ? "ooh, magic!" : "✎ !", 1.4f); }
+        else f.Emote(it.Def.Ranged ? (it.Def.Ammo == Ammo.Water ? "♪" : "!") : P.Aggression > 0.6f ? "#@!" : "!", 0.9f);
         _item = null;
         Go(G.Idle, rng.Range(0.6f, 1.2f));
     }

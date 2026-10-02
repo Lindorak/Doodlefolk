@@ -20,6 +20,7 @@ sealed partial class Figure
         DropWeapon(Vector2.Zero);
         Weapon = it;
         it.Holder = this;
+        it.RestAngle = 0;
         it.Pinned = false;
     }
 
@@ -32,6 +33,8 @@ sealed partial class Figure
         w.Vel = vel + new Vector2(Facing * 80 * S, -200 * S);
         w.Spin = Facing * 6;
         w.OnGround = false;
+        // Long thin things (pencils, swords, sticks) come to rest lying down, not balanced on end.
+        w.RestAngle = w.Def.H > w.Def.W * 2.5f ? Facing * MathF.PI / 2 : 0;
     }
 
     /// <summary>The held weapon's position and angle follow the near hand (forearm direction).</summary>
@@ -43,6 +46,9 @@ sealed partial class Figure
         it.Angle = MathF.Atan2(d.X, -d.Y);
         it.Flip = Facing < 0;
     }
+
+    /// <summary>Where the held thing's tip is (a pencil's point, a sword's end).</summary>
+    public Vector2 ToolTip => WeaponTip();
 
     Vector2 WeaponTip() => Weapon is { } w ? Jt[J.HandN] + Vector2.Normalize(Jt[J.HandN] - Jt[J.ElbowN] + new Vector2(0, 1e-3f)) * w.Def.Reach * w.Sc : Jt[J.HandN];
 

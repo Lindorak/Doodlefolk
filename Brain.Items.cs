@@ -67,6 +67,8 @@ sealed partial class Brain
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
                     Verb.Wield or Verb.Shoot => WeaponWant(it, v),
+                    // Everyone's curious about the Creator's Pencil; the playful and creative most of all.
+                    Verb.Create => it.Holder == null && !HasPencil ? (0.25f + P.Curiosity * 0.6f + P.Playfulness * 0.6f) * (0.5f + Boredom) * (_t0 > _pencilBreak ? 1 : 0) : 0,
                     _ => 0,
                 };
                 float score = wgt * like * near;
@@ -115,7 +117,7 @@ sealed partial class Brain
     {
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
-        if (_verb is Verb.Wield or Verb.Shoot) { Equipped(it); return; }
+        if (_verb is Verb.Wield or Verb.Shoot or Verb.Create) { Equipped(it); return; }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {

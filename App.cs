@@ -196,6 +196,7 @@ sealed partial class App : ApplicationContext
         foreach (var it in _w.Items) it.ApplyCarry(_w.Env);
         _w.Env.AddItemSurfaces(_w.Items);
         ScreenFrame();
+        WishFrame();
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
@@ -323,7 +324,8 @@ sealed partial class App : ApplicationContext
         var (fig, _) = hitProp == null ? HitTest(c) : (null, -1);
         _w.Hover = _dragging ? null : fig;
         if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
-        _overlay.SetClickThrough(_w.Offer?.Hot != true && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        if (_w.Wish != null) _w.Wish.Hot = WishHit(c);
+        _overlay.SetClickThrough(_w.Offer?.Hot != true && _w.Wish?.Hot != true && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -350,6 +352,7 @@ sealed partial class App : ApplicationContext
     void OnMouseDown(object? sender, MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left && OfferHit(_w.Cursor)) { TakeOffer(); return; }
+        if (e.Button == MouseButtons.Left && WishHit(_w.Cursor)) { GrantWish(); return; }
         if (HitProp(_w.Cursor) is { } prop)
         {
             if (e.Button == MouseButtons.Left)
@@ -428,6 +431,7 @@ sealed partial class App : ApplicationContext
         }
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
         if (OfferRect() is RectangleF ofr) _regNow.Add(ToRect(ofr));
+        if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
         _regAll.Clear();
@@ -485,6 +489,7 @@ sealed partial class App : ApplicationContext
         foreach (var m in _w.Matches) if (Dirty(m.Bounds())) m.Draw(_r);
         foreach (var p in _w.Props) if (Dirty(p.Bounds(_w.Env))) p.Draw(_r);
         DrawOffer();
+        DrawWish();
     }
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
@@ -926,6 +931,10 @@ sealed partial class App : ApplicationContext
                     break;
                 case "screen": World.Log(ScreenReport()); break;
                 case "pop": ShowPop(p[1], int.Parse(p[2], inv)); break;
+                case "wish":
+                    // wish <Name>: make that figure want something now (debug)
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } wf) World.Log($"wish {wf.Name}: {wf.Brain.ForceWish(_w)}");
+                    break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sayf) sayf.Emote(string.Join(' ', p.Skip(2)), 5);
@@ -947,7 +956,7 @@ sealed partial class App : ApplicationContext
                     World.Log($"props ({_w.Props.Count}, saved {_settings.Props.Count}): " + string.Join("; ", _w.Props.Select(pr => $"{pr.Kind}#{pr.Id}@({pr.Pos.X:0},{pr.Pos.Y:0}) v=({pr.Vel.X:0},{pr.Vel.Y:0}) holder={pr.Holder?.Name}")) + $" | virtual {_w.Env.Virtual}");
                     break;
                 case "state":
-                    World.Log("state: " + string.Join("; ", _w.Figures.Select(f => $"{f.Name}@({f.Base.X:0},{f.Base.Y:0}) {f.Brain.Activity} [{f.CurrentEmote}]")));
+                    World.Log("state: " + string.Join("; ", _w.Figures.Select(f => $"{f.Name}@({f.Base.X:0},{f.Base.Y:0}) {f.Brain.Activity} [{f.CurrentEmote}]{(f.Weapon != null ? " holding " + f.Weapon.Def.Key : "")}")));
                     break;
                 case "sfxpeaks": World.Log("sfx peaks: " + _w.Sound?.Peaks()); break;
                 case "sfx":

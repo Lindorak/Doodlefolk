@@ -39,7 +39,8 @@ sealed partial class Brain
                     _g is G.Idle or G.Watch or G.Walk or G.SitFloor or G.Juggle or G.Dribble;
         if (!free) return false;
         float yes = 0.15f + P.Playfulness * 0.4f + P.Sociability * 0.2f + f.Tastes.Of(Thing.PlayingBall) * 0.35f + AffinityWith(from) * 0.3f - Annoyance * 0.5f - (1 - Stamina) * 0.4f
-                    - (_g == G.Walk && _purpose is WalkPurpose.Look or WalkPurpose.Watch ? 0.6f : 0);   // busy going to see something
+                    - (_g == G.Walk && _purpose is WalkPurpose.Look or WalkPurpose.Watch ? 0.6f : 0)   // busy going to see something
+                    - (HasPencil ? 0.55f : 0);                                                           // busy drawing
         if (rng.NextDouble() < yes) { f.Emote(rng.NextDouble() < 0.5 ? "!" : "♪", 0.9f); return true; }
         f.Emote("…", 0.8f);
         return false;

@@ -159,7 +159,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume,
-            screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
+            wishes = _settings.Wishes, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
     };
@@ -489,6 +489,7 @@ sealed partial class App
             case "hidden": _paused = v.GetBoolean(); break;
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
+            case "wishes": _settings.Wishes = v.GetBoolean(); if (!_settings.Wishes) _w.Wish = null; break;
             case "screenTerrain": _settings.ScreenTerrain = v.GetBoolean(); ApplyScreenSettings(); break;
             case "screenReact": _settings.ScreenReact = v.GetBoolean(); ApplyScreenSettings(); break;
             case "screenLinks": _settings.ScreenLinks = v.GetBoolean(); ApplyScreenSettings(); break;

@@ -56,6 +56,8 @@ sealed class Settings
     public bool ScreenReact { get; set; } = true;
     public bool ScreenLinks { get; set; } = true;
     public bool ScreenMedia { get; set; } = true;
+    /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
+    public bool Wishes { get; set; } = true;
     public FightSettings Fight { get; set; } = new();
     public List<SavedFigure> Figures { get; set; } = new();
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>

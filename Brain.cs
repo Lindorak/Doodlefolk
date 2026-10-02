@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create,
     }
 
     readonly Figure f;
@@ -318,6 +318,7 @@ sealed partial class Brain
             case G.Revive: DoRevive(w); break;
             case G.DanceWith: DoDanceWith(w); break;
             case G.Groove: DoGroove(w); break;
+            case G.Create: DoCreate(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -628,6 +629,7 @@ sealed partial class Brain
         if (ItemOption(w) is { } useItem) opts.Add(useItem);
         if (SportOption(w) is { } sport) opts.Add(sport);
         ScreenOptions(w, opts);
+        WishOptions(w, opts);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);

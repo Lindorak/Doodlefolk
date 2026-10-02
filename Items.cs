@@ -21,6 +21,7 @@ enum Verb
     Wield,      // sword, bat, frying pan: carry it and swing it in fights
     Shoot,      // toy blaster, water gun: carry it and fire it
     Play,       // sports gear: goals, hoops, nets (figures organise games around it)
+    Create,     // the Creator's Pencil: whoever holds it can draw things into the world
 }
 
 enum Ammo { Dart, Water }
@@ -262,6 +263,15 @@ static class ItemCatalog
             Key = "stick", Name = "Stick", Words = new[] { "stick", "branch", "twig", "staff", "pole", "broom" }, W = 6, H = 32, Color = M.Hex(0x7B5134),
             Shapes = new[] { C(0, 2, 0, -2, 0.5f, 14, -0.5f, 32), C(0, 1.2f, 0.3f, 18, 3.5f, 23) },
             Verbs = new[] { Verb.Wield }, Carry = true, Reach = 30, Damage = 0.8f, Knock = 1, Likes = new[] { Thing.Exploring, Thing.Sparring },
+        });
+        Add(new ItemDef
+        {
+            // The Creator's Pencil: a figure holding it draws itself whatever it wants.
+            Key = "pencil", Name = "Creator's Pencil", Words = new[] { "creator's pencil", "creators pencil", "creator pencil", "magic pencil", "pencil", "the pencil", "drawing pencil" },
+            W = 5, H = 30, Color = M.Hex(0xFDD835),
+            Shapes = new[] { R(-2.2f, -4, 2.2f, -1, 14), R(-2.5f, -1.4f, 2.5f, 1, 5), R(-2.2f, 1, 2.2f, 23, 0), L(-0.7f, 2, -0.7f, 22, 1, 0.7f),
+                             P(17, -2.2f, 23, 2.2f, 23, 0, 28.5f), P(8, -0.8f, 26.6f, 0.8f, 26.6f, 0, 30) },
+            Verbs = new[] { Verb.Create }, Carry = true, Reach = 29, Damage = 0.15f, Knock = 0.3f, Likes = new[] { Thing.Tricks, Thing.Exploring, Thing.Reading },
         });
         Add(new ItemDef
         {

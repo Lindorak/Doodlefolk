@@ -1013,6 +1013,7 @@ PAGES.settings = {
       check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
       check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
       check("Hide the figures", "Pauses everything until you turn it back off.", () => st().hidden, v => setS("hidden", v)),
+      check("They ask for things", "A thought bubble when they want something (a snack, a ball, a bed). Click it to give it to them.", () => st().wishes !== false, v => setS("wishes", v)),
     ];
     const screen = [
       check("Stand on text", "Lines of text and pictures in the window you're using become ledges they can walk, sit and land on.", () => st().screenTerrain, v => setS("screenTerrain", v)),

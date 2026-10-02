@@ -30,6 +30,10 @@ sealed partial class World
     /// <summary>What the figures do with what's on screen (all user options).</summary>
     public bool ScreenTerrain = true, ScreenReact = true, ScreenLinks = true, ScreenMedia = true;
     public LinkOffer? Offer;
+    /// <summary>A figure's thought bubble asking for something (one at a time), and whether they're allowed to ask.</summary>
+    public Wish? Wish;
+    public double NextWishAt = 40;
+    public bool Wishes = true;
     public double NextOfferAt = 20;
 
     public MediaNow Media => ScreenMedia && Screen != null ? Screen.Media : MediaNow.Quiet;

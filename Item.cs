@@ -211,9 +211,11 @@ sealed partial class Item
         if (Def.Verbs.Contains(Verb.Read) && Open) { if (!over) DrawOpenBook(r); return; }
         if (Def.Verbs.Contains(Verb.Shelter) && Open && Holder is { } holder) { if (over) DrawOpenUmbrella(r, holder); return; }
         bool detail = Gfx.Q.DetailedArt;
+        // Someone hiding inside: the whole thing is in front of them (only a head peeking over the rim shows).
+        bool cover = over && HasHider;
         foreach (var sh in Def.Shapes)
         {
-            if (sh.Over != over || (sh.Detail && !detail)) continue;
+            if ((sh.Over != over && !cover) || (sh.Detail && !detail)) continue;
             if (sh.WhenUsed && User == null && Seated.All(s => s == null)) continue;
             DrawShape(r, sh, k);
         }
@@ -693,7 +695,10 @@ sealed partial class Item
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
     public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || Def.Key is "puddle" or "poop" or "fishtank" or "buildsite" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
-                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s;
+                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s || HasHider;
+
+    /// <summary>Someone's hiding inside (curled up in the box, the barrel, the tent).</summary>
+    public bool HasHider => User?.Brain.HidingIn == this;
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>
     public int StateKey() => HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
@@ -755,6 +760,7 @@ sealed partial class Item
     /// Those are on top of the figure, so a click there means the thing, not the person in it.</summary>
     public bool HitOver(Vector2 p)
     {
+        if (HasHider) return HitTest(p);
         if (!Def.Shapes.Any(s => s.Over)) return false;
         bool used = User != null || Seated.Any(s => s != null);
         // Into the object's own units (the inverse of Local).

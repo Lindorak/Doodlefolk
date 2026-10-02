@@ -563,13 +563,14 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "box", Name = "Box", Words = new[] { "box", "cardboard box", "crate", "wooden crate", "chest", "toy box" }, W = 34, H = 30, Color = M.Hex(0xC8A26B),
-            Shapes = new[] { R(-17, 0, 17, 30, 1), new('r', new float[] { -17, 0, 17, 30 }, 0, Over: true), L(-17, 30, -22, 36, 1, 1.8f), L(17, 30, 22, 36, 1, 1.8f), L(-10, 15, 10, 15, 1, 1) },
+            Shapes = new[] { R(-17, 0, 17, 30, 0), L(-17, 30, -22, 36, 1, 1.8f), L(17, 30, 22, 36, 1, 1.8f), L(-10, 15, 10, 15, 1, 1) },
             Verbs = new[] { Verb.Hide, Verb.Stand }, Surface = 30, SurfX1 = -16, SurfX2 = 16, Likes = new[] { Thing.Exploring }, Mass = 2,
         });
         Add(new ItemDef
         {
             Key = "barrel", Name = "Barrel", Words = new[] { "barrel", "keg", "drum", "bin", "trash can", "dustbin", "garbage can" }, W = 24, H = 32, Color = M.Hex(0xA0703C),
-            Shapes = new[] { R(-11, 0, 11, 32, 1), new('o', new float[] { -12, 0, 12, 32, 6 }, 0, Over: true), L(-12, 7, 12, 7, 6, 2), L(-12, 25, 12, 25, 6, 2) },
+            // Staves bulging at the middle, four iron hoops, light down one side.
+            Shapes = new[] { P(0, -9.5f, 0, -10.7f, 4, -12.1f, 10, -12.6f, 16, -12.1f, 22, -10.7f, 28, -9.5f, 32, 9.5f, 32, 10.7f, 28, 12.1f, 22, 12.6f, 16, 12.1f, 10, 10.7f, 4, 9.5f, 0), C(1, 0.6f, -6.3f, 0, -7.4f, 6, -8.2f, 12, -8.3f, 16, -8.2f, 20, -7.4f, 26, -6.3f, 32), C(1, 0.6f, -2.9f, 0, -3.4f, 6, -3.7f, 12, -3.8f, 16, -3.7f, 20, -3.4f, 26, -2.9f, 32), C(1, 0.6f, 0.6f, 0, 0.7f, 6, 0.7f, 12, 0.8f, 16, 0.7f, 20, 0.7f, 26, 0.6f, 32), C(1, 0.6f, 4, 0, 4.7f, 6, 5.2f, 12, 5.3f, 16, 5.2f, 20, 4.7f, 26, 4, 32), C(1, 0.6f, 7.2f, 0, 8.5f, 6, 9.4f, 12, 9.6f, 16, 9.4f, 20, 8.5f, 26, 7.2f, 32), C(2, 1.6f, -4.6f, 0, -5.4f, 6, -5.9f, 12, -6, 16, -5.9f, 20, -5.4f, 26, -4.6f, 32), C(6, 1.9f, -10.5f, 3.4f, -5.3f, 2.9f, 0, 2.8f, 5.3f, 2.9f, 10.5f, 3.4f), C(6, 1.2f, -12.2f, 10.5f, -6.1f, 10.1f, 0, 9.9f, 6.1f, 10.1f, 12.2f, 10.5f), C(6, 1.2f, -12.2f, 21.5f, -6.1f, 21.1f, 0, 20.9f, 6.1f, 21.1f, 12.2f, 21.5f), C(6, 1.9f, -10.5f, 28.6f, -5.3f, 28.2f, 0, 28, 5.3f, 28.2f, 10.5f, 28.6f), L(-9.5f, 32, 9.5f, 32, 4, 1.3f) },
             Verbs = new[] { Verb.Hide, Verb.Stand }, Surface = 32, SurfX1 = -10, SurfX2 = 10, Likes = new[] { Thing.Exploring }, Mass = 2,
         });
         Add(new ItemDef

@@ -97,6 +97,9 @@ sealed partial class Brain
     public void ForceUse(Item it, Verb v, World w) { if (f.Mode == Mode.Control && f.Grounded) UseItem(it, v, w); }
 
     /// <summary>Head to an object and start using it with <paramref name="v"/>.</summary>
+    /// <summary>For the contact sheets and tests: go and use this thing this way now.</summary>
+    public void UseNow(Item it, Verb v, World w) => UseItem(it, v, w);
+
     void UseItem(Item it, Verb v, World w)
     {
         var env = w.Env;
@@ -287,8 +290,9 @@ sealed partial class Brain
                 Boredom = MathF.Max(0, Boredom - World.Dt * 0.02f);
                 break;
             case Verb.Hide:
-                // Curled up; now and then peek out over the edge.
-                bool peek = (_t % 4.5f) > 3.6f;
+                // Curled up inside; now and then peek out over the edge (of a box or a barrel: a tent has no rim
+                // to look over, so in there they stay out of sight).
+                bool peek = (_t % 4.5f) > 3.6f && it.Def.H * it.SizeMul < 36;
                 f.SetAction(peek ? Act.SitFloor : Act.Curl);
                 if (peek) f.LookAt = w.Cursor;
                 if (Fear > 0.4f || (HunterAround(w) && P.Bravery < 0.35f)) _dur = MathF.Max(_dur, _t + 3);
@@ -351,6 +355,9 @@ sealed partial class Brain
         // Get down off seats and beds onto the floor below.
         if (f.Grounded && (long)f.GroundHwnd < 0) f.HopOff();
     }
+
+    /// <summary>The box, barrel or tent we're inside, if we're hiding (it's drawn over us).</summary>
+    public Item? HidingIn => _g == G.UseItem && _verb == Verb.Hide ? _item : null;
 
     /// <summary>An object we're using was grabbed, eaten by someone else, or removed.</summary>
     public void OnItemGone(Item it)

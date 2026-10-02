@@ -81,6 +81,19 @@ sealed partial class App
         Net("Goal (low)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 5), new(1700, 0)));
         Net("Goal (rolled in)", "goal", 2.0f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-30, 5), new(500, 0)));
         Net("Walk into it", "goal", 2.4f, 1.6f, new(4, 16), (g, f) => { f.PlaceAt(_w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero), g.Local(-24, 0).X); f.Facing = 1; f.DesiredVX = f.WalkSpeed; });
+        // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
+        foreach (var key in new[] { "box", "barrel", "tent" })
+        {
+            Item? place = null;
+            _animJobs.Add(new("Hiding", "In the " + key, 6, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                place = SpawnItem(ItemCatalog.Find(key)!);
+                place!.Pos = new Vector2(1000, floor.Y); place.Vel = Vector2.Zero; place.OnGround = true;
+                f!.PlaceAt(floor, 960);
+                f.Brain.UseNow(place, Verb.Hide, _w);
+            }, (_, _) => place?.Local(0, 18) ?? Vector2.Zero, null, 1.1f));
+        }
         foreach (var kind in Enum.GetValues<PetKind>())
         {
             Animal(kind, "Walk", 1.6f, p => p.PuppetWalk(1));

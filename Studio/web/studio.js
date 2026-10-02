@@ -1313,6 +1313,7 @@ PAGES.settings = {
     const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const dayChips = DAYS.map((d, i) => { const c = h("button", { class: "chip", onclick: () => { touched(c); const cur = new Set(st().pauseDays || []); cur.has(i) ? cur.delete(i) : cur.add(i); setS("pauseDays", [...cur].sort()); } }, d); c.key = i; return c; });
     const quietBox = h("div", null, h("div", { class: "field" }, h("label", null, "From"), qFrom, h("label", null, "to"), qTo), h("div", { class: "row tight" }, dayChips));
+    const voiceC = check("Talk out loud", "A 🎤 Speak button (in the quick panel) listens once: say a figure's name and what to tell them (\"Sparky, come here\"), ask for something (\"make a pizza\"), or call for an event, a photo, a clip or weather. Uses Windows' own speech recognition on this PC; nothing is sent anywhere.", () => !!st().voiceInput, v => setS("voiceInput", v));
     const dlC = check("Notice downloads", "A cheer when a download finishes. Only the kind of file is noticed (a picture, a document…), from its extension; nothing is opened or read.", () => st().noticeDownloads !== false, v => setS("noticeDownloads", v));
     const frC = check("Notice when you're frustrated", "Lots of clicks in one spot, or a run of windows slammed shut: a friend comes over to check you're okay.", () => st().noticeFrustration !== false, v => setS("noticeFrustration", v));
     const remText = h("input", { type: "text", placeholder: "Remind me to…", maxlength: 120, style: { width: "220px" } });
@@ -1368,7 +1369,7 @@ PAGES.settings = {
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month. Everything stays on this PC."),
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
-      remList, dlC, frC,
+      remList, dlC, frC, voiceC,
       h("h2", null, "Accessibility & quiet hours"),
       calmC, cbC, quietC, quietBox,
       h("h2", null, "Your screen"),
@@ -1392,7 +1393,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update();
       const rs = JSON.stringify(st().reminders || []);
       if (rs !== remSig) {
         remSig = rs;
@@ -1458,6 +1459,7 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\StickFight", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
+      S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,
     h("h3", null, "Pets"),

@@ -1211,6 +1211,9 @@ sealed partial class App : ApplicationContext
                     // msg {json}: as if the Studio sent it (debug).
                     OnStudioMessage(System.Text.Json.JsonDocument.Parse(line[(line.IndexOf(' ') + 1)..]).RootElement.Clone());
                     break;
+                case "voice": World.Log("voice: " + VoiceCommand(line[(line.IndexOf(' ') + 1)..])); break;
+                case "voiceinfo": World.Log("voiceinfo: " + string.Join(", ", System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers().Select(r => r.Culture.Name + " " + r.Name))); break;
+                case "listen": World.Log("listen: " + Listen()); break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;
@@ -1411,6 +1414,7 @@ sealed partial class App : ApplicationContext
             World.Log("dispose: overlay");
             _w.Sound?.Dispose();
             _downloads?.Dispose();
+            _sre?.Dispose();
             _w.Screen?.Dispose();
         }
         base.Dispose(disposing);

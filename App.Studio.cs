@@ -175,7 +175,7 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -398,6 +398,8 @@ sealed partial class App
                         PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
+                case "listen": PostAll(new { t = "toast", text = Listen() }); break;
+                case "command": PostAll(new { t = "toast", text = VoiceCommand(Str(m, "v")) }); break;
                 case "record": _quick?.Close(); _pop?.Hide(); PostAll(new { t = "toast", text = StartRecording(m.TryGetProperty("seconds", out var rsec) ? rsec.GetInt32() : 10) }); break;
                 case "sticker": if (Str(m, "key") == "paper") _w.Sticker("paper"); break;
                 case "tourney": PostAll(new { t = "toast", text = StartTourney() }); break;
@@ -670,6 +672,7 @@ sealed partial class App
             case "lifePace": _settings.LifePace = v.GetString() ?? "off"; break;
             case "events": _settings.Events = v.GetBoolean(); break;
             case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
+            case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
             case "noticeFrustration": _settings.NoticeFrustration = v.GetBoolean(); break;
             case "calm": _settings.Calm = World.Calm = v.GetBoolean(); if (World.Calm) { foreach (var f in _w.Figures) if (f.Brain.InFight) f.Brain.CalmDown(); } break;
             case "colourBlind": _settings.ColourBlind = World.ColourBlind = v.GetBoolean(); ForceFullRedraw(); break;

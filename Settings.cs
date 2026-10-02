@@ -179,6 +179,8 @@ sealed class Settings
     public bool PauseSchedule { get; set; }
     /// <summary>Desktop reactions: downloads finishing (only the file's kind is noticed), you getting frustrated.</summary>
     public bool NoticeDownloads { get; set; } = true;
+    /// <summary>Talk to them out loud (Windows speech recognition, on this PC).</summary>
+    public bool VoiceInput { get; set; }
     public bool NoticeFrustration { get; set; } = true;
     public List<Reminder> Reminders { get; set; } = new();
     public string PauseFrom { get; set; } = "09:00";

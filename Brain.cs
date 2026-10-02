@@ -191,6 +191,7 @@ sealed partial class Brain
         _hoverT = w.Hover == f ? _hoverT + dt : 0;
         FeelPetting(w, dt);
         DriftFondness(dt);
+        WatchForThreats(w, dt);
         if (near && cspeed < 300 * S && _g != G.Sleep) CursorTrust = MathF.Min(1, CursorTrust + dt * 0.01f);
 
         f.LookAt = null;

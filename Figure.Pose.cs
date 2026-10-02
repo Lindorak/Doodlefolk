@@ -60,7 +60,7 @@ sealed partial class Figure
                 hipT = StandHip * 0.6f; leanT = 0.4f; handW = 20;
                 hN = new(-Arm * 0.55f, Arm * 0.6f); hF = new(-Arm * 0.65f, Arm * 0.55f);
             }
-            else if (Action == Act.Fight || HitStun > 0)
+            else if (Action == Act.Fight || HitStun > 0 || DuckT > 0 || BlockT > 0)
             {
                 FightPose(ref hipT, ref leanT, ref handW, ref hN, ref hF, ref eN, ref eF, ref tiltT);
             }

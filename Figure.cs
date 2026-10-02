@@ -286,7 +286,7 @@ sealed partial class Figure
 
             // While reeling from a hit we slide with the knockback (and can be knocked off edges).
             bool reeling = HitStun > 0;
-            float target = reeling ? 0 : DesiredVX;
+            float target = reeling ? 0 : Brain.DashVX != 0 ? Brain.DashVX : DesiredVX;
             float accel = reeling ? 900 * S : (MathF.Abs(target) > MathF.Abs(Vel.X) ? 1100 : 1600) * S;
             Vel.X = M.MoveTowards(Vel.X, target, accel * dt);
             Vel.Y = 0;

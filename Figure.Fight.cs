@@ -337,8 +337,10 @@ sealed partial class Figure
         handW = 30;
         if (DuckT > 0)
         {
-            hipT = StandHip * 0.6f;
-            leanT = 0.42f;
+            // Get right down: knees deep, chest over them, head tucked.
+            hipT = StandHip * 0.48f;
+            leanT = 0.62f;
+            tiltT += 0.3f * Facing;
             hN = new(Arm * 0.3f, -Arm * 0.32f);
             hF = new(Arm * 0.25f, -Arm * 0.25f);
             return;

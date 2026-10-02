@@ -766,6 +766,24 @@ sealed partial class App : ApplicationContext
                     OpenStudio(p.Length > 1 ? p[1] : null, p.Length > 2 && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } sfi ? sfi.Id : 0);
                     break;
                 case "quick": ToggleQuick(); break;
+                case "throwat":
+                    // throwat <Name> [height 0..1] [speed]: a ball flies at the figure as if you threw it
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } taf)
+                    {
+                        float hk = p.Length > 2 ? float.Parse(p[2], inv) : 0.5f, spd = (p.Length > 3 ? float.Parse(p[3], inv) : 1400) * _w.Scale;
+                        var tb = SpawnProp(PropKind.Ball);
+                        float side = _w.Rng.NextDouble() < 0.5 ? -1 : 1;
+                        var target = new Vector2(taf.Base.X, taf.Base.Y - taf.Height * hk);
+                        tb.Pos = target + new Vector2(side * 700 * _w.Scale, -60 * _w.Scale);
+                        float tt = 700 * _w.Scale / spd;
+                        tb.Vel = new Vector2(-side * spd, (target.Y - tb.Pos.Y) / tt - 0.5f * tb.Grav * tt);
+                        tb.ThrownByUser = true;
+                        tb.SinceTouch = 0;
+                    }
+                    break;
+                case "duck":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } dkf) dkf.DuckT = 1.2f;
+                    break;
                 case "hold":
                     // hold <Name>: lift by the head (as if the user grabbed it)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } hof)

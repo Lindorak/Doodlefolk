@@ -152,6 +152,18 @@ sealed partial class App
             Check("a song can be sung", SingNow(99).Contains("singing"));
         });
         At(167, "singing", () => Check("they sing the words", _w.Figures.Any(f => f.CurrentEmote?.Contains("line") == true || f.Brain.Singing), string.Join(", ", _w.Figures.Select(f => f.CurrentEmote))));
+        At(169, "taskbar village", () => { _settings.TownLayout = "strip"; ApplyLayout(); });
+        At(176, "village check", () =>
+        {
+            float top = _w.Env.BoundsAt(960).T;
+            Check("the taskbar village keeps everyone in the strip", _w.Env.Platforms.All(p => p.Hwnd == IntPtr.Zero || p.Item != null) && _w.Figures.All(f => f.Base.Y >= top - 5),
+                  string.Join(", ", _w.Figures.Where(f => f.Base.Y < top - 5).Select(f => $"{f.Name}@{f.Base.Y:0}")) + $" top {top:0}");
+            _settings.TownLayout = "desktop"; ApplyLayout();
+            _overlay.SetBehind(true);
+            var desk = Overlay.DesktopHost();
+            Check("live wallpaper sits just above the desktop", desk == IntPtr.Zero || Overlay.NextVisibleBelow(_overlay.Handle) == desk, desk == IntPtr.Zero ? "no desktop window (CI?)" : $"desktop {Env.ClassName(desk)}, above it {Env.ClassName(Native.GetWindow(desk, Native.GW_HWNDPREV))} {Native.GetWindow(desk, Native.GW_HWNDPREV)}, us {_overlay.Handle}, below us {Env.ClassName(Native.GetWindow(_overlay.Handle, Native.GW_HWNDNEXT))}");
+            _overlay.SetBehind(false);
+        });
         At(162, "request granted", () => Check("a request is granted when you do it", _settings.Quests.LastOrDefault()?.Done == true, _questText));
         At(158, "album saved", () =>
         {

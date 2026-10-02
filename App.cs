@@ -109,6 +109,7 @@ sealed partial class App : ApplicationContext
         _w.MakePet = k => SpawnPet(k, quiet: true);
         InitSocial();
         StartDevHooks();
+        if (_settings.TownLayout != "desktop") ApplyLayout();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
         _w.RareSeen = RareSeen;
@@ -1356,6 +1357,7 @@ sealed partial class App : ApplicationContext
                     break;
                 }
                 case "meme": _memeAt = 0; _memeReady = null; World.Log("meme: making one; context " + string.Join(",", MemeNow().Tags)); break;
+                case "layout": _settings.TownLayout = p.Length > 1 ? p[1] : "desktop"; World.Log("layout: " + ApplyLayout()); break;
                 case "dev": World.Log("dev: " + DevReact(p.Length > 1 ? p[1] : "build-passed", p.Length > 2 ? string.Join(' ', p.Skip(2)) : "")); break;
                 case "toy": World.Log("toy: " + Toybox(p.Length > 1 ? p[1] : "")); break;
                 case "ghost": World.Log("ghost: " + (_settings.Memorials.LastOrDefault() is { } gm ? GhostOf(gm) : "nobody to remember")); break;

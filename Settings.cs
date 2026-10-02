@@ -213,6 +213,10 @@ sealed class Settings
     public bool Pranks { get; set; }
     /// <summary>Your tools (git hooks, build scripts) can tell the town how your work's going, on 127.0.0.1 only.</summary>
     public bool DevHooks { get; set; }
+    /// <summary>"desktop" (everywhere), "strip" (a taskbar village) or "wallpaper" (behind your windows).</summary>
+    public string TownLayout { get; set; } = "desktop";
+    /// <summary>How tall the taskbar village is (at 100% scale).</summary>
+    public int StripHeight { get; set; } = 170;
     /// <summary>Memes made from classic templates (pictures from imgflip.com) with captions that fit the moment.</summary>
     public bool InternetMemes { get; set; }
     /// <summary>Also real posts from r/wholesomememes (titles matched to the moment; no NSFW or spoilers).</summary>

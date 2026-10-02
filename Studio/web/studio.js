@@ -1666,6 +1666,10 @@ PAGES.settings = {
     let workshopSig = null;
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
+    const layoutChips = [["desktop", "🖥 The whole desktop"], ["strip", "▁ A taskbar village"], ["wallpaper", "🖼 Behind my windows"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townLayout", k); } }, l); c.key = k; return c; });
+    const shv = h("span", { class: "val" });
+    const stripH = range(110, 400, 10, st().stripHeight || 170, v => { shv.textContent = v + " px"; sendSoon("strip", { t: "setting", key: "stripHeight", v }); });
+    const stripRow = h("div", { class: "field" }, h("label", null, "Village height"), stripH, shv);
     const hemiChips = [["auto", "Automatic"], ["north", "Northern"], ["south", "Southern"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("hemisphere", k); } }, l); c.key = k; return c; });
     const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
     const ageChips = [["never", "Nobody dies of old age"], ["oldage", "Very old elders pass away peacefully"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("mortality", k); } }, l); c.key = k; return c; });
@@ -1700,6 +1704,9 @@ PAGES.settings = {
       check("Notifications", "They look over when a notification pops up, and the bold ones jump on it.", () => st().notifications !== false, v => setS("notifications", v)),
     ];
     add(root, h("h1", null, "Settings"),
+      h("h2", null, "Where they live"),
+      h("p", { class: "sub" }, "All over the desktop; in a little strip along the taskbar (windows aren't terrain, lighter, out of your way); or behind every window, like a live wallpaper (they still walk on window tops, and clicks go straight through to your icons)."),
+      h("div", { class: "row" }, layoutChips), stripRow,
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
       h("div", { class: "row" }, chips),
       h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
@@ -1793,6 +1800,8 @@ PAGES.settings = {
       memeFolderLine.textContent = st().memeFolder ? ` ${st().memeFolder}` : " (none)";
       ageChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().mortality || "never")); });
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
+      layoutChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townLayout || "desktop")); });
+      stripRow.style.display = st().townLayout === "strip" ? "" : "none"; if (idle(stripH)) shv.textContent = (st().stripHeight || 170) + " px";
       hemiChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().hemisphere || "auto")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";
       if (idle(aiModel)) aiModel.value = st().aiModel || "gpt-5-mini";

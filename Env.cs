@@ -41,6 +41,9 @@ sealed class Env
     public IEnumerable<IntPtr> Hwnds => _rects.Keys;
     static readonly int[] Sides = { -1, 1 };
     public float MinHeadroom = 140;
+    /// <summary>Taskbar-village mode: the town lives in a strip this tall above the taskbar (0: the whole desktop).
+    /// Windows aren't terrain then, and the strip's top is the sky.</summary>
+    public float Strip;
 
     Dictionary<IntPtr, RECT> _rects = new(), _prev = new();
     readonly Dictionary<IntPtr, string> _classes = new();
@@ -98,6 +101,8 @@ sealed class Env
         if (_classes.Count > 4000) _classes.Clear();
     }
 
+    public static string ClassName(IntPtr hwnd) { var sb = new StringBuilder(256); GetClassName(hwnd, sb, sb.Capacity); return sb.ToString(); }
+
     string ClassOf(IntPtr hwnd)
     {
         if (_classes.TryGetValue(hwnd, out var c)) return c;
@@ -125,7 +130,7 @@ sealed class Env
     {
         Platforms.Clear();
         Walls.Clear();
-        for (int i = 0; i < _wins.Count; i++)
+        for (int i = 0; i < _wins.Count && Strip <= 0; i++)
         {
             var (h, r) = _wins[i];
             float y = r.Top;
@@ -350,8 +355,11 @@ sealed class Env
     /// <summary>Left/right/top limits of the monitor column containing x.</summary>
     public (float L, float R, float T) BoundsAt(float x)
     {
-        foreach (var m in MonBounds)
-            if (x >= m.Left && x < m.Right) return (m.Left, m.Right, m.Top);
-        return (Virtual.Left, Virtual.Right, Virtual.Top);
+        for (int i = 0; i < MonBounds.Length; i++)
+        {
+            var m = MonBounds[i];
+            if (x >= m.Left && x < m.Right) return (m.Left, m.Right, Strip > 0 ? MathF.Max(m.Top, MonWork[i].Bottom - Strip) : m.Top);
+        }
+        return (Virtual.Left, Virtual.Right, Strip > 0 && MonWork.Length > 0 ? MathF.Max(Virtual.Top, MonWork[0].Bottom - Strip) : Virtual.Top);
     }
 }

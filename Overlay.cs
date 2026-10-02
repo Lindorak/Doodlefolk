@@ -41,8 +41,50 @@ sealed class Overlay : Form
     public void Place(Rectangle r) =>
         SetWindowPos(Handle, HWND_TOPMOST, r.X, r.Y, r.Width, r.Height, SWP_NOACTIVATE);
 
-    public void KeepOnTop() =>
-        SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    /// <summary>Live-wallpaper mode: just above the desktop (and its icons), under every window.</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool Behind { get; private set; }
+
+    public void SetBehind(bool behind)
+    {
+        Behind = behind;
+        if (!behind) { KeepOnTop(); return; }
+        SetWindowPos(Handle, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        KeepOnTop();
+    }
+
+    /// <summary>The first visible window below this one in the z-order.</summary>
+    public static IntPtr NextVisibleBelow(IntPtr h)
+    {
+        var n = GetWindow(h, GW_HWNDNEXT);
+        while (n != IntPtr.Zero && !IsWindowVisible(n)) n = GetWindow(n, GW_HWNDNEXT);
+        return n;
+    }
+
+    /// <summary>The top-level window holding the desktop icons (Progman, or the WorkerW that took them).</summary>
+    public static IntPtr DesktopHost()
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumWindows((h, _) =>
+        {
+            if (FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero) { found = h; return false; }
+            return true;
+        }, IntPtr.Zero);
+        return found;
+    }
+
+    public void KeepOnTop()
+    {
+        if (!Behind) { SetWindowPos(Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE); return; }
+        // Directly above the desktop: insert after whatever's just above it (unless that's already us).
+        var desk = DesktopHost();
+        if (desk == IntPtr.Zero) return;
+        // The nearest visible window above the desktop (hidden ones in between don't matter).
+        var above = GetWindow(desk, GW_HWNDPREV);
+        while (above != IntPtr.Zero && above != Handle && !IsWindowVisible(above)) above = GetWindow(above, GW_HWNDPREV);
+        if (above == Handle || NextVisibleBelow(Handle) == desk) return;
+        SetWindowPos(Handle, above == IntPtr.Zero ? HWND_TOP : above, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
 
     public void SetClickThrough(bool on)
     {

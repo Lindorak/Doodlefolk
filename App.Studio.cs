@@ -191,6 +191,7 @@ sealed partial class App
                 fish = FishDex(),
             }, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
                 tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, ambience = AmbienceState(), requests = _settings.Requests, autoAlbum = _settings.AutoAlbum,
+            townLayout = _settings.TownLayout, stripHeight = _settings.StripHeight,
             devHooks = _settings.DevHooks, devHookStatus = DevHookStatus, devHookPort = DevHookPort, exePath = Environment.ProcessPath ?? "Doodlefolk.exe",
             pranks = _settings.Pranks, internetMemes = _settings.InternetMemes, realMemes = _settings.RealMemes, memeFolder = _settings.MemeFolder, memeReady = _memeReady != null, mortality = _settings.Mortality, ghosts = _settings.Ghosts, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
             modFiles = Directory.Exists(Mods.Dir) ? Directory.GetFiles(Mods.Dir, "*.json").Select(Path.GetFileName) : Enumerable.Empty<string?>(), beatDance = _settings.BeatDance, gesturesOnly = _settings.GesturesOnly, breakNudges = _settings.BreakNudges, breakMinutes = _settings.BreakMinutes, tourDone = _settings.TourDone, problems = ProblemsJson(), aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
@@ -844,6 +845,11 @@ sealed partial class App
             case "mortality": _settings.Mortality = v.GetString() == "oldage" ? "oldage" : "never"; _nextTopmost = 0; break;
             case "ghosts": _settings.Ghosts = v.GetBoolean(); break;
             case "pranks": _settings.Pranks = v.GetBoolean(); if (_settings.Pranks) _memeAt = Math.Min(_memeAt, _clock.Elapsed.TotalSeconds + 120); break;
+            case "townLayout":
+                _settings.TownLayout = v.GetString() is "strip" or "wallpaper" ? v.GetString()! : "desktop";
+                PostAll(new { t = "toast", text = ApplyLayout() });
+                break;
+            case "stripHeight": _settings.StripHeight = Math.Clamp(v.GetInt32(), 110, 400); if (_settings.TownLayout == "strip") ApplyLayout(); break;
             case "devHooks": _settings.DevHooks = v.GetBoolean(); _settings.Save(); StartDevHooks(); break;
             case "internetMemes": _settings.InternetMemes = v.GetBoolean(); break;
             case "realMemes": _settings.RealMemes = v.GetBoolean(); if (_settings.RealMemes) _settings.InternetMemes = true; break;

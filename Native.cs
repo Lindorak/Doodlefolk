@@ -12,6 +12,10 @@ static class Native
     public const uint LWA_ALPHA = 2;
     public const uint SWP_NOSIZE = 0x1, SWP_NOMOVE = 0x2, SWP_NOACTIVATE = 0x10;
     public static readonly IntPtr HWND_TOPMOST = new(-1);
+    public static readonly IntPtr HWND_NOTOPMOST = new(-2), HWND_TOP = IntPtr.Zero;
+    public const uint GW_HWNDNEXT = 2, GW_HWNDPREV = 3;
+    [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string? cls, string? title);
     public const int WM_MOUSEACTIVATE = 0x21, MA_NOACTIVATE = 3;
 
     [StructLayout(LayoutKind.Sequential)]

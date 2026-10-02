@@ -70,7 +70,15 @@ sealed class ItemDef
     public Thing[] Likes = Array.Empty<Thing>();
     public string Article => "aeiou".Contains(char.ToLowerInvariant(Name[0])) ? "an" : "a";
 
-    public static readonly Color4[] Fixed =
+    /// <summary>A colour for a mod's shapes: its index in <see cref="Fixed"/> (added if new).</summary>
+    public static int AddColour(Color4 c)
+    {
+        for (int i = 3; i < Fixed.Length; i++) if (Fixed[i].Equals(c)) return i;
+        Fixed = Fixed.Append(c).ToArray();
+        return Fixed.Length - 1;
+    }
+
+    public static Color4[] Fixed =
     {
         default, default, default,
         M.Hex(0xA0703C), M.Hex(0x6E4B26), M.Hex(0x9AA3AD), M.Hex(0x5D6670), M.Hex(0xF7F5EF),   // 3 wood, 4 dark wood, 5 metal, 6 dark metal, 7 white
@@ -91,7 +99,10 @@ static class ItemCatalog
     static Shape L(float x0, float y0, float x1, float y1, int c, float w = 1.6f) => new('l', new[] { x0, y0, x1, y1 }, c, w);
     static Shape C(int c, float w, params float[] xy) => new('c', xy, c, w);
 
-    public static readonly ItemDef[] All = WithDetails(Build());
+    public static ItemDef[] All { get; private set; } = WithDetails(Build());
+
+    /// <summary>Objects from mods join the catalogue.</summary>
+    public static void AddMods(IEnumerable<ItemDef> defs) => All = All.Concat(WithDetails(defs.ToArray())).ToArray();
 
     /// <summary>Adds each object's detailed-art extras and its material.</summary>
     static ItemDef[] WithDetails(ItemDef[] defs)

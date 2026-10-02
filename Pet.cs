@@ -19,6 +19,7 @@ sealed partial class Pet
     public string RandomName()
     {
         var names = Kind switch { PetKind.Cat => CatNames, PetKind.Dog => DogNames, PetKind.Rabbit => RabbitNames, PetKind.Hamster => HamsterNames, _ => BirdNames };
+        if (Mods.PetNames.TryGetValue(Kind, out var extra) && extra.Count > 0) names = names.Concat(extra).ToArray();
         return names[_rng.Next(names.Length)];
     }
     public Color4 Color, Accent;

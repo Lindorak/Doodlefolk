@@ -181,6 +181,11 @@ sealed class Settings
     public bool NoticeDownloads { get; set; } = true;
     /// <summary>Talk to them out loud (Windows speech recognition, on this PC).</summary>
     public bool VoiceInput { get; set; }
+    /// <summary>Start with Windows; check GitHub for new versions; battery saver: off, battery (when unplugged), always.</summary>
+    public bool StartWithWindows { get; set; }
+    public bool CheckUpdates { get; set; } = true;
+    public DateTime? LastUpdateCheck { get; set; }
+    public string BatterySaver { get; set; } = "battery";
     public bool NoticeFrustration { get; set; } = true;
     public List<Reminder> Reminders { get; set; } = new();
     public string PauseFrom { get; set; } = "09:00";

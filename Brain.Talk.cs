@@ -156,6 +156,7 @@ sealed partial class Brain
                 "how do you draw a stick figure? you just… line up.",
             };
             World.Play(Sfx.Laugh, f.Jt[J.Head], 0.3f, 1.1f);
+            if (Mods.Jokes.Count > 0) jokes = jokes.Concat(Mods.Jokes).ToArray();
             return jokes[rng.Next(jokes.Length)];
         }
         if (Has(s, "sorry|apologi[sz]e")) { fond = 0.04f; return V("it's ok!", "FORGIVEN!!", "…fine.", "it's okay, really", "all is forgiven"); }

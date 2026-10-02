@@ -47,6 +47,8 @@ sealed partial class App : ApplicationContext
     {
         _debug = args.Contains("--debug");
         World.Debug = _debug;
+        Mods.Load();
+        CleanUpOldVersion();
         _showPlatforms = args.Contains("--platforms");
         _w.Scale = ComputeScale(args);
         _w.Fight = _settings.Fight;
@@ -98,6 +100,8 @@ sealed partial class App : ApplicationContext
     void ApplyFps()
     {
         int cap = _settings.FpsCap;
+        // Battery saver: 30 frames a second at most.
+        if (_lite) cap = cap is Settings.MatchMonitor or Settings.Unlimited ? 30 : Math.Min(cap, 30);
         _frameInterval = 0;
         if (cap == Settings.MatchMonitor) _r.SyncInterval = 1;
         else if (cap == Settings.Unlimited) _r.SyncInterval = 0;
@@ -225,6 +229,8 @@ sealed partial class App : ApplicationContext
         HappeningFrame(dt, now);
         DesktopFrame(now);
         RecordFrame(now);
+        PowerFrame(now);
+        UpdateFrame(now);
         SmartFps(dt);
         if (World.Debug && now > _nextAuditSample)
         {
@@ -710,6 +716,9 @@ sealed partial class App : ApplicationContext
     {
         int ci = colorIndex ?? NextColor();
         var (cname, color) = Palette.All[ci];
+        // Mods can bring their own names for newcomers.
+        var free = Mods.FigureNames.Where(n => !_w.Figures.Any(f => f.Name == n)).ToList();
+        if (free.Count > 0) cname = free[_w.Rng.Next(free.Count)];
         var nf = SpawnFigure(color, UniqueName(cname), traits ?? Personality.Random(_w.Rng), 1);
         nf?.Brain.DiaryBorn();
         if (nf != null) { _w.Sticker("hello"); if (_w.Figures.Count >= 8) _w.Sticker("fullhouse"); }
@@ -1166,6 +1175,8 @@ sealed partial class App : ApplicationContext
                     else World.Log("happening: " + StartHappening(p.Length > 1 ? p[1] : "festival"));
                     break;
                 case "remove": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } remF) _w.RemoveFigure(remF); break;
+                case "figlook": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } flF) { var lk = flF.Look; switch (p[2]) { case "hat": lk.Hat = p.Length > 3 ? p[3] : ""; break; case "hair": lk.Hair = p.Length > 3 ? p[3] : ""; break; } } break;
+                case "removeitems": foreach (var ri in _w.Items.Where(i => i.Def.Key == p[1]).ToList()) _w.RemoveItem(ri); break;
                 case "baby": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ba && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } bb) MakeBaby(ba, bb); break;
                 case "grow": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } growF) growF.Brain.Grown = Math.Clamp(float.Parse(p[2], inv), 0, 1); _growAt = 0; break;
                 case "home":
@@ -1214,6 +1225,13 @@ sealed partial class App : ApplicationContext
                 case "voice": World.Log("voice: " + VoiceCommand(line[(line.IndexOf(' ') + 1)..])); break;
                 case "voiceinfo": World.Log("voiceinfo: " + string.Join(", ", System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers().Select(r => r.Culture.Name + " " + r.Name))); break;
                 case "listen": World.Log("listen: " + Listen()); break;
+                case "shortcuttest": try { MakeShortcut(Path.Combine(Path.GetTempPath(), "sf-test.lnk"), ExePath); World.Log("shortcut: ok " + File.Exists(Path.Combine(Path.GetTempPath(), "sf-test.lnk"))); } catch (Exception e) { World.Log("shortcut: " + e.Message); } break;
+                case "update":
+                    if (p.Length > 1 && p[1] == "check") _ = CheckForUpdate().ContinueWith(t => World.Log("update: " + t.Result));
+                    else if (p.Length > 1 && p[1] == "fake") { _update = (new Version(9, 9, 9), "v0.9.0", $"https://github.com/{Repo}/releases/download/v0.9.0/StickFight-v0.9.0-win-x64.zip", long.Parse(p[2]), "test"); World.Log("update: faked"); }
+                    else if (p.Length > 1 && p[1] == "dry") _ = ApplyUpdate(true).ContinueWith(t => World.Log("update: " + t.Result));
+                    else if (p.Length > 1 && p[1] == "apply") _ = ApplyUpdate().ContinueWith(t => World.Log("update: " + t.Result));
+                    break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;

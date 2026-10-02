@@ -175,7 +175,9 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
+            installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
+            mods = new { loaded = Mods.Loaded, errors = Mods.Errors, items = Mods.ItemCount, hats = Mods.HatCount, jokes = Mods.Jokes.Count, dir = Mods.Dir }, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
@@ -398,6 +400,13 @@ sealed partial class App
                         PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
                     break;
                 case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
+                case "install": PostAll(new { t = "toast", text = Install() }); break;
+                case "checkUpdate": _ = CheckForUpdate().ContinueWith(t => _overlay.BeginInvoke(() => PostAll(new { t = "toast", text = t.Result }))); break;
+                case "applyUpdate": _ = ApplyUpdate().ContinueWith(t => _overlay.BeginInvoke(() => PostAll(new { t = "toast", text = t.Result }))); break;
+                case "openMods":
+                    Directory.CreateDirectory(Mods.Dir);
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{Mods.Dir}\"") { UseShellExecute = true });
+                    break;
                 case "listen": PostAll(new { t = "toast", text = Listen() }); break;
                 case "command": PostAll(new { t = "toast", text = VoiceCommand(Str(m, "v")) }); break;
                 case "record": _quick?.Close(); _pop?.Hide(); PostAll(new { t = "toast", text = StartRecording(m.TryGetProperty("seconds", out var rsec) ? rsec.GetInt32() : 10) }); break;
@@ -673,6 +682,9 @@ sealed partial class App
             case "events": _settings.Events = v.GetBoolean(); break;
             case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
             case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
+            case "startWithWindows": _settings.StartWithWindows = v.GetBoolean(); SetStartWithWindows(_settings.StartWithWindows); break;
+            case "checkUpdates": _settings.CheckUpdates = v.GetBoolean(); if (_settings.CheckUpdates) _updateCheckAt = 0; break;
+            case "batterySaver": _settings.BatterySaver = v.GetString() ?? "battery"; PowerFrame(_clock.Elapsed.TotalSeconds, true); break;
             case "noticeFrustration": _settings.NoticeFrustration = v.GetBoolean(); break;
             case "calm": _settings.Calm = World.Calm = v.GetBoolean(); if (World.Calm) { foreach (var f in _w.Figures) if (f.Brain.InFight) f.Brain.CalmDown(); } break;
             case "colourBlind": _settings.ColourBlind = World.ColourBlind = v.GetBoolean(); ForceFullRedraw(); break;

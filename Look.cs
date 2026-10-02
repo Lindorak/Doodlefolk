@@ -55,7 +55,9 @@ sealed class Look
         return new('c', pts.ToArray(), c, w);
     }
 
-    public static readonly LookPart[] Hats =
+    public static void AddHats(IEnumerable<LookPart> hats) => Hats = Hats.Concat(hats).ToArray();
+
+    public static LookPart[] Hats =
     {
         new("cap", "Cap", new[] { Dome(0, 0.15f, 1.08f, 1.0f, 0, 180, 0), P(1, 0.25f, 0.12f, 1.7f, 0.05f, 1.65f, 0.25f, 0.3f, 0.32f), E(0, 1.15f, 0.15f, 0.12f, 1) }),
         new("tophat", "Top hat", new[] { R(-0.72f, 0.7f, 0.72f, 2.35f, 0), R(-0.72f, 0.75f, 0.72f, 1.05f, 1), O(-1.3f, 0.6f, 1.3f, 0.86f, 0.12f, 0) }),

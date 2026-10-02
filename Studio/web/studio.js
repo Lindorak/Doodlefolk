@@ -1323,6 +1323,13 @@ PAGES.settings = {
     const remList = h("div", { class: "thoughts" });
     const icsIn = h("input", { type: "file", accept: ".ics,text/calendar", style: { display: "none" }, onchange: () => importIcs(icsIn) });
     let remSig = "";
+    const startC = check("Start with Windows", "Open StickFight when you sign in.", () => !!st().startWithWindows, v => setS("startWithWindows", v));
+    const updC = check("Check for updates", "Once a day, ask GitHub whether there's a newer version. Nothing is downloaded until you click Update.", () => st().checkUpdates !== false, v => setS("checkUpdates", v));
+    const batChips = [["off", "Off"], ["battery", "On battery"], ["always", "Always"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("batterySaver", k); } }, l); c.key = k; return c; });
+    const updLine = h("p", { class: "hint" });
+    const updBtn = h("button", { class: "btn small primary", onclick: () => send({ t: "applyUpdate" }) }, "Update now");
+    const installBtn = h("button", { class: "btn small", title: "Copies StickFight to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install StickFight");
+    const modsLine = h("p", { class: "hint" });
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1375,6 +1382,18 @@ PAGES.settings = {
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
+      h("h2", null, "Battery saver"),
+      h("p", { class: "sub" }, "A lighter frame rate (30 at most) and simpler graphics, to go easy on a laptop battery."),
+      h("div", { class: "row" }, batChips),
+      h("h2", null, "Mods"),
+      h("p", { class: "sub" }, "Add your own objects (drawn as SVG or shapes), hats, names and jokes with JSON files in the mods folder. There's an example in there to start from; the guide is docs/MODDING.md on GitHub. Restart StickFight after changing them."),
+      modsLine,
+      h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "openMods" }) }, "Open the mods folder"),
+        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight/blob/main/docs/MODDING.md") }, "Modding guide")),
+      h("h2", null, "Updates & installing"),
+      updLine,
+      h("div", { class: "row" }, updBtn, h("button", { class: "btn small", onclick: () => send({ t: "checkUpdate" }) }, "Check now"), installBtn),
+      updC, startC,
       h("h2", null, "About"),
       h("p", null, `StickFight ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
       h("div", { class: "row" },
@@ -1393,7 +1412,13 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update();
+      batChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().batterySaver || "battery")); });
+      updLine.textContent = `Version ${st().version || ""}${st().installed ? " (installed)" : ""}. ${st().updateStatus || ""}`;
+      updBtn.style.display = st().updateReady ? "" : "none";
+      installBtn.style.display = st().installed ? "none" : "";
+      const md = st().mods || { loaded: [], errors: [] };
+      modsLine.textContent = (md.loaded.length ? `Loaded: ${md.loaded.join(", ")} (${md.items} objects, ${md.hats} hats, ${md.jokes} jokes).` : "No mods yet.") + (md.errors.length ? ` Problems: ${md.errors.join("; ")}` : "");
       const rs = JSON.stringify(st().reminders || []);
       if (rs !== remSig) {
         remSig = rs;

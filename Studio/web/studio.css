@@ -395,6 +395,9 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .pop-field .swatches { flex-wrap: wrap; gap: 4px; }
 .pop-field .sw { width: 18px; height: 18px; }
 .pop-acts { flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pop-reply { margin: -2px 0 6px; min-height: 0; font-family: var(--hand, inherit); }
+.pop-reply:empty { display: none; }
+.q-games { flex-wrap: wrap; gap: 6px; }
 .pop-foot { margin-top: 6px; padding-top: 8px; border-top: 1.5px dashed var(--faint); gap: 6px; align-items: center; }
 .row.tight { gap: 4px; align-items: center; flex-wrap: wrap; }
 .btn.icon { min-width: 30px; padding-left: 6px; padding-right: 6px; font-size: 16px; line-height: 1; }

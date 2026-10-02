@@ -184,6 +184,9 @@ sealed partial class Figure
     public Vector2? HoldN, HoldF;
     /// <summary>A hat worn for the day (party hat, Halloween costume) instead of its usual one.</summary>
     public string? HatOverride, HatColourOverride;
+    /// <summary>Hide-and-seek: crouched behind something (drawn behind it), or blending into the window (faint).</summary>
+    public bool HidingBehind;
+    public float Camo;
 
     public Figure(Color4 color, string name, float scale, Personality traits, Random rng, int? id = null)
     {

@@ -35,6 +35,7 @@ function receive(m) {
     case "winstate": document.body.classList.toggle("max", !!m.max); break;
     case "toast": toast(m.text); break;
     case "pop": buildPop(m.kind, m.id); break;
+    case "said": popSaid(m); break;
   }
 }
 if (host) host.addEventListener("message", e => receive(e.data));
@@ -1110,6 +1111,7 @@ PAGES.settings = {
     ];
     const vv = h("span", { class: "val" });
     const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
+    const voicesC = check("Babble voices", "They mumble along when they talk: their own little voice, higher or lower, quicker or shyer.", () => st().voices !== false, v => setS("voices", v));
     const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
     const checks = [
       check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
@@ -1144,7 +1146,7 @@ PAGES.settings = {
       h("div", { class: "field" }, h("label", null, "Shadows"), shadowSel),
       h("div", { class: "field" }, h("label", null, "Faces"), faceSel),
       gfxChecks,
-      h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
+      h("h2", null, "Sound"), soundC, voicesC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
       h("h2", null, "Weather & time"),
@@ -1169,7 +1171,7 @@ PAGES.settings = {
       gfxChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === g().preset); });
       shadowSel.set(g().shadows ?? 2); faceSel.set(g().faces ?? 2);
       gfxChecks.forEach(c => c.update());
-      soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
+      soundC.update(); voicesC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
@@ -1202,6 +1204,8 @@ function buildQuick() {
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
   const soundC = check("Sound", null, () => S.settings.sound, v => send({ t: "setting", key: "sound", v }));
   const count = h("span", { class: "hint" });
+  const stopG = h("button", { class: "btn small danger", onclick: () => send({ t: "game", kind: "stop" }) }, "Stop game");
+  const gameNote = h("p", { class: "hint" });
   add(root,
     h("div", { class: "q-head" },
       s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
@@ -1211,6 +1215,14 @@ function buildQuick() {
     h("h3", null, "Draw something"), summonBox(true),
     h("h3", null, "Toss in a toy"),
     h("div", { class: "q-toys" }, INIT.propKinds.map(k => h("button", { class: "q-toy", title: k.name, onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, ballSvg(k.key, "#E53935"), h("span", null, k.name)))),
+    h("h3", null, "Play with them"),
+    h("div", { class: "row tight q-games" },
+      h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "HideSeek" }) }, "🙈 Hide & seek"),
+      h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Tag" }) }, "🏃 Tag"),
+      h("button", { class: "btn small", onclick: () => send({ t: "game", kind: "Catch" }) }, "⚾ Catch"),
+      h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\StickFight", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
+      stopG),
+    gameNote,
     h("div", { class: "q-checks" }, hideC, fightC, soundC),
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
@@ -1218,6 +1230,9 @@ function buildQuick() {
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
     hideC.update(); fightC.update(); soundC.update();
+    const gm = S.game;
+    stopG.hidden = !gm;
+    gameNote.textContent = !gm ? "" : gm.kind === "HideSeek" ? `Hide & seek: found ${gm.found} of ${gm.players}` : gm.kind === "Tag" ? `Tag: ${gm.players} playing` : `Catch: ${gm.streak} in a row (best ${gm.best})`;
     const n = S.figures.length;
     count.textContent = `${n} figure${n === 1 ? "" : "s"} · ${S.fpsNow || 0} fps`;
   };
@@ -1227,6 +1242,7 @@ function buildQuick() {
    bigger is one click away in the Studio. */
 
 let popUpdate = () => {};
+let popSaid = () => {};
 let popKey = "", pendingPop = null;
 
 function buildPop(kind, id) {
@@ -1314,7 +1330,14 @@ function buildPop(kind, id) {
     const heal = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "heal", id }) }, "Heal");
     const hunt = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "hunter", id, v: !x.hunter }) });
     const feels = h("span", { class: "hint" });
+    const reply = h("div", { class: "hint pop-reply" });
+    const say = h("input", { class: "text", placeholder: `Say something to ${x.name}…`, maxlength: 140,
+      onkeydown: e => { if (e.key === "Enter" && say.value.trim()) { send({ t: "fig", op: "talk", id, v: say.value }); reply.textContent = "“" + say.value.trim() + "”"; say.value = ""; } } });
+    popSaid = m => { if (m.id === id) reply.textContent = `${x.name}: ${m.text}`; fit(); };
+    const game = kind => h("button", { class: "btn small", onclick: () => { send({ t: "game", kind, id }); close(); } }, { HideSeek: "Hide & seek", Tag: "Tag", Catch: "Catch" }[kind]);
     add(root, head(dot, x.name, sub),
+      field("Talk", say), reply,
+      field("Play", h("div", { class: "row tight" }, game("Catch"), game("Tag"), game("HideSeek"))),
       field("Colour", col), field("Size", sz),
       h("div", { class: "row tight pop-acts" },
         h("button", { class: "btn small primary", onclick: () => { send({ t: "fig", op: "call", id }); close(); } }, "Come here"),

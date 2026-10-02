@@ -16,7 +16,7 @@ sealed partial class Figure
     public bool Gone { get; private set; }
     public Figure? KilledBy { get; private set; }
     float _koT, _fadeT;
-    public float Fade => Dead ? M.Clamp01(1 - (_fadeT - 2.5f) / 1.2f) : 1;
+    public float Fade => (Dead ? M.Clamp01(1 - (_fadeT - 2.5f) / 1.2f) : 1) * (1 - Camo * 0.8f);
     public AttackDef? Atk { get; private set; }
     public float AtkT;
     public bool LastAttackLanded;

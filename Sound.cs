@@ -153,6 +153,81 @@ sealed class Sound : IDisposable
         }
     }
 
+    // ---------------- babble ----------------
+
+    /// <summary>Gibberish speech for a bubble: one little sung syllable per few letters, vowels taken from the words
+    /// (so the same words always sound alike), a rising end for questions and a lift for shouts. pitch 1 ≈ 220 Hz.</summary>
+    public void Babble(string text, Vector2 at, float pitch, float vol, float speed)
+    {
+        if (!Enabled || _out == null || vol < 0.02f || _voices > 24) return;
+        var letters = new System.Text.StringBuilder();
+        foreach (char c in text.ToLowerInvariant()) if (c is >= 'a' and <= 'z') letters.Append(c);
+        if (letters.Length == 0) return;
+        string w = letters.ToString();
+        int n = Math.Clamp((int)MathF.Round(w.Length / 2.6f), 1, 9);
+        bool question = text.TrimEnd().EndsWith('?'), shout = text.Contains('!') || (text.Any(char.IsUpper) && !text.Any(char.IsLower));
+        float f0 = 220 * pitch * (shout ? 1.12f : 1);
+        float syl = 0.085f / speed, gap = 0.022f / speed;
+        int total = (int)((syl + gap) * n * Rate) + 400;
+        var d = new float[total];
+        int hash = 17;
+        foreach (char c in w) hash = hash * 31 + c;
+        var r = new Random(hash);
+        int pos = 0;
+        for (int i = 0; i < n; i++)
+        {
+            string chunk = w.Substring(i * w.Length / n, Math.Max(1, (i + 1) * w.Length / n - i * w.Length / n));
+            char v = chunk.FirstOrDefault(c => "aeiouy".Contains(c));
+            if (v == default) v = "aeiou"[Math.Abs(chunk[0] * 7) % 5];
+            (float F1, float F2) = v switch { 'a' => (800f, 1250f), 'e' => (480f, 1900f), 'i' or 'y' => (320f, 2300f), 'o' => (520f, 920f), _ => (360f, 820f) };
+            bool hiss = "stkpcfxz".Contains(chunk[0]);
+            float len = syl * (0.8f + (float)r.NextDouble() * 0.45f);
+            float startF = f0 * (0.9f + (float)r.NextDouble() * 0.25f);
+            float endF = i == n - 1 ? (question ? startF * 1.35f : startF * 0.82f) : startF * (0.95f + (float)r.NextDouble() * 0.1f);
+            pos = Syllable(d, pos, len, startF, endF, F1 * (pitch > 1.15f ? 1.12f : 1), F2 * (pitch > 1.15f ? 1.1f : 1), hiss, r);
+            pos += (int)(gap * Rate * (0.6f + (float)r.NextDouble() * 0.8f));
+            if (pos >= total - 10) break;
+        }
+        // Resonances ring much louder on some vowels than others: level it out so every voice sits at the same volume.
+        float peak = 0;
+        for (int i = 0; i < pos && i < d.Length; i++) peak = MathF.Max(peak, MathF.Abs(d[i]));
+        if (peak < 1e-4f) return;
+        float k = 0.28f / peak;
+        var outBuf = d.AsSpan(0, Math.Min(pos + 200, d.Length)).ToArray();
+        for (int i = 0; i < outBuf.Length; i++) outBuf[i] *= k;
+        float pan = Math.Clamp(((at.X - _left) / _width) * 2 - 1, -1, 1) * 0.75f;
+        Interlocked.Increment(ref _voices);
+        _mixer.AddMixerInput(new Voice(outBuf, Math.Clamp(vol, 0, 1), 1, pan));
+    }
+
+    /// <summary>One sung syllable: a buzzy source through two vowel resonances, with an optional breathy consonant first.</summary>
+    static int Syllable(float[] d, int pos, float secs, float f0a, float f0b, float F1, float F2, bool hiss, Random r)
+    {
+        int n = Math.Min((int)(secs * Rate), d.Length - pos - 1);
+        if (n <= 0) return pos;
+        static (float a1, float a2, float g) Res(float f, float bw) { float rr = MathF.Exp(-MathF.PI * bw / Rate), th = MathF.Tau * f / Rate; return (2 * rr * MathF.Cos(th), -rr * rr, 1 - rr); }
+        var (a1, a2, g1) = Res(F1, 90);
+        var (b1, b2, g2) = Res(F2, 130);
+        float y1 = 0, y2 = 0, z1 = 0, z2 = 0, ph = 0, lp = 0;
+        int burst = hiss ? (int)(0.018f * Rate) : 0;
+        for (int i = 0; i < n; i++)
+        {
+            float p = i / (float)n;
+            float f0 = f0a + (f0b - f0a) * p;
+            ph += f0 / Rate;
+            if (ph >= 1) ph -= 1;
+            float src = (2 * ph - 1);
+            lp += (src - lp) * 0.35f;
+            float y = g1 * lp * 6 + a1 * y1 + a2 * y2; y2 = y1; y1 = y;
+            float z = g2 * lp * 6 + b1 * z1 + b2 * z2; z2 = z1; z1 = z;
+            float env = p < 0.1f ? p / 0.1f : p > 0.7f ? (1 - p) / 0.3f : 1;
+            float s = (y + z * 0.55f) * env * 0.22f;
+            if (i < burst) s = s * (i / (float)burst) + ((float)r.NextDouble() * 2 - 1) * 0.08f * (1 - i / (float)burst);
+            d[pos + i] += s;
+        }
+        return pos + n;
+    }
+
     // ---------------- synthesis ----------------
 
     float[] _tune = Array.Empty<float>();

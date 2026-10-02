@@ -72,6 +72,8 @@ sealed class Settings
     public string Theme { get; set; } = "auto";
     public bool SoundOn { get; set; } = true;
     public float SoundVolume { get; set; } = 0.55f;
+    /// <summary>Babble voices when they talk.</summary>
+    public bool Voices { get; set; } = true;
     /// <summary>Screen awareness (all read on this PC only; nothing is saved or sent).</summary>
     public bool ScreenTerrain { get; set; } = true;
     public bool ScreenReact { get; set; } = true;

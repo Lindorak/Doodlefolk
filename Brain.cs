@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose,
     }
 
     readonly Figure f;
@@ -338,6 +338,8 @@ sealed partial class Brain
             case G.Snowman: DoSnowman(w); break;
             case G.PetAnimal: DoPetAnimal(w); break;
             case G.Party: DoParty(w); break;
+            case G.Game: DoGame(w); break;
+            case G.Pose: DoPose(w); break;
             case G.WatchScreen: DoWatchScreen(w); break;
             case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
@@ -639,6 +641,8 @@ sealed partial class Brain
         // Still in a game (e.g. got knocked over): back to it.
         if (Match != null && w.Matches.Contains(Match) && !Match.Over) { Go(G.Sport, 600); return; }
         Match = null;
+        if (w.Game is { Over: false } ug && ug.Players.Contains(f)) { Go(G.Game, 600); return; }
+        EndGameForMe();
         var env = w.Env;
         var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (seg == null || !f.Grounded) { Go(G.Idle, 0.5f); return; }

@@ -273,9 +273,14 @@ sealed class Prop
             Vector2 n = Pos - near;
             n = n.LengthSquared() > 1e-4f ? Vector2.Normalize(n) : new Vector2(0, -1);
             Pos = near + n * (r + f.LineW * 0.5f);
-            Vector2 rel = Vel - f.JVel[joint];
+            // A pose snapping into place (a cheer, a turn) can whip a joint around far faster than any real swing:
+            // cap how hard that can bat a ball, so a celebration doesn't fire it into someone's face.
+            Vector2 jv = f.JVel[joint];
+            if (f.Mode != Mode.Ragdoll && jv.LengthSquared() > 900 * 900 * _s * _s) jv = Vector2.Normalize(jv) * 900 * _s;
+            Vector2 rel = Vel - jv;
             float vn = Vector2.Dot(rel, n);
             if (vn >= 0) continue;
+            if (f.Mode == Mode.Control && Vector2.Dot(jv, n) > 200 * _s && Holder == null) { LastTouch = f; ThrownByUser = false; }
             Vel -= (1 + Bounce * 0.6f) * vn * n;
             OnGround = false;
             float hit = -vn * MathF.Sqrt(Mass);

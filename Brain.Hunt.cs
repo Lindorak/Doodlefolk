@@ -87,7 +87,7 @@ sealed partial class Brain
             {
                 float rise = f.Base.Y - cur.Y - f.Height * 0.6f;
                 f.RequestJump(new Vector2((cur.X - f.Base.X) * 2, -MathF.Sqrt(2 * f.Gravity * MathF.Max(rise, 20 * S))), 0.1f);
-                f.Emote("#@!", 0.8f);
+                f.Emote(_tagChase ? "tag!" : "#@!", 0.8f);
             }
             return;
         }
@@ -115,13 +115,13 @@ sealed partial class Brain
                 if (MoveToward(M.ClampIn(cur.X, seg.X1 + 8 * S, seg.X2 - 8 * S), 20 * S))
                 {
                     FaceTo(cur.X);
-                    if (rng.NextDouble() < 0.02) f.Emote(rng.NextDouble() < 0.5 ? "#@!" : "get down here!", 1.2f);
+                    if (rng.NextDouble() < 0.02) f.Emote(_tagChase ? "come down!" : rng.NextDouble() < 0.5 ? "#@!" : "get down here!", 1.2f);
                 }
                 return;
             }
         }
         var a = Anchor.On(env, goal, gx);
-        Navigate(() => a.Resolve(env), 30 * S, true, () => BeginHunt(w), WalkPurpose.Hunt);
+        Navigate(() => a.Resolve(env), 30 * S, true, _tagChase ? () => Go(G.Game, 600) : () => BeginHunt(w), WalkPurpose.Hunt);
         _navAbout = NavGraph.Key(goal);
         _dur = 25;
     }

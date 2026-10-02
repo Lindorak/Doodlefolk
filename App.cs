@@ -72,6 +72,7 @@ sealed partial class App : ApplicationContext
         try
         {
             _w.Sound = new Sound(_settings.SoundVolume) { Enabled = _settings.SoundOn };
+            World.Voices = _settings.Voices;
             _w.Sound.SetScreen(_w.Env.Virtual.Left, _w.Env.Virtual.Width);
         }
         catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
@@ -206,6 +207,8 @@ sealed partial class App : ApplicationContext
         _w.Nav.Refresh();
         WishFrame();
         EventsFrame(now);
+        GameFrame(now);
+        PhotoFrame(now);
         WeatherFrame(dt, now);
         SmartFps(dt);
         if (World.Debug && now > _nextAuditSample)
@@ -403,6 +406,7 @@ sealed partial class App : ApplicationContext
             return;
         }
         var (fig, joint) = HitTest(_w.Cursor);
+        if (fig != null && e.Button == MouseButtons.Left && GameClick(fig)) return;
         if (fig == null)
         {
             if (HitItem(_w.Cursor) is { } item)
@@ -520,6 +524,8 @@ sealed partial class App : ApplicationContext
             for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].DrawDropShadow(_r);
             _r.EndShadowLayer();
         }
+        // Hide-and-seek: hiders crouch behind things, so they're drawn before them.
+        for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && _w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(false);
         for (int i = 0; i < _w.Figures.Count; i++)
             if (figVisible[i] && Shadow(_w.Figures[i], out var c, out float rx, out float ry, out float a))
@@ -529,7 +535,7 @@ sealed partial class App : ApplicationContext
                 Gfx.GroundShadow(_r, c, rx, ry, a);
         if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
         foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) pet.Draw(_r);
-        for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) _w.Figures[i].Draw(_r);
+        for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
         DrawItems(true);
         foreach (var it in _w.Items)
         {
@@ -543,6 +549,8 @@ sealed partial class App : ApplicationContext
         DrawOffer();
         DrawWish();
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
+        DrawGameCurtain();
+        DrawFlash();
     }
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
@@ -1075,6 +1083,9 @@ sealed partial class App : ApplicationContext
                 case "testwin": TestWindow(p); break;
                 case "holiday": _w.HolidayOverride = Enum.TryParse<Holiday>(p[1], true, out var hol) && hol != Holiday.None ? hol : null; break;
                 case "party": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } pf2) pf2.Brain.ThrowParty(_w); break;
+                case "game": if (p[1] == "stop") StopGame(); else { World.Log(StartGame(Enum.Parse<GameKind>(p[1], true), p.Length > 2 ? _w.Figures.FirstOrDefault(f => f.Name == p[2]) : null)); if (_w.Game != null && p.Contains("quick")) _w.Game.Count = MathF.Min(_w.Game.Count, 0.3f); } break;
+                case "photo": TakePhoto(); break;
+                case "talk": if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } talkF) World.Log($"talk {talkF.Name}: {talkF.Brain.Talk(string.Join(' ', p.Skip(2)), _w)}"); break;
                 case "back": _w.OnUserBack(p.Length > 1 ? double.Parse(p[1], inv) : 1800); break;
                 case "pet": World.Log("summon: " + Summon(p.Length > 1 ? p[1] : "cat")); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;

@@ -141,6 +141,7 @@ sealed partial class App
     object StudioState() => new
     {
         t = "state",
+        game = _w.Game is { } gm ? new { kind = gm.Kind.ToString(), players = gm.Players.Count, found = gm.Found.Count, streak = gm.Streak, best = gm.Best } : null,
         figures = _w.Figures.Select(FigureJson),
         items = _w.Items.Select(i => new
         {
@@ -159,7 +160,7 @@ sealed partial class App
         settings = new
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
-            sound = _settings.SoundOn, volume = _settings.SoundVolume, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
+            sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, sky = _w.Weather.Kind.ToString(),
             noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
@@ -314,6 +315,12 @@ sealed partial class App
                     else if (Str(m, "what") == "items") foreach (var it in _w.Items.ToArray()) _w.RemoveItem(it);
                     else foreach (var f in _w.Figures.ToArray()) _w.RemoveFigure(f);
                     break;
+                case "game":
+                    if (Str(m, "kind") == "stop") StopGame();
+                    else if (Enum.TryParse<GameKind>(Str(m, "kind"), true, out var gk))
+                        PostAll(new { t = "toast", text = StartGame(gk, m.TryGetProperty("id", out var gid) ? _w.Figures.FirstOrDefault(x => x.Id == gid.GetInt32()) : null) });
+                    break;
+                case "photo": _quick?.Close(); _pop?.Hide(); TakePhoto(); break;
                 case "quit": ExitThread(); break;
             }
         }
@@ -426,6 +433,7 @@ sealed partial class App
             case "plainLook": f.Look = new Look(); break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
             case "call": PostAll(new { t = "toast", text = f.Brain.CalledByUser(_w) }); break;
+            case "talk": PostAll(new { t = "said", id = f.Id, text = f.Brain.Talk(Str(m, "v"), _w) }); break;
             case "dance": if (f.Mode == Mode.Control && f.Grounded) f.StartFidget(Fidget.Groove); break;
         }
     }
@@ -550,6 +558,7 @@ sealed partial class App
                 break;
             }
             case "smartFps": _settings.SmartFps = v.GetBoolean(); if (!_settings.SmartFps) ApplyFps(); break;
+            case "voices": _settings.Voices = World.Voices = v.GetBoolean(); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;

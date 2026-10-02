@@ -22,6 +22,9 @@ sealed partial class World
     public Sound? Sound;
     /// <summary>Play a sound effect at a spot on screen (no-op when sound is off or unavailable).</summary>
     public static void Play(Sfx s, Vector2 at, float vol = 1, float pitch = 1, double gap = 0.03) => Current?.Sound?.Play(s, at, vol, pitch, gap);
+    /// <summary>Babble voices for speech bubbles (off: just the little reaction sounds).</summary>
+    public static bool Voices = true;
+    public static void Babble(string text, Vector2 at, float pitch, float vol, float speed) { if (Voices) Current?.Sound?.Babble(text, at, pitch, vol, speed); }
     /// <summary>Hooks for the brain to bring things into the world (a ball for a game, rackets).</summary>
     public Func<PropKind, Prop>? MakeProp;
     public Func<string, Item?>? MakeItem;
@@ -29,6 +32,8 @@ sealed partial class World
     public readonly Random Rng = new();
     public FightSettings Fight = new();
     public Vector2 Cursor, CursorVel;
+    /// <summary>A game with you in progress (hide-and-seek, tag, catch).</summary>
+    public UserGame? Game;
     public Figure? Hover;
     public float Scale = 1;
     /// <summary>Freeze-frame on big impacts: the simulation pauses while this counts down.</summary>

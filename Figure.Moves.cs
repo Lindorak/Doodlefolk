@@ -21,6 +21,8 @@ sealed partial class Figure
     public bool Flipping => _flipT >= 0;
 
     Emote? _emote;
+    float _babbleUntil;
+
     public void Emote(string text, float dur = 1.4f, Color4? ink = null)
     {
         bool fresh = _emote?.Text != text;
@@ -38,6 +40,17 @@ sealed partial class Figure
             case "ha": World.Play(Sfx.Laugh, at, 0.35f, pitch, 0.2); break;
             case "♪": case "♫": World.Play(Sfx.Tune, at, 0.25f, pitch, 0.3); break;
             case "z": World.Play(Sfx.Snore, at, 0.25f, pitch * 0.8f, 2.5); break;
+            default:
+                if (text.Length >= 2 && text.Any(char.IsLetter) && _time > _babbleUntil)
+                {
+                    // Their own voice: higher for girls, lower for boys and big figures; quick when energetic, soft when shy.
+                    float vp = (Gender switch { Gender.Girl => 1.35f, Gender.Boy => 0.88f, _ => 1.1f }) / MathF.Sqrt(SizeMul) * (0.92f + (Id % 7) * 0.025f);
+                    float speed = 0.85f + Traits.Energy * 0.35f;
+                    float vol = 0.3f + Traits.Sociability * 0.15f;
+                    World.Babble(text, at, vp, vol, speed);
+                    _babbleUntil = _time + MathF.Min(2.2f, 0.12f * text.Length / speed);
+                }
+                break;
         }
     }
     public string? CurrentEmote => _emote?.Text;

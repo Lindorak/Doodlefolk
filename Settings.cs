@@ -86,6 +86,9 @@ sealed class SavedPet
     public List<SavedLog> Log { get; set; } = new();
     public int Sprays { get; set; }
     public int Treats { get; set; }
+    public float Health { get; set; } = 1;
+    public float Clean { get; set; } = 1;
+    public string Sick { get; set; } = "";
 }
 
 sealed class SavedLog

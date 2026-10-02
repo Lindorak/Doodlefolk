@@ -867,7 +867,7 @@ function petActions(p, close) {
   const act = (label, op, primary) => h("button", { class: "btn small" + (primary ? " primary" : ""), onclick: () => { send({ t: "pet", op, id: p.id }); if (close && (op === "spray")) close(); } }, label);
   return [act("🍖 Treat", "treat", true), p.kind !== "Parrot" ? act("Sit", "sit") : null, act("Come", "come"),
     p.kind === "Parrot" ? act(p.onCursor ? "Step down" : "Step up", "stepup") : act(p.leashed ? "Unleash" : "🦮 Leash", "leash"),
-    act("💦 Spray bottle", "spray")];
+    act("💦 Spray bottle", "spray"), act(p.sick ? "🩺 Vet (sick!)" : "🩺 Vet", "vet"), act("🛁 Bath", "bath"), act("🪮 Brush", "brush")];
 }
 
 PAGES.pets = {
@@ -898,7 +898,7 @@ PAGES.pets = {
         title.replaceChildren(h("span", { class: "dot", style: { background: p.hex } }), `${petGlyph(p.kind)} ${p.name}`, h("span", { class: "hint" }, `  ${p.species}${p.young ? ` · ${Math.round(p.age * 100)}% grown` : ""} · ${p.weightWord}`));
         sub.textContent = `${p.activity}. ${p.mood}.${p.owner ? ` ${p.owner}'s favourite.` : ""}`;
         needs.replaceChildren(...NEED_NAMES.map(([k, l]) => meterRow(l, p.needs[k], Math.round(p.needs[k] * 100) + "%")),
-          meterRow("Stamina", p.stamina, Math.round(p.stamina * 100) + "%"), meterRow("Loves you", (p.bond + 1) / 2, p.bond > 0.6 ? "adores you" : p.bond > 0.25 ? "likes you" : p.bond > -0.1 ? "warming up" : "wary"));
+          meterRow("Stamina", p.stamina, Math.round(p.stamina * 100) + "%"), meterRow("Health", p.health, p.sick ? p.sick : Math.round(p.health * 100) + "%", p.sick ? "var(--bad)" : null), meterRow("Clean", p.clean, Math.round(p.clean * 100) + "%"), meterRow("Loves you", (p.bond + 1) / 2, p.bond > 0.6 ? "adores you" : p.bond > 0.25 ? "likes you" : p.bond > -0.1 ? "warming up" : "wary"));
         train.replaceChildren(...p.habits.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--accent)")), ...p.skills.map(x => meterRow(x.name, x.v, Math.round(x.v * 100) + "%", "var(--good)")));
         extra.textContent = [p.friends.length ? "Gets on with: " + p.friends.map(f => `${f.name} (${f.v > 0.45 ? "friends" : f.v > 0 ? "okay" : f.v > -0.4 ? "wary" : "enemies"})`).join(", ") : "", p.words ? `Says: ${p.words.map(w => "“" + w + "”").join(" ")}` : "", `Sprayed ${p.sprays}× · ${p.treats} treats · born ${p.born}`].filter(Boolean).join("  ·  ");
         const sig = [p.leashed, p.onCursor].join();

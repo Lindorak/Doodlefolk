@@ -46,6 +46,7 @@ sealed partial class Pet
         Wet = MathF.Max(0, Wet - dt * 0.04f);
         TrainingDecay(dt);
         UpdateBody(w, dt);
+        UpdateHealth(w, dt);
         if (Young)
         {
             float before = Age;

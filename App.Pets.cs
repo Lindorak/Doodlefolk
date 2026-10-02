@@ -106,6 +106,12 @@ sealed partial class App
             _w.Fx.Spark(it.Pos + new Vector2(0, -6 * s), s * 0.6f, _w.Rng, 0.4f, new Color4(0.5f, 0.75f, 1, 1));
             return true;
         }
+        if (it.Def.Key == "fishtank" && it.Fill < 0.8f)
+        {
+            it.Fill = 1;
+            World.Play(Sfx.Bubble, it.Pos, 0.3f);
+            return true;
+        }
         switch (it.Def.Key)
         {
             case "foodbowl" when it.Fill < 0.6f:
@@ -260,6 +266,7 @@ sealed partial class App
         PetBonds = _w.Pets.Where(o => o != p).ToDictionary(o => o.Name, o => MathF.Round(p.PetBond(o), 3)),
         Log = p.CareLog.TakeLast(40).Select(l => new SavedLog { When = l.When, Text = l.Text }).ToList(),
         Sprays = p.Sprays, Treats = p.TreatsGiven,
+        Health = p.Health, Clean = p.Clean, Sick = p.Sick.ToString(),
     }).ToList();
 
     void RestorePets()
@@ -284,6 +291,8 @@ sealed partial class App
             if (sp.Vocabulary.Count > 0) { pet.Vocabulary.Clear(); pet.Vocabulary.AddRange(sp.Vocabulary); }
             foreach (var l in sp.Log) pet.CareLog.Add((l.When, l.Text));
             pet.Sprays = sp.Sprays; pet.TreatsGiven = sp.Treats;
+            pet.Health = Math.Clamp(sp.Health, 0, 1); pet.Clean = Math.Clamp(sp.Clean, 0, 1);
+            if (Enum.TryParse<Illness>(sp.Sick, out var ill)) pet.Sick = ill;
             if (sp.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == sp.Owner) is { } owner) { pet.Owner = owner; pet.Bond[owner.Id] = 0.5f; }
             pet.TimeAway(away);
             made.Add((pet, sp));

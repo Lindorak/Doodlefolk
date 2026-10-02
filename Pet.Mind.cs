@@ -334,6 +334,7 @@ sealed partial class Pet
         if (Boredom > 0.25f) Add(Boredom * 1.8f * (0.3f + Energy) * (Young ? 1.6f : 1), "play", () => GoPlay(w));
         if (Stress > 0.5f) Add(Stress * 2.5f, "hide", () => GoHide(w));
         if (cat) Add(0.3f, "groom", () => Go(State.Groom, _rng.Range(3, 7)));
+        if (cat && Nearest(w, "fishtank") is { } tank) Add(0.25f + Boredom * 0.9f, "watch the fish", () => Travel(() => w.Items.Contains(tank) ? Beside(tank) : null, 1, 6 * S, 20, () => { Go(State.Sit, _rng.Range(8, 20)); _thing = tank; Boredom = MathF.Max(0, Boredom - 0.3f); Log("Watched the fish, intently"); }));
         if (dog) Add(0.35f, "sniff", () => Go(State.Sniff, _rng.Range(1.5f, 3.5f)));
         if (bird) { Add(0.9f, "perch", () => PerchSomewhere(w)); Add(0.25f + Boredom * 0.6f, "chatter", () => Chatter(w)); Add(0.2f, "preen", () => Go(State.Groom, _rng.Range(3, 6))); }
         if (Energy > 0.75f && !bird) Add((Young ? 0.5f : 0.12f) * Energy, "zoomies", () => { Go(State.Zoomies, _rng.Range(4, 8)); Shout(cat ? "!!" : "woof!"); });
@@ -730,7 +731,7 @@ sealed partial class Pet
 
     void OnLanded(World w, float impact)
     {
-        if (impact > 1800 * S) { Say(w, true); UserBond -= 0.05f; Stress = M.Clamp01(Stress + 0.1f); }
+        if (impact > 1800 * S) { Say(w, true); UserBond -= 0.05f; Stress = M.Clamp01(Stress + 0.1f); MaybeHurt(w, M.Clamp01(impact / (3000 * S))); }
     }
 
     void Startle(World w, Habit? caughtDoing)

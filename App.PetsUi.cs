@@ -24,6 +24,7 @@ sealed partial class App
         owner = p.Owner?.Name, activity = p.Activity, mood = p.Mood, happiness = R2(p.Happiness), age = R2(p.Age), young = p.Young,
         born = p.Born.ToString("d MMM"), weight = R2(p.Weight), weightWord = p.WeightWord, stamina = R2(p.Stamina), bond = R2(p.UserBond),
         leashed = p.Leashed, onCursor = p.OnCursor, want = p.Want.ToString(),
+        health = R2(p.Health), clean = R2(p.Clean), sick = p.IllnessName, cone = p.InCone,
         needs = new { food = R2(1 - p.Hunger), water = R2(1 - p.Thirst), bathroom = R2(1 - MathF.Max(p.Bladder, p.Bowel)), energy = R2(p.Energy), love = R2(1 - p.Attention), fun = R2(1 - p.Boredom), calm = R2(1 - p.Stress), comfort = R2(1 - p.Frustration) },
         habits = p.Habits.Select(h => new { key = h.ToString(), name = Pet.HabitGood(h), v = R2(p.R(h)) }),
         skills = p.SkillList.Select(s => new { key = s.ToString(), name = Pet.SkillName(s), v = R2(p.Sk(s)) }),
@@ -53,6 +54,9 @@ sealed partial class App
             case "talk": { var text = Str(m, "v"); p.Hear(text, true, _w); PostAll(new { t = "toast", text = p.Kind == PetKind.Parrot ? $"{p.Name} listens…" : $"{p.Name} tilts their head." }); break; }
             case "spray": PickUpSpray(true); _pop?.Hide(); break;
             case "kit": StarterKit(p); break;
+            case "vet": PostAll(new { t = "toast", text = p.Vet(_w) }); break;
+            case "bath": PostAll(new { t = "toast", text = p.Bath(_w) }); break;
+            case "brush": PostAll(new { t = "toast", text = p.Brush(_w) }); break;
             case "spraynow": World.Log("spray: " + p.Sprayed(_w)); break;   // debug: a squirt without the tool
         }
     }

@@ -274,6 +274,7 @@ sealed partial class Pet
             _scuffleWith = null; o._scuffleWith = null;
             winner.GoIdle(1.5f);
             loser.Afraid(winner, 0.25f);
+            loser.MaybeHurt(w, 0.6f);
             loser.FleeFrom(winner, w);
         }
     }

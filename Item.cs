@@ -414,6 +414,7 @@ sealed class Item
                 if (Dirt >= 3) Smell(r, t, 3);
                 break;
             case "puddle": Smell(r, t, 1); break;
+            case "fishtank": DrawTank(r, t); break;
             case "seedpatch" or "sprout" or "bud" or "tulip" or "sunflower" or "tomatoplant":
                 // Dry soil goes pale; freshly watered soil glistens.
                 if (Fill < 0.25f) r.Oval(Local(0, 1.6f), 8.5f * sc, 1.8f * sc, new Color4(0.85f, 0.75f, 0.55f, 0.45f * (1 - Fill * 4)));
@@ -421,6 +422,39 @@ sealed class Item
                 break;
             case "poop": Smell(r, t, 5); break;
         }
+    }
+
+    /// <summary>The aquarium: water, weed swaying, little fish swimming (gathering at the top when they're hungry),
+    /// bubbles rising. Fill is how recently they were fed.</summary>
+    void DrawTank(Renderer r, float t)
+    {
+        float sc = Sc;
+        r.FillPolygon(stackalloc Vector2[] { Local(-21, 6), Local(21, 6), Local(21, 26), Local(-21, 26) }, new Color4(0.3f, 0.65f, 0.9f, 0.45f));
+        for (int i = 0; i < 3; i++)
+        {
+            float x = -14 + i * 13, sw = MathF.Sin(t * 1.3f + i) * 1.6f;
+            r.Line(Local(x, 6), Local(x + sw, 13), M.Hex(0x43A047), 1.6f * sc);
+            r.Line(Local(x + sw, 13), Local(x + sw * 1.8f, 19), M.Hex(0x66BB6A), 1.3f * sc);
+        }
+        bool hungry = Fill < 0.3f;
+        var cols = new[] { M.Hex(0xFB8C00), M.Hex(0xFDD835), M.Hex(0xE53935) };
+        for (int i = 0; i < 3; i++)
+        {
+            float speed = 0.35f + i * 0.12f, ph = t * speed + i * 2.1f;
+            float x = MathF.Sin(ph) * 15, y = hungry ? 23 - i * 0.8f : 11 + i * 4 + MathF.Sin(ph * 2.3f) * 2;
+            int dir = MathF.Cos(ph) >= 0 ? 1 : -1;
+            var c = Local(x, y);
+            r.Oval(c, 2.6f * sc, 1.5f * sc, cols[i]);
+            r.FillPolygon(stackalloc Vector2[] { c - new Vector2(dir * 2.2f * sc, 0), c - new Vector2(dir * 4 * sc, 1.4f * sc), c - new Vector2(dir * 4 * sc, -1.4f * sc) }, cols[i]);
+            r.Disc(c + new Vector2(dir * 1.3f * sc, -0.4f * sc), 0.45f * sc, new Color4(0.1f, 0.1f, 0.1f, 1));
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            float ph = (t * 0.5f + i * 0.27f) % 1;
+            r.Ring(Local(12 + MathF.Sin(t * 3 + i) * 0.8f, 7 + ph * 18), (0.6f + ph * 0.5f) * sc, new Color4(1, 1, 1, 0.6f * (1 - ph)), 0.4f * sc);
+        }
+        r.Line(Local(-20, 26), Local(20, 26), new Color4(1, 1, 1, 0.5f), 0.8f * sc);   // the water line
+        if (Fill > 0.85f) for (int i = 0; i < 5; i++) r.Disc(Local(-6 + i * 3, 25.5f - (1 - Fill) * 40 * (i % 2 + 1)), 0.5f * sc, M.Hex(0xA1887F));   // flakes sinking
     }
 
     /// <summary>Wavy smell lines rising off something.</summary>
@@ -590,7 +624,7 @@ sealed class Item
     public bool Changed()
     {
         bool animated = Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
-                     || Def.Key is "puddle" or "poop" || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
+                     || Def.Key is "puddle" or "poop" or "fishtank" || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f);
         int key = HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
                                    User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt));

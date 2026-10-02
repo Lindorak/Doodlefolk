@@ -28,6 +28,19 @@ sealed partial class Brain
         if (Hobby == Hobby.Gardening && _gardenCd < _t0 && w.Items.Count(i => i.IsPlant && i.PlanterId == f.Id) < 3 && w.Items.Count < 55
             && w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd) is { Item: null } seg && seg.X2 - seg.X1 > 80 * S)
             opts.Add(0.45f + Boredom * 0.5f, () => PlantSeed(w), "Plant some seeds");
+        // A fish tank is a calming thing to watch.
+        if (w.Items.FirstOrDefault(i => i.Def.Key == "fishtank" && Vector2.Distance(i.Pos, f.Base) < 1500 * S) is { } tank && (Sadness > 0.2f || Annoyance > 0.2f || Boredom > 0.4f))
+            opts.Add(0.3f + Sadness * 0.8f + Annoyance * 0.6f, () =>
+            {
+                float side = MathF.Sign(f.Base.X - tank.Pos.X); if (side == 0) side = 1;
+                Navigate(() => w.Items.Contains(tank) ? new Vector2(tank.Pos.X + side * (tank.Def.W * tank.Sc * 0.5f + 14 * S), tank.Pos.Y) : null, 8 * S, false, () =>
+                {
+                    FaceTo(tank.Pos.X);
+                    Go(G.SitFloor, rng.Range(10, 20));
+                    Sadness = MathF.Max(0, Sadness - 0.15f); Annoyance = MathF.Max(0, Annoyance - 0.2f); Boredom = MathF.Max(0, Boredom - 0.2f);
+                    Write("fish", V("Watched the fish for a while. Calming.", "THE FISH!! They're so swishy!", "Stared at fish. It helped. Don't tell anyone.", "I watched the fish. They don't judge.", "The fish drift, and so did my thoughts."), "♪", 1800);
+                }, WalkPurpose.Look);
+            }, "Watch the fish");
         // Collectors show off their finds.
         if (Collection.Count >= 3 && _showTreasureCd < _t0)
         {

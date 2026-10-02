@@ -18,6 +18,7 @@ sealed partial class Pet
         }
         if (Kind == PetKind.Parrot) DrawParrot(r);
         else DrawBeast(r);
+        DrawHealth(r);
         DrawBubbles(r);
     }
 

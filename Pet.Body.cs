@@ -23,7 +23,7 @@ sealed partial class Pet
 
     public string WeightWord => Weight < 0.08f ? "Skinny" : Weight < 0.3f ? "Fit" : Weight < 0.5f ? "Chubby" : Weight < 0.75f ? "Fat" : "Obese";
     /// <summary>Speed multiplier from weight and stamina.</summary>
-    float BodyPace => (WeightOn ? 1 - 0.45f * MathF.Max(0, Weight - 0.3f) / 0.7f : 1) * (StaminaOn ? 0.55f + 0.45f * MathF.Min(1, Stamina * 1.5f) : 1);
+    float BodyPace => HealthPace * (WeightOn ? 1 - 0.45f * MathF.Max(0, Weight - 0.3f) / 0.7f : 1) * (StaminaOn ? 0.55f + 0.45f * MathF.Min(1, Stamina * 1.5f) : 1);
     /// <summary>How wide the body is drawn.</summary>
     float Girth => WeightOn ? 1 + MathF.Max(0, Weight - 0.15f) * 0.75f : 1;
 

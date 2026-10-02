@@ -12,7 +12,7 @@ enum Sfx
     Pew, Squirt, DartHit, Boing, Clank, Whirr, Munch, Snore, Scribble, Thud,
     Pip, Chime, Grumble, Laugh, Tune, TaDa, Whistle, Swish,
     Thunder, Splat, Bark, Meow, Purr,
-    Hiss, Growl, Chirp, Squawk, Whine, Spray, Yowl, Lap, Squeak, Crackle,
+    Hiss, Growl, Chirp, Squawk, Whine, Spray, Yowl, Lap, Squeak, Crackle, Sneeze, Bubble,
 }
 
 /// <summary>Dynamic sound effects, synthesized at start-up (no sound files): every effect is a few short
@@ -301,6 +301,8 @@ sealed class Sound : IDisposable
         Add(Sfx.Yowl, Make(0.8f, (t, p) => Sine(t, 450 + 250 * MathF.Sin(t * 9) + 120 * MathF.Sin(t * 31)) * MathF.Sin(MathF.PI * p) * 0.15f));
         Add(Sfx.Lap, Lp(Make(0.06f, (t, p) => Rnd() * Env(p, 0.05f) * 0.3f), 0.5f));
         Add(Sfx.Crackle, Make(0.03f, (t, p) => Rnd() * Env(p, 0.02f) * 0.5f), Make(0.05f, (t, p) => Rnd() * Env(p, 0.01f) * 0.4f * (p < 0.3f ? 1 : 0.5f)), Lp(Make(0.08f, (t, p) => Rnd() * Env(p, 0.01f) * 0.6f), 0.6f));
+        Add(Sfx.Sneeze, Make(0.35f, (t, p) => (p < 0.55f ? Sine(t, 500 + 400 * p) * 0.08f * p * 2 : Rnd() * 0.4f * MathF.Pow(1 - (p - 0.55f) / 0.45f, 2))));
+        Add(Sfx.Bubble, Make(0.08f, (t, p) => Sine(t, 600 + 900 * p) * Env(p, 0.05f) * 0.15f));
         Add(Sfx.Squeak, Make(0.2f, (t, p) => Sine(t, 1600 + 700 * MathF.Sin(MathF.PI * p)) * MathF.Sin(MathF.PI * p) * 0.2f));
         _rainLoop = Lp(Make(2.4f, (t, p) => Rnd() * 0.5f + (r.NextDouble() < 0.0015 ? 0.8f : 0)), 0.35f);
         // Crossfade the ends so the loop doesn't click.

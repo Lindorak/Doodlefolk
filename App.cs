@@ -1159,7 +1159,8 @@ sealed partial class App : ApplicationContext
                     {
                         float pv = float.Parse(p[3], inv);
                         switch (p[2]) { case "hunger": ps.Hunger = pv; break; case "thirst": ps.Thirst = pv; break; case "bladder": ps.Bladder = pv; break; case "bowel": ps.Bowel = pv; break;
-                            case "energy": ps.Energy = pv; break; case "attention": ps.Attention = pv; break; case "boredom": ps.Boredom = pv; break; case "weight": ps.Weight = pv; break; case "age": ps.Age = pv; break; }
+                            case "energy": ps.Energy = pv; break; case "attention": ps.Attention = pv; break; case "boredom": ps.Boredom = pv; break; case "weight": ps.Weight = pv; break; case "age": ps.Age = pv; break; case "clean": ps.Clean = pv; break; case "health": ps.Health = pv; break;
+                            case "sick": ps.Sick = (Illness)(int)pv; break; }
                     }
                     break;
                 case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;

@@ -54,6 +54,8 @@ sealed partial class App
     /// <summary>Plants drink their water and, while they have some, grow a stage every quarter of an hour or so.</summary>
     void GardenTick(float dt)
     {
+        // The fish get peckish over a few hours.
+        foreach (var tank in _w.Items.Where(i => i.Def.Key == "fishtank")) tank.Fill = MathF.Max(0, tank.Fill - dt / (5 * 3600));
         foreach (var it in _w.Items.Where(i => i.IsPlant).ToList())
         {
             if (_w.Weather.Raining) it.Fill = 1;

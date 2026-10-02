@@ -35,12 +35,19 @@ sealed class Sound : IDisposable
     public bool Enabled { get; set; } = true;
     public float Volume { get => _master.Volume; set => _master.Volume = Math.Clamp(value, 0, 1); }
 
-    public Sound(float volume)
+    /// <summary>One take of an effect (for mixing offline, as the trailer does). Mono, 44.1 kHz.</summary>
+    public float[] Take(Sfx s, Random rng) => _bank.TryGetValue(s, out var v) && v.Length > 0 ? v[rng.Next(v.Length)] : Array.Empty<float>();
+    public const int SampleRate = Rate;
+
+    public Sound(float volume) : this(volume, true) { }
+
+    public Sound(float volume, bool output)
     {
         _mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(Rate, 2)) { ReadFully = true };
         _mixer.MixerInputEnded += (_, _) => Interlocked.Decrement(ref _voices);
         _master = new VolumeSampleProvider(_mixer) { Volume = volume };
         Build();
+        if (!output) return;
         try
         {
             _out = new WasapiOut(AudioClientShareMode.Shared, 50);

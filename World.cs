@@ -21,7 +21,13 @@ sealed partial class World
     public readonly List<Pet> Pets = new();
     public Sound? Sound;
     /// <summary>Play a sound effect at a spot on screen (no-op when sound is off or unavailable).</summary>
-    public static void Play(Sfx s, Vector2 at, float vol = 1, float pitch = 1, double gap = 0.03) => Current?.Sound?.Play(s, at, vol, pitch, gap);
+    public static void Play(Sfx s, Vector2 at, float vol = 1, float pitch = 1, double gap = 0.03)
+    {
+        SoundTap?.Invoke(s, at, vol, pitch);
+        Current?.Sound?.Play(s, at, vol, pitch, gap);
+    }
+    /// <summary>Set by the trailer to hear every sound effect as it happens.</summary>
+    public static Action<Sfx, Vector2, float, float>? SoundTap;
     /// <summary>Babble voices for speech bubbles (off: just the little reaction sounds).</summary>
     public static bool Voices = true;
     /// <summary>Everyone tires with exertion / everyone's weight changes / figures help with the pets (settings).</summary>

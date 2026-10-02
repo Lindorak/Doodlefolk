@@ -20,7 +20,7 @@ sealed partial class App
 
     void WelcomeFrame(double now)
     {
-        if (!_settings.FirstRun || _selfTest || _welcomeIndex >= 3) return;
+        if (!_settings.FirstRun || _selfTest || _trailer || _welcomeIndex >= 3) return;
         if (_welcomeStep < 0) _welcomeStep = now + 3.5;
         if (now < _welcomeStep) return;
         var f = _w.Figures.FirstOrDefault(x => x.Mode == Mode.Control);

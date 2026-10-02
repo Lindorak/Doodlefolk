@@ -63,8 +63,30 @@ sealed class Env
         Virtual = SystemInformation.VirtualScreen;
     }
 
+    /// <summary>The trailer's pretend desktop: when set, these are the windows (the real ones are ignored).</summary>
+    public List<(IntPtr hwnd, RECT rect)>? Staged;
+
+    /// <summary>Pretend the screen is this size, with a taskbar of this height.</summary>
+    public void StageScreen(Rectangle screen, int taskbar)
+    {
+        Virtual = screen;
+        MonBounds = new[] { screen };
+        MonWork = new[] { new Rectangle(screen.X, screen.Y, screen.Width, screen.Height - taskbar) };
+        Staged ??= new();
+    }
+
     public void Refresh(IntPtr self)
     {
+        if (Staged != null)
+        {
+            (_prev, _rects) = (_rects, _prev);
+            _rects.Clear();
+            _wins.Clear();
+            foreach (var (h, r) in Staged) { _rects[h] = r; _wins.Add((h, r)); }
+            BuildPlatforms();
+            FullscreenActive = false;
+            return;
+        }
         _self = self;
         (_prev, _rects) = (_rects, _prev);
         _rects.Clear();

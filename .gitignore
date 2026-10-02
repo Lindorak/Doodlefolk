@@ -11,3 +11,4 @@ ci-output/
 lib/steam/steam_api64.dll
 steam_appid.txt
 steam/
+trailer/

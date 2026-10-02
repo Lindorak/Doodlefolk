@@ -477,7 +477,7 @@ sealed partial class App
         _nextStudioPush = 0;   // reflect the change right away
     }
 
-    static string Str(JsonElement m, string k) => m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+    static string Str(JsonElement m, string k) => m.ValueKind == JsonValueKind.Object && m.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
     static float Num(JsonElement m, string k) => m.GetProperty(k).GetSingle();
 
     void FigureEdit(JsonElement m)

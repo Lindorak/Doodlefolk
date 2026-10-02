@@ -34,5 +34,9 @@ sealed class SimClock
     }
 
     double Seconds => _offset + (_sw.Elapsed.TotalSeconds - _base) * _scale;
-    public TimeSpan Elapsed => TimeSpan.FromSeconds(Seconds);
+    public TimeSpan Elapsed => TimeSpan.FromSeconds(_manual ?? Seconds);
+
+    double? _manual;
+    /// <summary>Step the clock by hand (the trailer advances exactly one video frame at a time).</summary>
+    public void Manual(double seconds) => _manual = seconds;
 }

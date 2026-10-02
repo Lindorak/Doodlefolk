@@ -47,12 +47,14 @@ sealed partial class App : ApplicationContext
     {
         _debug = args.Contains("--debug");
         _selfTest = args.Contains("--selftest");
+        _trailer = args.Contains("--trailer");
         World.Debug = _debug;
         if (_selfTest) SelfTestPrepare();
+        if (_trailer) TrailerPrepare(args);
         var boot = System.Diagnostics.Stopwatch.StartNew();
         var marks = new List<string>();
         void Mark(string what) { marks.Add($"{what} {boot.ElapsedMilliseconds}"); }
-        if (!_selfTest) SteamHub.Init();
+        if (!_selfTest && !_trailer) SteamHub.Init();
         Mods.Load(SteamHub.WorkshopFolders());
         Mark("mods");
         CleanUpOldVersion();
@@ -64,7 +66,7 @@ sealed partial class App : ApplicationContext
 
         var vs = _w.Env.Virtual;
         _overlay = new Overlay(vs);
-        if (!_selfTest) _overlay.Show();
+        if (!_selfTest && !_trailer) _overlay.Show();
         Mark("overlay");
         _r = new Renderer(_overlay.Handle, vs);
         Mark("renderer");
@@ -77,6 +79,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
         if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; }
+        if (_trailer) { _tray.Visible = false; TrailerStage(); }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;
@@ -87,7 +90,7 @@ sealed partial class App : ApplicationContext
         // Sound effects are synthesised on a worker thread so the figures appear sooner; until then it's quiet.
         World.Voices = _settings.Voices;
         var screen = (_w.Env.Virtual.Left, _w.Env.Virtual.Width);
-        Task.Run(() =>
+        if (!_trailer) Task.Run(() =>
         {
             try
             {
@@ -178,7 +181,9 @@ sealed partial class App : ApplicationContext
         {
             try
             {
+                if (_trailer) { _clock.Manual(_tFrame / (double)TFps); }
                 Frame();
+                if (_trailer) { TrailerFrame(); continue; }
                 if (!_startLogged)
                 {
                     _startLogged = true;
@@ -206,7 +211,7 @@ sealed partial class App : ApplicationContext
     void Frame()
     {
         double now = _clock.Elapsed.TotalSeconds;
-        if (_frameInterval > 0)
+        if (_frameInterval > 0 && !_trailer)
         {
             // Software frame limiter for caps that don't divide the monitor's refresh rate.
             if (now < _nextFrameAt)
@@ -238,7 +243,7 @@ sealed partial class App : ApplicationContext
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
 
-        if (!_selfTest && (_paused || _w.Env.FullscreenActive || QuietHours()))
+        if (!_selfTest && !_trailer && (_paused || _w.Env.FullscreenActive || QuietHours()))
         {
             if (now > _reminderTick) { _reminderTick = now + 5; ReminderTick(hidden: true); }
             EndPress();
@@ -352,8 +357,8 @@ sealed partial class App : ApplicationContext
         float alpha = _w.HitStop > 0 ? 1 : (float)Math.Clamp(_acc / World.Dt, 0, 1);
         foreach (var f in _w.Figures) if (f != _pressFig || !_dragging) f.BeginInterp(alpha);
         foreach (var p in _w.Props) if (p != _pressProp) p.BeginInterp(alpha);
-        bool drew;
-        try { drew = Render(); }
+        bool drew = _trailer;
+        try { if (!_trailer) drew = Render(); }
         finally
         {
             foreach (var f in _w.Figures) f.EndInterp();
@@ -366,6 +371,7 @@ sealed partial class App : ApplicationContext
         if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _msDraw = _r.DrawMs / _frames; _regionsPerFrame = _r.Regions / (float)_frames; _r.DrawMs = 0; _r.Regions = 0; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
         if (_debug && !_selfTest && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
         if (_selfTest) SelfTestFrame(now);
+        if (_trailer) TrailerTick(now);
     }
 
     readonly HashSet<string> _logged = new();
@@ -1046,11 +1052,16 @@ sealed partial class App : ApplicationContext
         string[] lines;
         try { lines = File.ReadAllLines(path); File.Delete(path); }
         catch (IOException) { return; }
+        foreach (var line in lines) RunCommand(line);
+    }
+
+    /// <summary>One debug command (also how the trailer directs its scenes).</summary>
+    void RunCommand(string line)
+    {
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        foreach (var line in lines)
         {
             var p = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (p.Length == 0) continue;
+            if (p.Length == 0) return;
             string result = "ok";
             switch (p[0].ToLowerInvariant())
             {
@@ -1451,7 +1462,7 @@ sealed partial class App : ApplicationContext
                     result = fig != null && p.Length > 1 && fig.Brain.Force(p[1].ToLowerInvariant(), p[2..], _w) ? "ok" : "failed";
                     break;
             }
-            File.AppendAllText(Path.Combine(Path.GetTempPath(), "doodlefolk_cmd.log"), $"{line} -> {result}\n");
+            if (!_trailer) File.AppendAllText(Path.Combine(Path.GetTempPath(), "doodlefolk_cmd.log"), $"{line} -> {result}\n");
         }
     }
 

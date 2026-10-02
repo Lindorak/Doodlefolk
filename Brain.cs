@@ -23,6 +23,18 @@ sealed partial class Brain
 
     // ---- needs & mood (0..1) ----
     public float Stamina = 1, Boredom = 0.3f, Loneliness = 0.3f, Annoyance, CursorTrust = 0.6f;
+    /// <summary>Wanting something and not getting it (nowhere to sit, no bed to sleep in).</summary>
+    public float Frustration;
+
+    /// <summary>Tired, and nowhere comfy to lie down: the floor will do, grudgingly.</summary>
+    void NoBed(World w)
+    {
+        bool any = w.Items.Any(i => i.Free && i.OnGround && (i.Def.Verbs.Contains(Verb.Lie) || i.Def.Verbs.Contains(Verb.Sit)) && i.User == null && Vector2.Distance(i.Pos, f.Base) < 2000 * S);
+        if (any) return;
+        Frustration = M.Clamp01(Frustration + 0.15f);
+        f.Emote(V("no bed… floor it is", "WHERE'S A BED?! fine. floor.", "floor. great.", "nowhere to lie down…", "the floor, again"), 1.6f);
+        Write("nobed", V("Nowhere comfy to sleep, so I napped on the floor.", "NO BEDS! I slept on the FLOOR!", "Slept on the floor. Thanks for nothing.", "There was no bed, so I curled up on the floor. My back hurts.", "Slept on the cold floor tonight."), "…", 1800);
+    }
     /// <summary>Short-lived feelings: joy from good moments, sadness from losses, fear from scares.</summary>
     public float Joy, Sadness, Fear;
 
@@ -370,7 +382,7 @@ sealed partial class Brain
         float speed = MathF.Abs(f.Vel.X);
         float cost = _g switch
         {
-            G.Sleep => -0.09f,
+            G.Sleep => -0.07f,   // on the floor: not as restful as a bed (see Brain.Items)
             G.SitEdge or G.SitFloor or G.SitWith => -0.035f,
             G.Idle or G.Watch or G.Chat => -0.012f,
             G.Juggle or G.Dribble or G.Kick or G.Catch or G.Throw => 0.022f,
@@ -382,7 +394,16 @@ sealed partial class Brain
         if (f.Climbing) cost += 0.03f;
         if (cost > 0) cost *= 1.3f - 0.6f * P.Energy;   // energetic figures tire more slowly
         if (_g != G.Sleep) cost += World.Current.Night * 0.004f;   // late at night everyone flags
-        Stamina = M.Clamp01(Stamina - cost * dt);
+        // Heavier figures run out of puff sooner; exercise burns weight off, idling on a full stomach puts it on.
+        if (cost > 0) cost *= 1 + f.Fat * 1.8f;
+        if (World.WeightOn)
+        {
+            if (cost > 0.01f) f.Weight = MathF.Max(0, f.Weight - cost * dt * 0.0016f);
+            else if (Hunger < 0.2f) f.Weight = MathF.Min(1, f.Weight + dt * 0.0000025f);
+        }
+        Stamina = World.StaminaOn ? M.Clamp01(Stamina - cost * dt) : 1;
+        Frustration = MathF.Max(0, Frustration - dt * 0.002f);
+        if (Frustration > 0.6f && rng.NextDouble() < dt * 0.03) { f.Emote(V("ugh.", "UGHHH!", "everything's annoying.", "…*sigh*", "this is not my day"), 1.2f); Annoyance = M.Clamp01(Annoyance + 0.05f); }
 
         // How much the current activity keeps boredom away (games, play, music and new things most; sitting about least).
         float fun = _g switch
@@ -669,7 +690,7 @@ sealed partial class Brain
         opts.Add(0.5f + (1 - E) * 0.5f, () => Go(G.Idle, rng.Range(1.5f, 4.5f)), "Hang out");
         opts.Add((tired * 0.8f + (1 - E) * 0.3f) * L(Thing.Sitting), () => Go(G.SitFloor, rng.Range(4, 12)), "Sit down");
         if (Stamina < 0.3f || (Stamina < 0.55f && f.Tastes.Likes(Thing.Napping)))
-            opts.Add((0.55f - Stamina) * 8 * L(Thing.Napping), () => Go(G.Sleep, rng.Range(15, 40)), "Nap");
+            opts.Add((0.55f - Stamina) * 8 * L(Thing.Napping), () => { NoBed(w); Go(G.Sleep, rng.Range(15, 40)); }, "Nap");
         if (seg.X2 - seg.X1 > 60 * S) opts.Add((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg), "Wander");
         if (Stamina > 0.35f && PickExplore(env, seg, out var explore))
             opts.Add(P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore, "Explore");

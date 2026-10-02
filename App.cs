@@ -720,6 +720,7 @@ sealed partial class App : ApplicationContext
         f.Hunter = old.Hunter;
         f.Gender = old.Gender;
         f.Attraction = old.Attraction;
+        f.Weight = old.Weight;
         f.Look = old.Look;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
@@ -792,6 +793,7 @@ sealed partial class App : ApplicationContext
         f.Brain.LastBaby = s.LastBaby;
         f.Brain.Trophies = s.Trophies;
         f.Brain.ChampionOn = s.ChampionOn;
+        if (s.Weight is float wt) f.Weight = Math.Clamp(wt, 0, 1);
         f.Brain.Gifts.AddRange(s.Gifts);
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
         if (s.Attraction is Attraction at) f.Attraction = at;
@@ -850,7 +852,7 @@ sealed partial class App : ApplicationContext
             Born = f.Brain.Born,
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
-            Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn,
+            Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(),
         }).ToList();
@@ -1154,6 +1156,7 @@ sealed partial class App : ApplicationContext
                     break;
                 case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;
                 case "petmode": SetPetMode(p[1] == "on"); break;
+                case "weight": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } wtF) wtF.Weight = Math.Clamp(float.Parse(p[2], inv), 0, 1); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)

@@ -27,7 +27,7 @@ sealed partial class Figure
         Color4 near = new(baseColor.R, baseColor.G, baseColor.B, fade);
         Color4 far = new(baseColor.R * 0.72f, baseColor.G * 0.72f, baseColor.B * 0.72f, fade);
         Color4 outline = new(0, 0, 0, Outline.A * fade);
-        float w = LineW, ow = LineW + 1.6f * S;
+        float w = LineW * (1 + Fat * 0.45f), ow = w + 1.6f * S;
 
         DrawTrails(r, near);
         DrawLookBack(r, fade);
@@ -38,6 +38,7 @@ sealed partial class Figure
         DrawGear(r, J.ElbowF, J.HandF, 0.75f);
         r.Line(Jt[J.Pelvis], Jt[J.KneeF], far, w); r.Line(Jt[J.KneeF], Jt[J.FootF], far, w);
         r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], near, w);
+        DrawBelly(r, near, outline);
         r.ShadedDisc(Jt[J.Head], HeadR, near);
         if (Blush > 0.04f && !(Action == Act.SitBack && FrontView))
         {

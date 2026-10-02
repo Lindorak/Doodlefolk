@@ -29,6 +29,7 @@ sealed class SavedFigure
     public DateTime? LastBaby { get; set; }
     public int Trophies { get; set; }
     public DateTime? ChampionOn { get; set; }
+    public float? Weight { get; set; }
     public Dictionary<string, int[]> Record { get; set; } = new();
     public List<Gift> Gifts { get; set; } = new();
     public string Hobby { get; set; } = "";

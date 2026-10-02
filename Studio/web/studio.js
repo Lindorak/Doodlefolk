@@ -711,7 +711,7 @@ const SUBPANELS = {
 
   mood(panel, f) {
     const id = f.id;
-    const M = [["stamina", "Energy left", "#43a047"], ["joy", "Joy", "#fbc02d"], ["sadness", "Sadness", "#5c8fd6"], ["fear", "Fear", "#8e6cc9"], ["annoyance", "Annoyance", "#e53935"], ["boredom", "Boredom", "#9e9e9e"], ["loneliness", "Loneliness", "#26a69a"]];
+    const M = [["stamina", "Energy left", "#43a047"], ["joy", "Joy", "#fbc02d"], ["sadness", "Sadness", "#5c8fd6"], ["fear", "Fear", "#8e6cc9"], ["annoyance", "Annoyance", "#e53935"], ["boredom", "Boredom", "#9e9e9e"], ["loneliness", "Loneliness", "#26a69a"], ["frustration", "Frustration", "#ef6c00"], ["weight", "Weight", "#8d6e63"]];
     const rows = M.map(([k, label, col]) => {
       const i = h("i", { style: { "--fill": col } }), n = h("span", { class: "n" });
       return { k, i, n, el: h("div", { class: "meter" }, h("label", null, label), h("div", { class: "bar" }, i), n) };

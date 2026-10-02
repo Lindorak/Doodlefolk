@@ -187,7 +187,7 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
-            family = FamilyLine(f),
+            family = FamilyLine(f), weightWord = f.WeightWord,
             skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
@@ -209,7 +209,7 @@ sealed partial class App
             mood = new
             {
                 stamina = R(b.Stamina), joy = R(b.Joy), sadness = R(b.Sadness), fear = R(b.Fear),
-                annoyance = R(b.Annoyance), boredom = R(b.Boredom), loneliness = R(b.Loneliness),
+                annoyance = R(b.Annoyance), boredom = R(b.Boredom), loneliness = R(b.Loneliness), frustration = R(b.Frustration), weight = R(f.Weight),
             },
             traits = TraitsJson(f.Traits),
             describe = f.Traits.Describe(),

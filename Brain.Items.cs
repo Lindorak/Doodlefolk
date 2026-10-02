@@ -211,6 +211,8 @@ sealed partial class Brain
         {
             case Verb.Sit:
                 if (Stamina < 0.98f) Stamina = MathF.Min(1, Stamina + World.Dt * 0.01f * (0.5f + it.Def.Comfort));
+                Frustration = MathF.Max(0, Frustration - World.Dt * 0.01f * it.Def.Comfort);
+                Cheered(World.Dt * 0.003f * it.Def.Comfort);
                 if (it.Def.Facing != SeatFacing.Side) f.SetAction(it.Def.Facing == SeatFacing.In ? Act.SitBack : Act.SitFront);
                 else f.SetAction(Act.SitEdge);
                 if (it.Def.Comfort > 0.7f && Stamina < 0.3f && _t > 5 && rng.NextDouble() < World.Dt * 0.05) { f.Emote("z", 2); }
@@ -219,6 +221,8 @@ sealed partial class Brain
             case Verb.Hammock:
                 f.SetAction(Act.Lie);
                 Stamina = MathF.Min(1, Stamina + World.Dt * 0.025f * (0.5f + it.Def.Comfort));
+                Frustration = MathF.Max(0, Frustration - World.Dt * 0.015f * it.Def.Comfort);
+                Cheered(World.Dt * 0.003f * it.Def.Comfort);
                 if (_t > 1.5f && f.CurrentEmote != "z") f.Emote("z", 3);
                 if (_verb == Verb.Hammock)
                 {
@@ -253,6 +257,7 @@ sealed partial class Brain
                     _nextBite = 1.2f;
                     it.BitesLeft--;
                     World.Play(Sfx.Munch, f.Jt[J.Head], 0.45f, 1.1f / MathF.Sqrt(f.SizeMul));
+                    if (World.WeightOn) f.Weight = MathF.Min(1, f.Weight + 0.012f / it.Def.Bites * (Hunger < 0.25f ? 3 : 1));
                     Hunger = MathF.Max(0, Hunger - 0.35f / it.Def.Bites * 2);
                     Cheered(0.05f + MathF.Max(0, f.Tastes.Of(Thing.Eating)) * 0.05f);
                     w.Fx.Dust(f.Jt[J.Head] + new Vector2(f.Facing * 3 * S, 2 * S), S * 0.4f, 2, 0.2f, w.Rng);

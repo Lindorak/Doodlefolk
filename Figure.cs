@@ -188,6 +188,11 @@ sealed partial class Figure
     public bool HidingBehind;
     /// <summary>Club colours: worn as a bandana.</summary>
     public Color4? ClubColour;
+    /// <summary>0 lean … 0.3 fit … 0.5 chubby … 0.75 fat … 1 obese. Changes with eating and exercise (a setting).</summary>
+    public float Weight = 0.2f;
+    /// <summary>How much heavier than fit (0 at fit or lighter).</summary>
+    public float Fat => World.WeightOn ? MathF.Max(0, Weight - 0.3f) / 0.7f : 0;
+    public string WeightWord => Weight < 0.1f ? "Skinny" : Weight < 0.3f ? "Fit" : Weight < 0.5f ? "Chubby" : Weight < 0.75f ? "Fat" : "Obese";
     public float Camo;
 
     public Figure(Color4 color, string name, float scale, Personality traits, Random rng, int? id = null)

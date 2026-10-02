@@ -121,7 +121,7 @@ sealed partial class Brain
             }
         }
         var a = Anchor.On(env, goal, gx);
-        Navigate(() => a.Resolve(env), 30 * S, true, () => BeginHunt(w), WalkPurpose.Other);
+        Navigate(() => a.Resolve(env), 30 * S, true, () => BeginHunt(w), WalkPurpose.Hunt);
         _navAbout = NavGraph.Key(goal);
         _dur = 25;
     }

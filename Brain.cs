@@ -386,7 +386,8 @@ sealed partial class Brain
         Annoyance = M.Clamp01(Annoyance - dt * 0.04f);
         // Joy: quick lifts from good moments, settling toward how content it is overall (rested, busy, not lonely).
         float content = M.Clamp01((1 - Boredom) * 0.45f + (1 - Loneliness) * 0.3f + MathF.Min(Stamina, 0.5f) * 0.5f - Sadness * 0.5f - Annoyance * 0.3f) * (0.6f + P.Playfulness * 0.5f);
-        Joy = Joy > content ? M.Clamp01(Joy - dt * 0.03f) : M.MoveTowards(Joy, content, dt * 0.01f);
+        content = M.Clamp01(content);
+        Joy = Joy > content ? M.Clamp01(Joy - dt * 0.03f) : M.Clamp01(M.MoveTowards(Joy, content, dt * 0.01f));
         Sadness = M.Clamp01(Sadness - dt * 0.015f);
         Fear = M.Clamp01(Fear - dt * 0.25f);
 

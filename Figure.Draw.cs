@@ -29,6 +29,7 @@ sealed partial class Figure
         Color4 outline = new(0, 0, 0, Outline.A * fade);
         float w = LineW, ow = LineW + 1.6f * S;
 
+        DrawLookBack(r, fade);
         foreach (var (a, b) in Bones) r.Line(Jt[a], Jt[b], outline, ow);
         r.Disc(Jt[J.Head], HeadR + 0.8f * S, outline);
 
@@ -39,6 +40,8 @@ sealed partial class Figure
         r.Disc(Jt[J.Head], HeadR, near);
         r.Line(Jt[J.Pelvis], Jt[J.KneeN], near, w); r.Line(Jt[J.KneeN], Jt[J.FootN], near, w);
         r.Line(Jt[J.Neck], Jt[J.ElbowN], near, w); r.Line(Jt[J.ElbowN], Jt[J.HandN], near, w);
+        DrawLookBody(r, fade);
+        DrawLookFront(r, fade);
         DrawGear(r, J.ElbowN, J.HandN, 1);
         DrawHealthBar(r);
         if (fade > 0.5f) DrawEmote(r);

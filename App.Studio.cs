@@ -94,6 +94,11 @@ sealed partial class App
             fps,
             refresh = _refresh,
             fixedColours = ItemDef.Fixed.Select(c => Settings.Hex(c)),
+            lookParts = new
+            {
+                hat = LookJson(Look.Hats), hair = LookJson(Look.Hairs), beard = LookJson(Look.Beards), glasses = LookJson(Look.GlassesParts), shoes = LookJson(Look.ShoeParts),
+                body = Look.BodyParts.Select(b => new { slot = b.Slot, key = b.Key, name = b.Name }),
+            },
             catalog = ItemCatalog.All.Select(d => new
             {
                 key = d.Key, name = d.Name, words = d.Words.Take(3), verbs = d.Verbs.Select(v => v.ToString()), w = d.W, h = d.H, hex = Settings.Hex(d.Color),
@@ -101,6 +106,13 @@ sealed partial class App
             }),
         };
     }
+
+    static object LookJson(LookPart[] parts) => parts.Select(p => new
+    {
+        key = p.Key, name = p.Name,
+        front = p.Front.Select(s => new { k = s.Kind.ToString(), p = s.P, c = s.Col, w = s.W }),
+        back = (p.Back ?? Array.Empty<Shape>()).Select(s => new { k = s.Kind.ToString(), p = s.P, c = s.Col, w = s.W }),
+    });
 
     object StudioState() => new
     {
@@ -143,6 +155,7 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
+            look = f.Look,
             trust = R(b.CursorTrust),
             memories = b.Memories.AsEnumerable().Reverse().Select(m => new { what = m.What, delta = R(m.Delta), ago = MathF.Round(b.Age - m.At) }),
             hp = R(f.HP),
@@ -337,6 +350,22 @@ sealed partial class App
             case "save": SaveToLibrary(f); break;
             case "remove": _w.RemoveFigure(f); break;
             case "heal": f.HP = 100; break;
+            case "look":
+            {
+                var l = f.Look;
+                string v = Str(m, "v");
+                switch (Str(m, "slot"))
+                {
+                    case "hat": l.Hat = v; break; case "hair": l.Hair = v; break; case "beard": l.Beard = v; break; case "glasses": l.Glasses = v; break;
+                    case "top": l.Top = v; break; case "neck": l.Neck = v; break; case "waist": l.Waist = v; break; case "back": l.Back = v; break; case "shoes": l.Shoes = v; break;
+                    case "hatColour": l.HatColour = v; break; case "hairColour": l.HairColour = v; break; case "topColour": l.TopColour = v; break;
+                    case "neckColour": l.NeckColour = v; break; case "waistColour": l.WaistColour = v; break; case "backColour": l.BackColour = v; break;
+                    case "shoeColour": l.ShoeColour = v; break;
+                }
+                break;
+            }
+            case "rollLook": f.Look = Look.Generate(f.Traits, _w.Rng.Next()); break;
+            case "plainLook": f.Look = new Look(); break;
             case "hunter": MakeHunter(f, m.GetProperty("v").GetBoolean()); break;
             case "call": _studio?.Post(JsonSerializer.Serialize(new { t = "toast", text = f.Brain.CalledByUser(_w) }, Json)); break;
         }

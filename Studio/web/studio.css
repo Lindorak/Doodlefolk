@@ -373,3 +373,7 @@ input[type=color] { -webkit-appearance: none; appearance: none; width: 30px; hei
 input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type=color]::-webkit-color-swatch { border: 1.8px solid var(--ink); border-radius: 48% 52% 50% 46%; }
 .sw.custom input[type=color] { width: auto; height: auto; }
+
+.look-row { grid-template-columns: 120px 220px 1fr; }
+.swatches.mini { gap: 4px; }
+.sw.mini { width: 19px; height: 19px; }

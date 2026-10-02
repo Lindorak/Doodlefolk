@@ -298,6 +298,7 @@ sealed partial class Figure
                 break;
         }
         StepRope(dt);
+        if (Mode != Mode.Spawning) StepCloth(dt);
         float inv = 1 / dt;
         for (int i = 0; i < J.Count; i++) JVel[i] = (Jt[i] - _jtPrev[i]) * inv;
     }

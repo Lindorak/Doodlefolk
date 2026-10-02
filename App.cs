@@ -547,6 +547,7 @@ sealed partial class App : ApplicationContext
         f.StyleChoice = old.StyleChoice;
         f.Tastes = old.Tastes;
         f.Hunter = old.Hunter;
+        f.Look = old.Look;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
         f.PlaceAt(plat, M.ClampIn(old.Base.X, plat.X1 + 4, plat.X2 - 4));
@@ -585,6 +586,7 @@ sealed partial class App : ApplicationContext
             Fondness = f.Brain.UserFondness,
             Trust = f.Brain.CursorTrust,
             Hunter = f.Hunter,
+            Look = f.Look.Clone(),
             Traits = f.Traits.Clone(),
         });
         _settings.Save();
@@ -607,6 +609,7 @@ sealed partial class App : ApplicationContext
     {
         if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
         f.Hunter = s.Hunter;
+        if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
         if (s.Trust is float trust) f.Brain.CursorTrust = Math.Clamp(trust, 0, 1);
     }
@@ -640,6 +643,7 @@ sealed partial class App : ApplicationContext
             Fondness = f.Brain.UserFondness,
             Trust = f.Brain.CursorTrust,
             Hunter = f.Hunter,
+            Look = f.Look.Clone(),
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
         }).ToList();

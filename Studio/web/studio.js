@@ -177,8 +177,9 @@ function figSvg(cls = "fig") {
   const outline = s("g", { "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-width": 4.9, stroke: "rgba(0,0,0,.25)" });
   const fp = s("path"), np = s("path"), op = s("path"), head = s("circle", { r: 6.5 }), headO = s("circle", { r: 7.3, fill: "rgba(0,0,0,.25)" });
   far.append(fp); near.append(np); outline.append(op);
-  svg.append(outline, headO, far, near, head);
-  svg.update = (pose, hex) => {
+  const lookBack = s("g"), lookFront = s("g");
+  svg.append(lookBack, outline, headO, far, near, head, lookFront);
+  svg.update = (pose, hex, look, facing) => {
     pose = pose && pose.length === 11 ? pose : STANDING;
     // Stand it on the ground line under its pelvis, whatever it's doing.
     let maxY = -1e9; for (const p of pose) maxY = Math.max(maxY, p[1]);
@@ -191,8 +192,70 @@ function figSvg(cls = "fig") {
     const hx = pose[J.Head][0] + dx, hy = pose[J.Head][1] + dy;
     head.setAttribute("cx", hx); head.setAttribute("cy", hy); head.setAttribute("fill", hex);
     headO.setAttribute("cx", hx); headO.setAttribute("cy", hy);
+    drawLook(lookBack, lookFront, look, pose.map(p => [p[0] + dx, p[1] + dy]), facing || 1, hex);
   };
   return svg;
+}
+
+/** Outfit pieces on a Studio figure: same shape data as the desktop (head pieces, shoes), simple strokes for clothes. */
+function drawLook(gBack, gFront, look, P, facing, hex) {
+  gBack.replaceChildren(); gFront.replaceChildren();
+  if (!look || !INIT || !INIT.lookParts) return;
+  const LP = INIT.lookParts, fixed = INIT.fixedColours;
+  const find = (list, key) => key ? list.find(p => p.key === key) : null;
+  const V = i => ({ x: P[i][0], y: P[i][1] });
+  const head = V(J.Head), neck = V(J.Neck), pel = V(J.Pelvis);
+  let ux = head.x - neck.x, uy = head.y - neck.y; const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
+  const fx = -uy * facing, fy = ux * facing, hr = 6.5;
+  const headMap = (x, y) => [head.x + fx * x * hr + ux * y * hr, head.y + fy * x * hr + uy * y * hr];
+  const colOf = (c, main) => c === 0 ? main : c === 1 ? shade(main, 0.72) : c === 2 ? lighten(main) : fixed[c] || "#999";
+  const ink = { stroke: "rgba(20,20,20,.75)", "stroke-width": 0.8, "stroke-linejoin": "round" };
+  function shapes(list, map, unit, main, into) {
+    for (const sh of list || []) {
+      const p = sh.p, c = colOf(sh.c, main), pts = [];
+      const pt = (x, y) => pts.push(map(x, y).map(v => v.toFixed(2)).join(","));
+      if (sh.k === "l") { const a = map(p[0], p[1]), b = map(p[2], p[3]); into.append(s("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: c, "stroke-width": sh.w * unit, "stroke-linecap": "round" })); continue; }
+      if (sh.k === "c") { for (let i = 0; i + 1 < p.length; i += 2) pt(p[i], p[i + 1]); into.append(s("polyline", { points: pts.join(" "), fill: "none", stroke: c, "stroke-width": sh.w * unit, "stroke-linecap": "round" })); continue; }
+      if (sh.k === "r") { pt(p[0], p[1]); pt(p[2], p[1]); pt(p[2], p[3]); pt(p[0], p[3]); }
+      else if (sh.k === "o") { pt(p[0], p[1]); pt(p[2], p[1]); pt(p[2], p[3]); pt(p[0], p[3]); }
+      else if (sh.k === "e") { for (let i = 0; i < 16; i++) { const a = i * Math.PI * 2 / 16; pt(p[0] + Math.cos(a) * p[2], p[1] + Math.sin(a) * p[3]); } }
+      else if (sh.k === "p") { for (let i = 0; i + 1 < p.length; i += 2) pt(p[i], p[i + 1]); }
+      into.append(s("polygon", { points: pts.join(" "), fill: c, ...ink }));
+    }
+  }
+  const hair = find(LP.hair, look.hair), hat = find(LP.hat, look.hat);
+  // Behind: cape, long hair, hood.
+  if (look.back === "cape") {
+    const bx = -facing;
+    gBack.append(s("polygon", { points: `${neck.x + bx * 1.5},${neck.y} ${neck.x + bx * 4},${neck.y} ${pel.x + bx * 11},${pel.y + 9} ${pel.x + bx * 3},${pel.y + 11}`, fill: look.backColour, ...ink }));
+  }
+  if (hair) shapes(hair.back, headMap, hr, look.hairColour, gBack);
+  if (hat) shapes(hat.back, headMap, hr, look.hatColour, gBack);
+  if (look.hair === "ponytail") { const a = headMap(-0.95, 0.45); gBack.append(s("path", { d: `M${a[0]} ${a[1]} q${-facing * 3} 5 ${-facing * 2} 9`, stroke: look.hairColour, "stroke-width": 2.4, fill: "none", "stroke-linecap": "round" })); }
+  // Clothes on the body.
+  if (look.top) {
+    const w = look.top === "tank" ? 5.6 : 6.8;
+    gFront.append(s("line", { x1: neck.x, y1: neck.y + 1.2, x2: pel.x, y2: pel.y + 1.5, stroke: look.topColour, "stroke-width": w, "stroke-linecap": "round" }));
+    if (look.top !== "tank") {
+      const k = look.top === "hoodie" ? 1 : 0.55, e = V(J.ElbowN);
+      gFront.append(s("line", { x1: neck.x, y1: neck.y, x2: neck.x + (e.x - neck.x) * k, y2: neck.y + (e.y - neck.y) * k, stroke: look.topColour, "stroke-width": 5.6, "stroke-linecap": "round" }));
+    }
+  }
+  if (look.waist === "belt") gFront.append(s("line", { x1: pel.x - 2.8, y1: pel.y - 1.8, x2: pel.x + 2.8, y2: pel.y - 1.8, stroke: look.waistColour, "stroke-width": 1.8 }));
+  if (look.waist === "skirt") gFront.append(s("polygon", { points: `${pel.x - 2.6},${pel.y - 2.5} ${pel.x + 2.6},${pel.y - 2.5} ${pel.x + 7.5},${pel.y + 10} ${pel.x - 7.5},${pel.y + 10}`, fill: look.waistColour, ...ink }));
+  if (look.neck === "tie") gFront.append(s("polygon", { points: `${neck.x + facing * 0.6},${neck.y + 1.5} ${neck.x + facing * 2.2},${neck.y + 1.5} ${neck.x + facing * 2.6},${neck.y + 10} ${neck.x + facing * 1.4},${neck.y + 12}`, fill: look.neckColour }));
+  if (look.neck === "bowtie") gFront.append(s("polygon", { points: `${neck.x + facing},${neck.y + 1.2} ${neck.x + facing},${neck.y - 1} ${neck.x + facing * 1},${neck.y + 3.4}`, fill: look.neckColour, stroke: look.neckColour, "stroke-width": 2.2, "stroke-linejoin": "round" }));
+  if (look.neck === "scarf") gFront.append(s("line", { x1: neck.x - 2.2, y1: neck.y + 0.6, x2: neck.x + 2.2, y2: neck.y + 0.6, stroke: look.neckColour, "stroke-width": 2.6, "stroke-linecap": "round" }));
+  // Head pieces.
+  if (hair) shapes(hair.front, headMap, hr, look.hairColour, gFront);
+  shapes(find(LP.beard, look.beard)?.front, headMap, hr, look.hairColour, gFront);
+  shapes(find(LP.glasses, look.glasses)?.front, headMap, hr, hex, gFront);
+  if (hat) shapes(hat.front, headMap, hr, look.hatColour, gFront);
+  const shoe = find(LP.shoes, look.shoes);
+  if (shoe) for (const j of [J.FootF, J.FootN]) {
+    const f = V(j);
+    shapes(shoe.front, (x, y) => [f.x + x * facing - facing * 0.5, f.y - y + 1.2], 1, j === J.FootF ? shade(look.shoeColour, 0.8) : look.shoeColour, gFront);
+  }
 }
 
 // ---------------- routing ----------------
@@ -267,7 +330,7 @@ PAGES.cast = {
     return () => {
       for (const c of cards) {
         const f = fig(c.id); if (!f) continue;
-        c.svg.update(f.pose, f.hex);
+        c.svg.update(f.pose, f.hex, f.look, f.facing);
         c.name.textContent = f.name; c.dot.style.background = f.hex;
         c.act.textContent = f.activity;
         c.feels.textContent = f.feels;
@@ -325,7 +388,7 @@ PAGES.figure = {
     const sub = SUBPANELS[route.sub](panel, f);
     return () => {
       const f = fig(id); if (!f) return;
-      big.update(f.pose, f.hex);
+      big.update(f.pose, f.hex, f.look, f.facing);
       if (idle(name)) name.value = f.name;
       act.textContent = f.activity;
       feels.textContent = `${f.feels} · ${f.describe}`;
@@ -545,7 +608,7 @@ const SUBPANELS = {
     }
     drawCard(); paintSel();
     return f => {
-      centreFig.update(f.pose, f.hex);
+      centreFig.update(f.pose, f.hex, f.look, f.facing);
       for (const o of others) {
         const v = o.id === "you" ? f.fond : (f.rels.find(r => r.id === o.id) || { mine: 0 }).mine;
         const e = edges[o.id];
@@ -607,14 +670,47 @@ const SUBPANELS = {
     const sizeVal = h("span", { class: "val" });
     const size = range(0.4, 3, 0.05, f.size, v => sizeVal.textContent = Math.round(v * 100) + "%", v => send({ t: "fig", id, op: "size", v }));
     const gear = select(INIT.gear.map(g => ({ value: g.v, label: g.label })), f.gear, v => send({ t: "fig", id, op: "gear", v: +v }));
-    add(panel, h("h2", { style: { marginTop: 0 } }, "Look"),
+    const LP = INIT.lookParts;
+    const CLOTH = ["#E53935", "#1E88E5", "#43A047", "#FB8C00", "#8E24AA", "#FDD835", "#00ACC1", "#EC407A", "#2E2E2E", "#F4F4F4", "#6D4C41", "#283593"];
+    const HAIR = ["#2B1D16", "#3B2A20", "#6D4C2F", "#A86B32", "#D9B262", "#E8D9A8", "#B33A1F", "#9E9E9E", "#F2F2F2", "#5C6BC0", "#EC407A", "#43A047"];
+    const body = slot => LP.body.filter(b => b.slot === slot);
+    const SLOTS = [
+      ["hat", "Hat", LP.hat, "hatColour", CLOTH], ["hair", "Hair", LP.hair, "hairColour", HAIR], ["beard", "Facial hair", LP.beard, null, null],
+      ["glasses", "Glasses", LP.glasses, null, null], ["top", "Top", body("top"), "topColour", CLOTH], ["neck", "Neck", body("neck"), "neckColour", CLOTH],
+      ["waist", "Waist", body("waist"), "waistColour", CLOTH], ["back", "Back", body("back"), "backColour", CLOTH], ["shoes", "Shoes", LP.shoes, "shoeColour", CLOTH],
+    ];
+    const rows = SLOTS.map(([slot, label, parts, colKey, palette]) => {
+      const sel = select([{ value: "", label: "None" }, ...parts.map(p => ({ value: p.key, label: p.name }))], f.look[slot] || "", v => send({ t: "fig", id, op: "look", slot, v }));
+      let sw = null;
+      if (colKey) {
+        let cur = f.look[colKey];
+        const btns = palette.map(c => h("button", { class: "sw mini", title: c, style: { background: c }, onclick: () => { cur = c; touched(wrap); send({ t: "fig", id, op: "look", slot: colKey, v: c }); paint(); } }));
+        const wrap = h("div", { class: "swatches mini" }, btns);
+        const paint = () => btns.forEach((b, i) => b.classList.toggle("on", palette[i].toLowerCase() === (cur || "").toLowerCase()));
+        wrap.set = v => { if (idle(wrap)) { cur = v; paint(); } };
+        paint();
+        sw = wrap;
+      }
+      return { slot, colKey, sel, sw, el: h("div", { class: "field look-row" }, h("label", null, label), sel, sw || h("span")) };
+    });
+    add(panel, h("div", { class: "row" }, h("h2", { style: { margin: "0" } }, "Look"), h("span", { class: "spacer" }),
+        h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "rollLook" }) }, "🎲 New look"),
+        h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "plainLook" }) }, "Plain")),
+      h("p", { class: "sub" }, "Every figure gets an outfit that suits them. Mix and match: capes and ponytails swing as they move."),
+      rows.map(r => r.el),
+      h("h3", null, "Body"),
       h("div", { class: "field" }, h("label", null, "Size"), size, sizeVal),
       h("div", { class: "field" }, h("label", null, "On their hands"), gear, h("span")),
-      h("p", { class: "hint" }, "Colour is up top, next to their name."));
-    return f => { setRange(size, f.size); if (idle(size)) sizeVal.textContent = Math.round(f.size * 100) + "%"; gear.set(f.gear); };
+      h("p", { class: "hint" }, "Their main colour is up top, next to their name."));
+    return f => {
+      setRange(size, f.size); if (idle(size)) sizeVal.textContent = Math.round(f.size * 100) + "%"; gear.set(f.gear);
+      for (const r of rows) {
+        r.sel.set(f.look[r.slot] || "");
+        if (r.sw) { r.sw.set(f.look[r.colKey]); r.sw.style.visibility = f.look[r.slot] || (r.slot === "hair" && f.look.beard) ? "visible" : "hidden"; }
+      }
+    };
   },
 };
-
 function figMini() {
   const g = s("g", { transform: "translate(0 25) scale(0.74)" });
   const svg = figSvg();

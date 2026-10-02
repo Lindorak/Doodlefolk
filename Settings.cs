@@ -14,6 +14,7 @@ sealed class SavedFigure
     public float? Fondness { get; set; }
     public float? Trust { get; set; }
     public bool Hunter { get; set; }
+    public Look? Look { get; set; }
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();

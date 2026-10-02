@@ -154,7 +154,7 @@ sealed partial class Figure
         float pop = M.Smooth(e.T / 0.15f);
         float s = S * (0.6f + 0.4f * pop);
         Vector2 c = head + new Vector2(Facing * 5 * S, -(HeadR + 10 * S));
-        float w = MathF.Max(12, 4 + e.Text.Length * 6.5f) * s, h = 11 * s;
+        float w = MathF.Max(12, 5 + e.Text.Length * 5.6f) * s, h = 11 * s;
         var ink = new Color4(e.Ink.R, e.Ink.G, e.Ink.B, e.Ink.A * fade);
         r.RoundRect(c, w, h, 4 * s, new Color4(1, 1, 1, 0.95f * fade), new Color4(0.1f, 0.1f, 0.1f, 0.8f * fade), 1.1f * s);
         r.FillPolygon(stackalloc Vector2[] { c + new Vector2(-2 * s * Facing, h / 2 - 0.5f), c + new Vector2(2 * s * Facing, h / 2 - 0.5f), c + new Vector2(-3.5f * s * Facing, h / 2 + 4 * s) },

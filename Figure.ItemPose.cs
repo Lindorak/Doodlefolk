@@ -7,6 +7,9 @@ namespace StickFight;
 sealed partial class Figure
 {
     /// <summary>Front (or back) view seated pose. Joints are placed directly, eased from wherever they were.</summary>
+    /// <summary>Sitting on the floor (watching a video) rather than in a seat.</summary>
+    public bool FloorSit;
+
     void FrontPose(float dt)
     {
         bool back = Action == Act.SitBack;
@@ -22,6 +25,15 @@ sealed partial class Figure
         float swing = MathF.Max(0, MathF.Sin(_time * 1.4f + Id * 3)) * (back ? 0 : 1.5f * S);
         Vector2 kN = pel + new Vector2(5 * S, 2.5f * S), kF = pel + new Vector2(-5 * S, 2.5f * S);
         Vector2 fN = kN + new Vector2(1.5f * S + swing, Shin * 0.9f), fF = kF + new Vector2(-1.5f * S, Shin * 0.9f);
+        if (FloorSit)
+        {
+            // Sitting on the floor, cross-legged: hips down, knees out to the sides, feet tucked in.
+            pel = Base + new Vector2(0, -2.5f * S);
+            neck = pel + new Vector2(0, -Torso * 0.97f + br * 0.25f * S);
+            head = neck + new Vector2(look * 1.6f * S, -(HeadR + NeckGap) - 0.6f * S);
+            kN = pel + new Vector2(8 * S, 0.5f * S); kF = pel + new Vector2(-8 * S, 0.5f * S);
+            fN = Base + new Vector2(-2 * S, -0.8f * S); fF = Base + new Vector2(2 * S, -0.8f * S);
+        }
         Vector2 eN, eF, hN, hF;
         if (back)
         {

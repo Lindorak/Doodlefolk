@@ -22,6 +22,8 @@ sealed partial class Brain
                 G.Walk => _fleeing ? "Running away" : _purpose switch
                 {
                     WalkPurpose.Explore => "Exploring",
+                    WalkPurpose.Look => "Going to look at something on your screen",
+                    WalkPurpose.Watch => "Finding a spot to watch from",
                     WalkPurpose.Social => with != null ? $"Going to see {with}" : "Going to say hi",
                     WalkPurpose.Ball => "Going for the ball",
                     _ => _run ? "Running somewhere" : "Wandering",
@@ -52,6 +54,9 @@ sealed partial class Brain
                 G.CursorFight => "Boxing your cursor",
                 G.Revive => "Helping a friend up",
                 G.Hunt => "Hunting your cursor",
+                G.Groove => "Dancing to your music",
+                G.WatchScreen => "Watching your video",
+                G.LookAtScreen => _look?.Seen.Kind == SeenKind.Link ? "Showing you a link" : _look != null ? $"Reading \"{_look.Value.Seen.Text}\"" : "Reading your screen",
                 G.Sport => Match != null ? $"Playing {Match.Name} ({Match.ScoreText})" : "Playing",
                 G.UseItem => _item == null ? "Busy" : _verb switch
                 {

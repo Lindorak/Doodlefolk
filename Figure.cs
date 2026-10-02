@@ -235,9 +235,10 @@ sealed partial class Figure
 
     /// <summary>Jump with launch velocity <paramref name="v"/>. <paramref name="styled"/>: an ordinary
     /// jump (getting somewhere), so flip-happy figures may throw in a flip.</summary>
-    public void RequestJump(Vector2 v, float crouch = 0.13f, bool styled = false, bool flip = false)
+    public void RequestJump(Vector2 v, float crouch = 0.13f, bool styled = false, bool flip = false, [System.Runtime.CompilerServices.CallerMemberName] string by = "")
     {
         if (!Grounded || JumpPending) return;
+        if (World.TraceJumps) World.Log($"jump {Name}: v=({v.X:0},{v.Y:0}) facing {Facing} keep {KeepFacing} by {by}/{Brain.State} at ({Base.X:0},{Base.Y:0}) ground {(long)GroundHwnd}");
         _jumpVel = v;
         _crouchT = crouch;
         if (MathF.Abs(v.X) > 1 && !KeepFacing) Facing = MathF.Sign(v.X);

@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen,
     }
 
     readonly Figure f;
@@ -32,6 +32,8 @@ sealed partial class Brain
     public readonly Dictionary<int, float> Affinity = new();
 
     // ---- perception ----
+    /// <summary>Habituation to a jumpy cursor (0..0.6): every scare makes the next one less likely; fades over minutes.</summary>
+    float _usedToCursor;
     float _hoverT, _watchCd = 3, _swatCd, _startleCd, _waveCd = 5, _awayT = 100, _stillT, _nextLook, _scanT;
     Vector2? _idleLook;
     float _idleLookUntil;
@@ -45,10 +47,15 @@ sealed partial class Brain
     public string State => _partner != null ? $"{_g} ({_partner.Name})" : _foe != null && _g == G.Fight ? $"{(_spar ? "Spar" : "Fight")} ({_foe.Name})" : _fleeing ? "Flee" : _g.ToString();
     public bool Asleep => _g == G.Sleep;
 
-    void Go(G g, float dur)
+    /// <summary>Debug: log this figure's goal changes (and who caused them) for a while.</summary>
+    public float TraceUntil;
+
+    void Go(G g, float dur, [System.Runtime.CompilerServices.CallerMemberName] string by = "")
     {
+        if (_t0 < TraceUntil) World.Log($"trace {f.Name}: {_g} -> {g} ({dur:0.0}s) by {by}");
         _snub = false;
         f.AimAt = null;
+        f.FloorSit = false;
         if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
         if (g != G.Walk) _itemPending = false;
         if (_g == G.Sport && g != G.Sport && Match != null && !(g == G.Walk && _toMatch)) LeaveMatch();
@@ -186,6 +193,7 @@ sealed partial class Brain
     {
         _t += dt;
         _t0 += dt;
+        _usedToCursor = MathF.Max(0, _usedToCursor - dt * 0.003f);
         _watchCd -= dt; _swatCd -= dt; _witnessCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
 
@@ -309,6 +317,9 @@ sealed partial class Brain
             case G.Sport: DoSport(w); break;
             case G.Revive: DoRevive(w); break;
             case G.DanceWith: DoDanceWith(w); break;
+            case G.Groove: DoGroove(w); break;
+            case G.WatchScreen: DoWatchScreen(w); break;
+            case G.LookAtScreen: DoLookAtScreen(w); break;
             case G.Victory:
                 f.SetAction(Act.Cheer);
                 KeepSpace(w);
@@ -395,10 +406,13 @@ sealed partial class Brain
             }
             return false;
         }
-        if (_startleCd <= 0 && dist < 170 * S && cspeed > 1600 * S)
+        // A fast cursor coming straight at them makes them jump; one just whizzing past doesn't. They get used to it.
+        Vector2 toMe = f.Base - new Vector2(0, f.Height * 0.5f) - cur;
+        float coming = cspeed > 1 && toMe.LengthSquared() > 1 ? Vector2.Dot(Vector2.Normalize(w.CursorVel), Vector2.Normalize(toMe)) : 0;
+        if (_startleCd <= 0 && dist < 160 * S && cspeed > 2400 * S && coming > 0.55f)
         {
-            _startleCd = 2.5f;
-            if (rng.NextDouble() > P.Bravery * 0.8f) { Startle(cur); return true; }
+            _startleCd = 5;
+            if (rng.NextDouble() > P.Bravery * 0.8f + _usedToCursor) { Startle(cur); return true; }
         }
         if (_hoverT > 1.0f && _swatCd <= 0)
         {
@@ -546,13 +560,25 @@ sealed partial class Brain
     {
         float away = -MathF.Sign(cur.X - f.Base.X);
         if (away == 0) away = -f.Facing;
+        bool jumpy = Fear > 0.3f || P.Bravery < 0.45f;
+        _usedToCursor = MathF.Min(0.6f, _usedToCursor + 0.15f);
+        if (!jumpy || !f.Grounded)
+        {
+            // Just a flinch: duck and lean away.
+            f.DuckT = 0.45f;
+            f.Facing = (int)-away;
+            f.Emote("!", 0.8f);
+            Fear = MathF.Max(Fear, 0.4f);
+            Go(G.Idle, 1.2f);
+            return;
+        }
         Go(G.Startled, 3);
         Fear = 0.9f;
         f.Emote("!", 0.9f);
         f.Facing = (int)-away;
         f.KeepFacing = true;
         f.Flailing = true;
-        f.RequestJump(new Vector2(away * 140 * S, -620 * S), 0.03f);
+        f.RequestJump(new Vector2(away * 100 * S, -480 * S), 0.03f);
     }
 
     void RunFromCursor(World w, Vector2 cur)
@@ -601,6 +627,7 @@ sealed partial class Brain
         if (HuntOption(w) is { } hunt) opts.Add(hunt);
         if (ItemOption(w) is { } useItem) opts.Add(useItem);
         if (SportOption(w) is { } sport) opts.Add(sport);
+        ScreenOptions(w, opts);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);

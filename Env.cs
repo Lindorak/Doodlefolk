@@ -15,6 +15,8 @@ sealed class Platform
     public float Bounce;
     /// <summary>Set when this is part of an object (a seat, a mattress, a table top).</summary>
     public Item? Item;
+    /// <summary>Set when this is a line of text or the top of a picture inside a window.</summary>
+    public Seen? Seen;
 }
 
 /// <summary>The visible part of a window's left (Side = -1) or right (Side = +1) edge. Climbable;
@@ -199,6 +201,64 @@ sealed class Env
         }
         foreach (var k in _items.Keys.Where(k => !seen.Contains(k)).ToList()) _items.Remove(k);
     }
+
+    /// <summary>Text lines and picture tops in windows that have been read become ledges (only where nothing covers them).</summary>
+    public void AddScreenSurfaces(IReadOnlyList<ScreenSnap> snaps)
+    {
+        foreach (var s in snaps)
+        {
+            int z = _wins.FindIndex(w => w.hwnd == s.Hwnd);
+            if (z < 0) continue;
+            var r = _wins[z].rect;
+            if (r.Width != s.Win.Width || r.Height != s.Win.Height) continue;   // resized: wait for a fresh reading
+            float ox = r.Left - s.Win.Left, oy = r.Top - s.Win.Top, dy = Delta(s.Hwnd).Y;
+            int mon = MonitorAt(r.Left + r.Width / 2f, MathF.Max(r.Top, Virtual.Top));
+            if (mon < 0) continue;
+            float lastY = float.NaN;
+            foreach (var t in s.Things)
+            {
+                if (t.Kind is not (SeenKind.Line or SeenKind.Image)) continue;
+                float y = MathF.Round(t.Rect.Top + oy);
+                if (y < MonBounds[mon].Top + 70 || y > MonWork[mon].Bottom - 12 || y < r.Top + 24) continue;
+                // Lines that wrap a paragraph come in pairs at nearly the same height; one ledge is enough.
+                if (MathF.Abs(y - lastY) < 3 && t.Kind == SeenKind.Line) continue;
+                lastY = y;
+                _spans.Clear();
+                _spans.Add((t.Rect.Left + ox, t.Rect.Right + ox));
+                for (int j = 0; j < z && _spans.Count > 0; j++)
+                {
+                    var o = _wins[j].rect;
+                    if (o.Top <= y && o.Bottom > y) Subtract(o.Left, o.Right);
+                }
+                foreach (var (a, b) in _spans)
+                    if (b - a >= 24)
+                        Platforms.Add(new Platform { Hwnd = s.Hwnd, Y = y, PrevY = y - dy, X1 = a, X2 = b, Seen = t });
+            }
+        }
+    }
+
+    /// <summary>Where a window is now relative to where it was when it was read.</summary>
+    public Vector2 SnapOffset(ScreenSnap s) =>
+        _rects.TryGetValue(s.Hwnd, out var r) && r.Width == s.Win.Width && r.Height == s.Win.Height
+            ? new(r.Left - s.Win.Left, r.Top - s.Win.Top) : new(float.NaN, float.NaN);
+
+    /// <summary>Whether a window is still around and how much of a screen rectangle in it isn't covered by other windows (0..1).</summary>
+    public float Visible(IntPtr hwnd, RectangleF rect)
+    {
+        int z = _wins.FindIndex(w => w.hwnd == hwnd);
+        if (z < 0 || rect.Width <= 0) return 0;
+        _spans.Clear();
+        _spans.Add((rect.Left, rect.Right));
+        float cy = rect.Top + rect.Height / 2;
+        for (int j = 0; j < z && _spans.Count > 0; j++)
+        {
+            var o = _wins[j].rect;
+            if (o.Top <= cy && o.Bottom > cy) Subtract(o.Left, o.Right);
+        }
+        return _spans.Sum(s => s.b - s.a) / rect.Width;
+    }
+
+    public RECT? RectOf(IntPtr hwnd) => _rects.TryGetValue(hwnd, out var r) ? r : null;
 
     /// <summary>How far a window moved since the previous refresh.</summary>
     public Vector2 Delta(IntPtr hwnd)

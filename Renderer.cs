@@ -189,6 +189,7 @@ sealed class Renderer : IDisposable
             fmt = _dwrite.CreateTextFormat("Segoe UI", null, FontWeight.Black, Vortice.DirectWrite.FontStyle.Normal, FontStretch.Normal, key, "en-us");
             fmt.TextAlignment = TextAlignment.Center;
             fmt.ParagraphAlignment = ParagraphAlignment.Center;
+            fmt.WordWrapping = WordWrapping.NoWrap;   // centred; longer phrases simply spill wider than the layout box
             _fonts[key] = fmt;
         }
         _brush.Color = c;

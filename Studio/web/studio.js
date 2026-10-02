@@ -1011,6 +1011,12 @@ PAGES.settings = {
       check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
       check("Hide the figures", "Pauses everything until you turn it back off.", () => st().hidden, v => setS("hidden", v)),
     ];
+    const screen = [
+      check("Stand on text", "Lines of text and pictures in the window you're using become ledges they can walk, sit and land on.", () => st().screenTerrain, v => setS("screenTerrain", v)),
+      check("React to words", "They wander over to words they know (pizza, cats, spiders...) and love them, hate them, or run.", () => st().screenReact, v => setS("screenReact", v)),
+      check("Point out links", "Now and then one shows you a link in a bubble. It only opens if you click the bubble.", () => st().screenLinks, v => setS("screenLinks", v)),
+      check("Music and videos", "Dance when an app plays music; sit down and watch when a video is on.", () => st().screenMedia, v => setS("screenMedia", v)),
+    ];
     add(root, h("h1", null, "Settings"),
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
       h("div", { class: "row" }, chips),
@@ -1018,6 +1024,9 @@ PAGES.settings = {
       h("h2", null, "Sound"), soundC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,
+      h("h2", null, "Your screen"),
+      h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
+      screen,
       h("h2", null, "About"),
       h("p", null, `StickFight ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
       h("div", { class: "row" },
@@ -1030,6 +1039,7 @@ PAGES.settings = {
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
       soundC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
+      screen.forEach(c => c.update());
     };
   },
 };

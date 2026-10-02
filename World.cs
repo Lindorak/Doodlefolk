@@ -31,7 +31,7 @@ sealed partial class World
     public float HitStop;
     /// <summary>Accumulated shove for the mouse cursor (figures punching it); applied by the app.</summary>
     public Vector2 CursorPush;
-    public static bool Debug;
+    public static bool Debug, TraceJumps;
 
     public World() => Current = this;
 

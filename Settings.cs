@@ -49,6 +49,11 @@ sealed class Settings
     public string Theme { get; set; } = "auto";
     public bool SoundOn { get; set; } = true;
     public float SoundVolume { get; set; } = 0.55f;
+    /// <summary>Screen awareness (all read on this PC only; nothing is saved or sent).</summary>
+    public bool ScreenTerrain { get; set; } = true;
+    public bool ScreenReact { get; set; } = true;
+    public bool ScreenLinks { get; set; } = true;
+    public bool ScreenMedia { get; set; } = true;
     public FightSettings Fight { get; set; } = new();
     public List<SavedFigure> Figures { get; set; } = new();
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>

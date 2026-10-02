@@ -53,6 +53,24 @@ sealed partial class App
         return $"Drew {(sz.Length > 0 || colour != null ? "a " : def.Article + " ")}{sz}{def.Name.ToLowerInvariant()}.";
     }
 
+    double _nextTidy;
+
+    /// <summary>Games hand out rackets; spare ones left lying around get tidied away (a couple of each are kept).</summary>
+    void TidyGear(double now)
+    {
+        if (now < _nextTidy) return;
+        _nextTidy = now + 4;
+        foreach (var key in new[] { "racket", "badmintonracket" })
+        {
+            var spare = _w.Items.Where(i => i.Def.Key == key && i.Holder == null && i.User == null && i != _pressItem).ToList();
+            foreach (var it in spare.Skip(2).Take(3))
+            {
+                _w.Fx.Dust(it.Pos, _w.Scale, 6, 0.5f, _w.Rng);
+                _w.RemoveItem(it);
+            }
+        }
+    }
+
     void GrabItem(Item it)
     {
         foreach (var f in _w.Figures) f.Brain.OnItemGone(it);   // anyone using it gets dumped off
@@ -77,7 +95,8 @@ sealed partial class App
         foreach (var it in _w.Items) if (it.Holder == null && Dirty(it.Bounds())) it.Draw(_r, over, t);
     }
 
-    List<SavedItem> SaveItems() => _w.Items.Where(i => i.Holder == null && i.BitesLeft == i.Def.Bites)
+    // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
+    List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites)
         .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip }).ToList();
 
     void RestoreItems(List<SavedItem> items)

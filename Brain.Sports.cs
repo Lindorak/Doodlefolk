@@ -38,7 +38,8 @@ sealed partial class Brain
         bool free = f.Mode == Mode.Control && f.Grounded && Match == null && !InFight && f.Carrying == null &&
                     _g is G.Idle or G.Watch or G.Walk or G.SitFloor or G.Juggle or G.Dribble;
         if (!free) return false;
-        float yes = 0.15f + P.Playfulness * 0.4f + P.Sociability * 0.2f + f.Tastes.Of(Thing.PlayingBall) * 0.35f + AffinityWith(from) * 0.3f - Annoyance * 0.5f - (1 - Stamina) * 0.4f;
+        float yes = 0.15f + P.Playfulness * 0.4f + P.Sociability * 0.2f + f.Tastes.Of(Thing.PlayingBall) * 0.35f + AffinityWith(from) * 0.3f - Annoyance * 0.5f - (1 - Stamina) * 0.4f
+                    - (_g == G.Walk && _purpose is WalkPurpose.Look or WalkPurpose.Watch ? 0.6f : 0);   // busy going to see something
         if (rng.NextDouble() < yes) { f.Emote(rng.NextDouble() < 0.5 ? "!" : "♪", 0.9f); return true; }
         f.Emote("…", 0.8f);
         return false;
@@ -102,9 +103,13 @@ sealed partial class Brain
         _kickAt = -1;
         _shotSpot = null;
         _dunking = _serving = false;
-        if (m.Kind is Sport.Tennis or Sport.Badminton && f.Weapon?.Def.Key is not ("racket" or "badmintonracket") && w.MakeItem != null)
+        string key = m.Kind == Sport.Tennis ? "racket" : "badmintonracket";
+        if (m.Kind is Sport.Tennis or Sport.Badminton && f.Weapon?.Def.Key != key)
         {
-            var r = w.MakeItem(m.Kind == Sport.Tennis ? "racket" : "badmintonracket");
+            // Use a spare racket lying around before conjuring a new one (so they don't pile up).
+            var spare = w.Items.Where(i => i.Def.Key == key && i.Holder == null && i.User == null && Vector2.Distance(i.Pos, f.Base) < 2500 * S)
+                               .OrderBy(i => Vector2.Distance(i.Pos, f.Base)).FirstOrDefault();
+            var r = spare ?? w.MakeItem?.Invoke(key);
             if (r != null) f.Equip(r);
         }
         else if (m.Kind is Sport.Soccer or Sport.Basketball) f.DropWeapon(Vector2.Zero);

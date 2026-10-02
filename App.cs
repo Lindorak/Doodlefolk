@@ -72,6 +72,7 @@ sealed partial class App : ApplicationContext
             _w.Sound.SetScreen(_w.Env.Virtual.Left, _w.Env.Virtual.Width);
         }
         catch (Exception e) { World.Log($"sound init failed: {e.Message}"); }
+        InitScreen();
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
@@ -194,6 +195,8 @@ sealed partial class App : ApplicationContext
         UpdateCursor(now);
         foreach (var it in _w.Items) it.ApplyCarry(_w.Env);
         _w.Env.AddItemSurfaces(_w.Items);
+        ScreenFrame();
+        TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
 
@@ -319,7 +322,8 @@ sealed partial class App : ApplicationContext
         var hitProp = HitProp(c);
         var (fig, _) = hitProp == null ? HitTest(c) : (null, -1);
         _w.Hover = _dragging ? null : fig;
-        _overlay.SetClickThrough(fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
+        _overlay.SetClickThrough(_w.Offer?.Hot != true && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -345,6 +349,7 @@ sealed partial class App : ApplicationContext
 
     void OnMouseDown(object? sender, MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Left && OfferHit(_w.Cursor)) { TakeOffer(); return; }
         if (HitProp(_w.Cursor) is { } prop)
         {
             if (e.Button == MouseButtons.Left)
@@ -422,6 +427,7 @@ sealed partial class App : ApplicationContext
             if (srx > 0) _regNow.Add(ToRect(RectangleF.FromLTRB(sc.X - srx, sc.Y - sry, sc.X + srx, sc.Y + sry)));
         }
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
+        if (OfferRect() is RectangleF ofr) _regNow.Add(ToRect(ofr));
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
         _regAll.Clear();
@@ -478,6 +484,7 @@ sealed partial class App : ApplicationContext
         foreach (var pr in _w.Projectiles) if (Dirty(pr.Bounds())) pr.Draw(_r);
         foreach (var m in _w.Matches) if (Dirty(m.Bounds())) m.Draw(_r);
         foreach (var p in _w.Props) if (Dirty(p.Bounds(_w.Env))) p.Draw(_r);
+        DrawOffer();
     }
 
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
@@ -507,7 +514,8 @@ sealed partial class App : ApplicationContext
         {
             // Room for the emote bubble (or rising z's) above the head.
             Vector2 h = f.Jt[J.Head];
-            r = RectangleF.Union(r, RectangleF.FromLTRB(h.X - 30 * f.S, h.Y - f.HeadR - 32 * f.S, h.X + 30 * f.S, h.Y));
+            float half = MathF.Max(30, 12 + f.CurrentEmote.Length * 3.2f) * f.S;
+            r = RectangleF.Union(r, RectangleF.FromLTRB(h.X - half, h.Y - f.HeadR - 32 * f.S, h.X + half, h.Y));
         }
         if (Shadow(f, out var c, out float rx, out float ry, out _))
             r = RectangleF.Union(r, RectangleF.FromLTRB(c.X - rx, c.Y - ry, c.X + rx, c.Y + ry));
@@ -916,6 +924,26 @@ sealed partial class App : ApplicationContext
                     Figure.SkipLooks = p[1] is "looks" or "all";
                     _skipItems = p[1] is "items" or "all";
                     break;
+                case "screen": World.Log(ScreenReport()); break;
+                case "tracejumps": World.TraceJumps = !World.TraceJumps; break;
+                case "fakemedia":
+                    // fakemedia music|video <hwnd> [seconds]
+                    if (_w.Screen != null)
+                    {
+                        double secs = p.Length >= 4 ? double.Parse(p[3], inv) : p.Length >= 3 && p[1] == "music" ? double.Parse(p[2], inv) : 60;
+                        _w.Screen.Pretend(p[1] == "video" ? new MediaNow(false, true, (IntPtr)long.Parse(p[2], inv), 0.6f, 0) : new MediaNow(true, false, IntPtr.Zero, 0.6f, 0), secs);
+                    }
+                    break;
+                case "screengo":
+                    // screengo <name> word|link|watch|groove
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sgf) World.Log($"screengo {sgf.Name}: {sgf.Brain.ForceScreen(_w, p[2])}");
+                    break;
+                case "props":
+                    World.Log($"props ({_w.Props.Count}, saved {_settings.Props.Count}): " + string.Join("; ", _w.Props.Select(pr => $"{pr.Kind}#{pr.Id}@({pr.Pos.X:0},{pr.Pos.Y:0}) v=({pr.Vel.X:0},{pr.Vel.Y:0}) holder={pr.Holder?.Name}")) + $" | virtual {_w.Env.Virtual}");
+                    break;
+                case "state":
+                    World.Log("state: " + string.Join("; ", _w.Figures.Select(f => $"{f.Name}@({f.Base.X:0},{f.Base.Y:0}) {f.Brain.Activity} [{f.CurrentEmote}]")));
+                    break;
                 case "sfxpeaks": World.Log("sfx peaks: " + _w.Sound?.Peaks()); break;
                 case "sfx":
                     if (p.Length >= 2 && Enum.TryParse<Sfx>(p[1], true, out var sx)) _w.Sound?.Play(sx, _w.Cursor, 0.8f);
@@ -1029,6 +1057,7 @@ sealed partial class App : ApplicationContext
             _overlay.Dispose();
             World.Log("dispose: overlay");
             _w.Sound?.Dispose();
+            _w.Screen?.Dispose();
         }
         base.Dispose(disposing);
     }

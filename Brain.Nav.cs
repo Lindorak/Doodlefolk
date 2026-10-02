@@ -25,7 +25,7 @@ readonly struct Anchor
 sealed partial class Brain
 {
     enum Nav { Direct, ToTakeoff, InAir, ToWall, ToThrow, Climbing }
-    enum WalkPurpose { Wander, Explore, Social, Ball, Other }
+    enum WalkPurpose { Wander, Explore, Social, Ball, Other, Look, Watch }
 
     Func<Vector2?> _navTarget = () => null;
     Action _onArrive = () => { };
@@ -87,8 +87,9 @@ sealed partial class Brain
                 var tp = env.SupportAt(t.X, t.Y, IntPtr.Zero) ?? env.Below(t.X, t.Y - 4 * S);
                 if (tp != null && !SameSegment(tp, seg))
                 {
-                    if (_hops >= 4 || !PlanHop(env, seg, tp, M.ClampIn(t.X, tp.X1 + 10 * S, tp.X2 - 10 * S), true))
+                    if (_hops >= 16 || !(PlanHop(env, seg, tp, M.ClampIn(t.X, tp.X1 + 10 * S, tp.X2 - 10 * S), true) || PlanVia(env, seg, tp, t.X)))
                     {
+                        if (_t0 < TraceUntil) World.Log($"trace {f.Name}: no route from y={seg.Y:0} [{seg.X1:0}..{seg.X2:0}] to y={tp.Y:0} [{tp.X1:0}..{tp.X2:0}] target {t} hops {_hops}");
                         f.Emote("?", 1);
                         Go(G.Idle, 1);
                     }
@@ -151,9 +152,10 @@ sealed partial class Brain
 
     /// <summary>Plan one hop from <paramref name="seg"/> to platform <paramref name="tp"/>, landing near x:
     /// a jump if one is possible, otherwise climbing one of the target window's edges.</summary>
-    bool PlanHop(Env env, Platform seg, Platform tp, float landX, bool commit)
+    bool PlanHop(Env env, Platform seg, Platform tp, float landX, bool commit, float? fromX = null)
     {
-        float side = MathF.Sign(landX - f.Base.X);
+        float baseX = fromX ?? f.Base.X;
+        float side = MathF.Sign(landX - baseX);
         if (side == 0) side = 1;
         float tk = M.ClampIn(landX - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
         if (SolveJump(new(tk, seg.Y), new(landX, tp.Y), out _))
@@ -176,7 +178,7 @@ sealed partial class Brain
             float x = wall.X + wall.Side * f.ClimbStandOffset;
             if (x < seg.X1 + 4 * S || x > seg.X2 - 4 * S) continue;
             if (env.SupportAt(wall.X - wall.Side * 9 * S, wall.Y1, wall.Hwnd) is not { } top || top.Hwnd != wall.Hwnd) continue;
-            float d = MathF.Abs(x - f.Base.X);
+            float d = MathF.Abs(x - baseX);
             if (d < bestD) { best = wall; bestX = x; bestD = d; }
         }
         if (best == null) return false;
@@ -202,6 +204,44 @@ sealed partial class Brain
     bool _forceGrapple;
 
     bool CanReach(Env env, Platform seg, Platform tp, float x) => PlanHop(env, seg, tp, x, false);
+
+    /// <summary>No single jump or climb gets there: search a few hops ahead (ledges, text lines, window tops, the
+    /// floor) and head for the first step of the shortest route.</summary>
+    bool PlanVia(Env env, Platform seg, Platform goal, float goalX)
+    {
+        var nodes = env.Platforms.Where(p => p.X2 - p.X1 >= 24 * S && !SameSegment(p, seg)).ToList();
+        if (nodes.Count > 220) return false;
+        var from = new Dictionary<Platform, (Platform prev, float x)>();
+        var queue = new Queue<(Platform p, float x, int depth)>();
+        queue.Enqueue((seg, f.Base.X, 0));
+        int expanded = 0;
+        while (queue.Count > 0 && expanded++ < 70)
+        {
+            var (a, ax, depth) = queue.Dequeue();
+            if (depth >= 4) continue;
+            foreach (var b in nodes)
+            {
+                if (b == a || from.ContainsKey(b)) continue;
+                // Land as near the goal as possible, or failing that as near as possible to where we are (drops).
+                float x = M.ClampIn(goalX, b.X1 + 10 * S, b.X2 - 10 * S);
+                if (!PlanHop(env, a, b, x, false, ax))
+                {
+                    x = M.ClampIn(M.ClampIn(goalX, a.X1, a.X2), b.X1 + 10 * S, b.X2 - 10 * S);
+                    if (!PlanHop(env, a, b, x, false, ax)) continue;
+                }
+                from[b] = (a, x);
+                if (SameSegment(b, goal) || b == goal)
+                {
+                    // Walk the route back to its first step and take it.
+                    var step = b;
+                    while (from[step].prev != seg) step = from[step].prev;
+                    return PlanHop(env, seg, step, from[step].x, true);
+                }
+                queue.Enqueue((b, x, depth + 1));
+            }
+        }
+        return false;
+    }
 
     bool CanReachByJump(Env env, Platform seg, Platform tp, float x)
     {

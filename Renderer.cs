@@ -36,7 +36,7 @@ sealed class Renderer : IDisposable
             Vortice.Direct3D.FeatureLevel.Level_10_1, Vortice.Direct3D.FeatureLevel.Level_10_0,
         };
         // No usable graphics card (a virtual machine, remote desktop, a build server): Windows' software renderer.
-        if (D3D11.D3D11CreateDevice((IDXGIAdapter?)null, DriverType.Hardware, DeviceCreationFlags.BgraSupport, levels, out _d3d!).Failure)
+        if (ForceWarp || D3D11.D3D11CreateDevice((IDXGIAdapter?)null, DriverType.Hardware, DeviceCreationFlags.BgraSupport, levels, out _d3d!).Failure)
             D3D11.D3D11CreateDevice((IDXGIAdapter?)null, DriverType.Warp, DeviceCreationFlags.BgraSupport, levels, out _d3d!).CheckError();
         _dxgi = _d3d.QueryInterface<IDXGIDevice>();
         using (var d1 = _d3d.QueryInterface<IDXGIDevice1>()) d1.MaximumFrameLatency = 1;
@@ -199,11 +199,14 @@ sealed class Renderer : IDisposable
         Regions += rects.Count;
 
         if (!Headless) _swap.Present1(SyncInterval, PresentFlags.None, new PresentParameters { DirtyRectangles = rects.ToArray() });
+        else _d3d.ImmediateContext.Flush();   // nothing presents, so make sure the queued work runs (the software renderer never would)
     }
 
     /// <summary>Draw but never show (the self-test): Windows throttles presents to a hidden window to a few a second,
     /// which would starve the sped-up simulation.</summary>
     public bool Headless;
+    /// <summary>Software rendering only (--warp: what a machine without a GPU, like CI, gets).</summary>
+    public static bool ForceWarp;
 
     /// <summary>Profiling: time spent drawing (not presenting) and regions drawn, since last reset.</summary>
     public double DrawMs;

@@ -47,6 +47,7 @@ sealed partial class App : ApplicationContext
     {
         _debug = args.Contains("--debug");
         _selfTest = args.Contains("--selftest");
+        Renderer.ForceWarp = args.Contains("--warp");
         _cardArt = args.Contains("--cardart");
         _trailer = args.Contains("--trailer") || _cardArt;
         World.Debug = _debug;

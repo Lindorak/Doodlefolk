@@ -204,14 +204,14 @@ sealed partial class App
             Check("moon gravity makes things lighter", World.GravityMul < 0.5f && _w.Figures.All(f => f.Gravity < 1000 * f.S));
         });
         At(652, "toybox over", () => { SetGravity("normal"); Check("gravity goes back to normal", World.GravityMul == 1); });
-        At(660, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });
-        At(671, "remembered", () =>
+        At(654, "pass away", () => { _memoName = Fig(0)?.Name ?? ""; Fig(0)?.PassAway(_w); });
+        At(672, "remembered", () =>
         {
             Check("someone who dies is remembered (headstone and memorial)", _settings.Memorials.Any(m => m.Name == _memoName)
                   && _w.Items.Any(i => i.Def.Key == "memorial" && i.Label == _memoName) && !_w.Figures.Any(f => f.Name == _memoName), _memoName);
             if (_settings.Memorials.LastOrDefault() is { } m) GhostOf(m);
         });
-        At(673, "ghost", () => Check("their ghost can come back to visit", _w.Figures.Any(f => f.Spirit && f.Name == _memoName)));
+        At(676, "ghost", () => Check("their ghost can come back to visit", _w.Figures.Any(f => f.Spirit && f.Name == _memoName)));
         At(680, "mass removal", () => { foreach (var f in _w.Figures.ToList()) _w.RemoveFigure(f); });
         At(690, "empty world", () => Check("an event ends when everyone's gone", _w.Happening == null));
         At(695, "done", FinishSelfTest);

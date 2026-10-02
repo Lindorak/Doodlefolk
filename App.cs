@@ -1198,6 +1198,11 @@ sealed partial class App : ApplicationContext
                     break;
                 case "story": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } storyF) World.Log("story: " + storyF.Brain.DebugStory(_w)); break;
                 case "items": World.Log("items: " + string.Join("; ", _w.Items.Select(i => $"{i.Def.Key}@({i.Pos.X:0},{i.Pos.Y:0}){(i.Growth > 0 ? $" g={i.Growth:0.00}" : "")}"))); break;
+                case "realwx":
+                    // realwx <place...> | realwx off <mode>
+                    if (p.Length > 2 && p[1] == "off") { _settings.WeatherMode = p[2]; _settings.WeatherPlace = ""; _settings.WeatherLat = _settings.WeatherLon = null; RealWeatherStatus = ""; }
+                    else SetWeatherPlace(string.Join(' ', p.Skip(1)));
+                    break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;

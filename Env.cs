@@ -57,6 +57,7 @@ sealed class Env
 
     public void RefreshMonitors()
     {
+        if (Staged != null) return;   // a pretend desktop (trailer, self-test) keeps its own screen
         var screens = Screen.AllScreens;
         MonBounds = screens.Select(s => s.Bounds).ToArray();
         MonWork = screens.Select(s => s.WorkingArea).ToArray();

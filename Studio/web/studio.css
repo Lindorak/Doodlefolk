@@ -456,3 +456,14 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .tour, .tab.tour-here { animation: none; } }
 
 .focus-timer { font: 34px var(--scrawl); color: var(--accent-ink); margin: 10px 0 4px; min-height: 40px; }
+
+/* Photo album */
+.album { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 10px; }
+.album-month { grid-column: 1 / -1; margin: 10px 0 0; }
+.photo { margin: 0; position: relative; background: var(--card, transparent); border: 1.5px solid var(--faint); border-radius: 10px; padding: 8px; transform: rotate(-0.4deg); }
+.photo:nth-child(even) { transform: rotate(0.5deg); }
+.photo img { width: 100%; display: block; border-radius: 4px; cursor: zoom-in; }
+.photo figcaption { font-size: 13px; margin-top: 6px; line-height: 1.3; }
+.photo .photo-tools { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.photo:hover .photo-tools, .photo.starred .photo-tools { opacity: 1; }
+.starred-only .photo:not(.starred) { display: none; }

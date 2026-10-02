@@ -78,7 +78,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseDown += OnMouseDown;
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
-        if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; }
+        if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; SelfTestStage(); }
         if (_trailer) { _tray.Visible = false; TrailerStage(); }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
@@ -111,6 +111,7 @@ sealed partial class App : ApplicationContext
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
         _w.RareSeen = RareSeen;
+        _w.OnMilestone = OnMilestone;
         _w.CrateDelivered = _ => { _settings.CratesWaiting = Math.Max(0, _settings.CratesWaiting - 1); };
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
@@ -366,6 +367,7 @@ sealed partial class App : ApplicationContext
         }
         if (!drew) Thread.Sleep(15);
         _tRender += Stopwatch.GetElapsedTime(tr1).TotalMilliseconds;
+        AlbumFrame(now);
 
         _frames++;
         if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _msDraw = _r.DrawMs / _frames; _regionsPerFrame = _r.Regions / (float)_frames; _r.DrawMs = 0; _r.Regions = 0; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
@@ -1328,6 +1330,7 @@ sealed partial class App : ApplicationContext
                     _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
                     break;
                 }
+                case "album": World.Log("album: " + TakeAlbumPhoto("snapshot", p.Length > 1 ? string.Join(' ', p.Skip(1)) : "A debug snapshot", _w.Figures.ToList(), _w.Pets.ToList())); break;
                 case "snappet":
                 {
                     // snappet <name or kind> [zoom]: one animal, close up, on paper.

@@ -204,8 +204,19 @@ sealed class StudioWindow : Form
 
     void Serve(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        string path = new Uri(e.Request.Uri).AbsolutePath.TrimStart('/');
+        string path = Uri.UnescapeDataString(new Uri(e.Request.Uri).AbsolutePath.TrimStart('/'));
         if (path == "") path = "index.html";
+        // Album photos: only a plain file name, only pictures, only from the album folder.
+        if (path.StartsWith("album/"))
+        {
+            string name = path[6..], full = Path.Combine(App.AlbumDir, name);
+            var envA = _web.CoreWebView2.Environment;
+            if (name != Path.GetFileName(name) || !name.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || !File.Exists(full))
+            { e.Response = envA.CreateWebResourceResponse(null, 404, "Not found", ""); return; }
+            var img = new MemoryStream(File.ReadAllBytes(full));
+            e.Response = envA.CreateWebResourceResponse(img, 200, "OK", "Content-Type: image/png\nCache-Control: max-age=3600");
+            return;
+        }
         var stream = Asm.GetManifestResourceStream("studio/" + path);
         var env = _web.CoreWebView2.Environment;
         if (stream == null) { e.Response = env.CreateWebResourceResponse(null, 404, "Not found", ""); return; }

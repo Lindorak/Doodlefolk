@@ -25,6 +25,9 @@ sealed partial class App
 
     const double TestSpeed = 6;
 
+    string _albumFile = "";
+    double _perfAt = 5;
+
     void Check(string name, bool pass, string detail = "")
     {
         _checks.Add((name, pass, detail));
@@ -32,6 +35,19 @@ sealed partial class App
     }
 
     /// <summary>Before anything starts: quiet, offline, nothing of yours touched; and a test mod to load.</summary>
+    /// <summary>A fixed pretend desktop (1920×1080 at scale 1, three windows and a taskbar), so the checks give the
+    /// same answers whatever's open (and whatever the screen size) on the machine running them.</summary>
+    void SelfTestStage()
+    {
+        _r.Headless = true;
+        _w.Scale = 1;
+        _w.Env.MinHeadroom = 75;
+        _w.Env.StageScreen(new Rectangle(0, 0, 1920, 1080), 48);
+        var wins = new[] { new Rectangle(110, 560, 600, 300), new Rectangle(1010, 410, 760, 430), new Rectangle(560, 250, 460, 230) };
+        for (int i = 0; i < wins.Length; i++)
+            _w.Env.Staged!.Add(((IntPtr)(0x7F000200 + i), new Native.RECT { Left = wins[i].Left, Top = wins[i].Top, Right = wins[i].Right, Bottom = wins[i].Bottom }));
+    }
+
     void SelfTestPrepare()
     {
         World.LogAlways = true;
@@ -104,6 +120,14 @@ sealed partial class App
         At(84, "racer leaves", () => { if (_w.Happening?.Who.FirstOrDefault() is { } r) _w.RemoveFigure(r); });
         At(150, "race over", () => Check("race finishes after a racer leaves", _w.Happening == null));
         At(152, "refill", () => { while (_w.Figures.Count < 6) Spawn(null); });
+        At(153, "album photo", () => _albumFile = TakeAlbumPhoto("test", "Self-test: everyone", _w.Figures.ToList(), _w.Pets.ToList()));
+        At(158, "album saved", () =>
+        {
+            string path = Path.Combine(AlbumDir, _albumFile);
+            int w = 0;
+            try { if (File.Exists(path)) { using var img = System.Drawing.Image.FromFile(path); w = img.Width; } } catch (Exception e) { Check("album photo decodes", false, e.Message); }
+            Check("album photo saved and indexed", w == AlbumW + 72 && Album.Any(a => a.File == _albumFile), $"{_albumFile} {w}px");
+        });
         At(155, "talent", () => Check("talent show starts", StartHappening("talent").StartsWith("started")));
         At(175, "resize an act", () => { if (_w.Happening?.Who.FirstOrDefault() is { } a) ResizeFigure(a, 1.3f); });
         At(300, "talent over", () => Check("talent show finishes (with a resized act)", _w.Happening == null, _w.Happening?.Title ?? ""));
@@ -192,6 +216,7 @@ sealed partial class App
     {
         if (_testStart < 0) { _testStart = now; BuildScript(); }
         double t = now - _testStart;
+        if (t > _perfAt) { _perfAt = t + 30; World.Log($"selftest perf: {_fps} fps, sim {_msSim:0.0} ms, render {_msRender:0.0} ms (draw {_msDraw:0.0}), refresh {_msRefresh:0.0} ms, {_w.Figures.Count} figures, {_w.Items.Count} items"); }
         while (_scriptAt < _script.Count && t >= _script[_scriptAt].at)
         {
             var (_, name, act) = _script[_scriptAt++];

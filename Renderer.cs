@@ -198,8 +198,12 @@ sealed class Renderer : IDisposable
         DrawMs += System.Diagnostics.Stopwatch.GetElapsedTime(t0, tp).TotalMilliseconds;
         Regions += rects.Count;
 
-        _swap.Present1(SyncInterval, PresentFlags.None, new PresentParameters { DirtyRectangles = rects.ToArray() });
+        if (!Headless) _swap.Present1(SyncInterval, PresentFlags.None, new PresentParameters { DirtyRectangles = rects.ToArray() });
     }
+
+    /// <summary>Draw but never show (the self-test): Windows throttles presents to a hidden window to a few a second,
+    /// which would starve the sped-up simulation.</summary>
+    public bool Headless;
 
     /// <summary>Profiling: time spent drawing (not presenting) and regions drawn, since last reset.</summary>
     public double DrawMs;

@@ -197,6 +197,8 @@ sealed class Settings
     public string TownMood { get; set; } = "classic";
     /// <summary>Visitors drop by; gift crates waiting for the mail carrier; rare hats found; the Doodledex.</summary>
     public bool Visitors { get; set; } = true;
+    /// <summary>Big moments (a first date, a baby, a race won) are photographed for the album, town only.</summary>
+    public bool AutoAlbum { get; set; } = true;
     public int CratesWaiting { get; set; }
     public List<string> UnlockedHats { get; set; } = new();
     public Dictionary<string, DexEntry> Dex { get; set; } = new();

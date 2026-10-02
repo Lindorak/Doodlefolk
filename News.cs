@@ -59,8 +59,9 @@ static class Stickers
         new("dressup", "🎀", "Dress-up", "Put clothes on a pet"),
         new("visitor", "🧳", "Company!", "Have a visitor drop by"),
         new("rarehat", "🎁", "Something special", "Find a rare hat in a gift crate"),
-        new("rarepet", "🌈", "One in a hundred", "Meet an animal with a rare coat"),
+        new("rarepet", "🌈", "One in forty", "Meet an animal with a rare coat"),
         new("focus", "🎯", "In the zone", "Finish a focus session"),
+        new("album", "📷", "Say cheese", "A big moment goes in the photo album"),
         new("built", "🔨", "Master builder", "A fort or treehouse gets built"),
         new("shopping", "🪙", "Retail therapy", "A figure buys something with coins it earned"),
         new("dream", "💭", "Sweet dreams", "Catch a figure dreaming"),
@@ -92,5 +93,9 @@ sealed partial class World
         NewsLog.Add(new NewsItem { When = now, Kind = kind, Text = text, Weight = weight, Who = who.Select(f => f.Name).ToList() });
         if (NewsLog.Count > 400) NewsLog.RemoveRange(0, NewsLog.Count - 400);
         Log($"news [{kind}] {text}");
+        if (weight >= 3) OnMilestone?.Invoke(kind, text, weight, who);
     }
+
+    /// <summary>A big moment (news of weight 3 and up): the app takes an album photo.</summary>
+    public Action<string, string, int, Figure[]>? OnMilestone;
 }

@@ -36,6 +36,7 @@ function receive(m) {
     case "toast": toast(m.text); break;
     case "pop": buildPop(m.kind, m.id); break;
     case "said": popSaid(m); break;
+    case "album": ALBUM = m; if (route.page === "album" && current) { current.sig = null; onState(); } break;
   }
 }
 if (host) host.addEventListener("message", e => receive(e.data));
@@ -302,7 +303,7 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { focus: "Focus", cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", stickers: "Sticker book", settings: "Settings" };
+  const names = { focus: "Focus", cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", album: "Photo album", stickers: "Sticker book", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
@@ -1091,6 +1092,38 @@ PAGES.stickers = {
       h("h3", null, "Rare coats"),
       h("div", { class: "stickers" }, dex.pets.map(x => h("div", { class: "sticker" + (x.seen ? " got" : "") },
         h("div", { class: "art" }, x.seen ? { golden: "✨", rainbow: "🌈", starry: "🌌", silver: "🥈" }[x.coat] : "?"), h("div", { class: "st-title" }, x.seen ? x.coat[0].toUpperCase() + x.coat.slice(1) : "???"), h("div", { class: "hint" }, x.seen ? "Spotted!" : "Keep adopting…")))));
+  },
+};
+
+// ---------------- Photo album ----------------
+
+let ALBUM = null, albumAsked = -1;
+PAGES.album = {
+  sig: () => (ALBUM ? ALBUM.items.length + "|" + ALBUM.items.filter(a => a.starred).length + "|" + ALBUM.auto : "none") + "|" + (S.albumCount || 0),
+  build(root) {
+    if (albumAsked !== (S.albumCount || 0)) { albumAsked = S.albumCount || 0; send({ t: "album", op: "list" }); }
+    const items = ALBUM ? ALBUM.items : [];
+    add(root, h("h1", null, "Photo album"),
+      h("p", { class: "sub" }, "When something big happens (a first date, a baby, a race won, a treehouse finished, a new pet) the town's camera takes a picture. Only the town is in it, drawn on paper: never your screen."),
+      h("div", { class: "row" },
+        check("Take pictures of big moments", "Off: the album only gets the snapshots you take.", () => !ALBUM || ALBUM.auto, v => send({ t: "album", op: "auto", v })),
+        h("button", { class: "btn small", onclick: () => send({ t: "album", op: "snap" }) }, "📷 Take one now"),
+        h("button", { class: "btn small", onclick: () => send({ t: "album", op: "show" }) }, "Open the folder")));
+    if (!items.length) { add(root, h("p", { class: "hint" }, ALBUM ? "No pictures yet. They'll come." : "Opening the album…")); return; }
+    const starredOnly = h("label", { class: "check" }, h("input", { type: "checkbox", onchange: e => { grid.classList.toggle("starred-only", e.target.checked); } }), h("span", null, "Only starred"));
+    add(root, starredOnly);
+    const grid = h("div", { class: "album" });
+    let month = "";
+    for (const a of items) {
+      if (a.month !== month) { month = a.month; grid.append(h("h3", { class: "album-month" }, month)); }
+      grid.append(h("figure", { class: "photo" + (a.starred ? " starred" : "") },
+        h("img", { src: "album/" + encodeURIComponent(a.file), loading: "lazy", alt: a.caption, onclick: () => send({ t: "album", op: "show", file: a.file }) }),
+        h("figcaption", null, h("div", null, a.caption), h("div", { class: "hint" }, a.when)),
+        h("div", { class: "photo-tools" },
+          h("button", { class: "btn small", title: a.starred ? "Unstar" : "Star (starred photos are never tidied away)", onclick: () => send({ t: "album", op: "star", file: a.file }) }, a.starred ? "★" : "☆"),
+          h("button", { class: "btn small", title: "Delete", onclick: () => { if (confirm("Delete this photo?")) send({ t: "album", op: "delete", file: a.file }); } }, "✕"))));
+    }
+    add(root, grid);
   },
 };
 

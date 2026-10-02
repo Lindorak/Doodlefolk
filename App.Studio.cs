@@ -163,6 +163,7 @@ sealed partial class App
         sprayTool = _sprayTool,
         paper = Paper(),
         stickers = StickerBook(),
+        albumCount = Album.Count,
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
         library = _settings.Library.Select(s => new
         {
@@ -445,6 +446,29 @@ sealed partial class App
                     }
                     _settings.Save();
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
+                    break;
+                }
+                case "album":
+                {
+                    var file = Str(m, "file");
+                    var entry = Album.FirstOrDefault(a => a.File == file);
+                    switch (Str(m, "op"))
+                    {
+                        case "star": if (entry != null) { entry.Starred = !entry.Starred; SaveAlbum(); } break;
+                        case "delete":
+                            if (entry != null) { Album.Remove(entry); try { File.Delete(Path.Combine(AlbumDir, entry.File)); } catch { } SaveAlbum(); }
+                            break;
+                        case "show":
+                            if (entry != null) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{Path.Combine(AlbumDir, entry.File)}\"") { UseShellExecute = true });
+                            else { Directory.CreateDirectory(AlbumDir); System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{AlbumDir}\"") { UseShellExecute = true }); }
+                            break;
+                        case "auto": _settings.AutoAlbum = m.GetProperty("v").GetBoolean(); _settings.Save(); break;
+                        case "snap":
+                            var cap = _w.Figures.Count > 0 ? $"Everyone, {DateTime.Now:dddd} {(DateTime.Now.Hour < 12 ? "morning" : DateTime.Now.Hour < 18 ? "afternoon" : "evening")}" : "";
+                            if (cap.Length > 0) { TakeAlbumPhoto("snapshot", cap, _w.Figures.ToList(), _w.Pets.ToList()); PostAll(new { t = "toast", text = "Click! It's in the album." }); }
+                            break;
+                    }
+                    PostAll(AlbumMessage());
                     break;
                 }
                 case "openMods":

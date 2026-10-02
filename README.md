@@ -26,7 +26,7 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `StickFight-v0.7.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
+1. Grab `StickFight-v0.8.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/StickFight/releases/latest).
 2. Unzip it anywhere and run `StickFight.exe`. Nothing to install.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed yet:
    click **More info → Run anyway**.
@@ -57,8 +57,17 @@ panel (draw a figure, toss in a toy, hide them, quit).
   - they walk over to words they know and love them, hate them, or run from them (spiders!);
   - now and then one points out a link in a bubble (it only opens if you click it);
   - they dance when music plays and sit down to watch when a video's on.
-- **Pets**: type "a cat" or "a puppy". Pets pick a favourite figure and follow it around; dogs fetch, cats nap on
-  soft things and pounce at your cursor. Stroke them gently (purring, wagging), or pick them up.
+- **Pets that feel real**: cats, dogs and parrots (or a kitten, puppy or chick that grows up over a few hours).
+  - **Needs**: they get hungry, thirsty, tired, bored and lonely, and need the bathroom. Fill their bowls, scoop the
+    litter box, take dogs out on a **leash** (it runs from the collar to your cursor), and clean up any accidents.
+    They ask for what they need with a little thought bubble.
+  - **Lives of their own**: cats stalk parrots and knock things off ledges; dogs chase cats; they squabble over
+    food and beds, or become friends who play-chase and curl up together. Parrots fly, perch (on a figure's head,
+    or on your cursor), and learn to say things they hear.
+  - **Training**, with a spray bottle and treats. Timing matters: spray within a couple of seconds of the misdeed
+    and they slowly learn; spray late, or for nothing, and they just get upset. Parrots love a misting.
+  - **Pet-only mode** if you just want animals, and a care setting (relaxed, normal, realistic). The Studio's
+    **Pets** tab shows needs, mood, weight, training and a care log.
 - **Weather and time of day**: now and then rain, a thunderstorm or (in winter) snow. Figures shelter, grab
   umbrellas, dance in the rain, have snowball fights and build snowmen. Late at night they get sleepy.
 - **Diaries**: every figure writes about its day in its own voice. Read them in the Studio.
@@ -73,6 +82,17 @@ panel (draw a figure, toss in a toy, hide them, quit).
 - **Life**: skills that grow with practice (juggling, climbing, fighting, ball games, dancing, drawing),
   favourite places (and spots they avoid), birthdays with a cake and a song, Halloween costumes, Christmas
   hats and New Year fireworks, and a welcome when you come back after a while away.
+- **Bodies**: weight goes up with overeating and treats and down with exercise. Heavier figures fill out properly
+  (a rounder torso, thicker limbs, fuller face), move slower and tire sooner. Everyone has stamina, and comfort
+  matters: no bed means a grumpy night on the floor. Both weight and stamina can be switched off.
+- **Social life**: rivalries and rematches, clubs of close friends (with matching bandanas), campfire stories and
+  sleepovers, hobbies (gardening, collecting trinkets, storytelling), and they remember the gifts you gave them.
+- **The world turns**: trinkets turn up for collectors, gardens grow from seed to bloom (water them!), leaves
+  blow in during autumn (run through them!), blossom in spring, fireflies on summer nights, pumpkins at
+  Halloween and a tree at Christmas.
+- **Lassos**: figures rope each other, balls, and (if you allow it) your cursor, then spin it round and fling it.
+  Only when you've left the mouse alone; move it and it breaks free.
+- **The Stick Times**: a weekly newspaper in the Studio with the week's big stories, and a **sticker book** to fill.
 - **Homes and families**: a figure that naps somewhere twice makes it home (with a little flag); they go home
   at night and visit each other. Sweethearts who've been together a long while can have a **baby**, who
   toddles after its parents and grows up over a few hours.
@@ -141,6 +161,9 @@ dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true 
 | `App.Items.cs`, `App.Screen.cs`, `App.Wish.cs` | Summoning objects, the screen reader's ledges and link bubbles, wish bubbles |
 | `App.Games.cs`, `Tournament.cs` | Games with you (hide-and-seek, tag, catch), photo mode, tournaments |
 | `App.Family.cs` | Babies arriving and growing up, home flags, the tournament board |
+| `Pet*.cs`, `App.Pets*.cs` | Animals: body and flight, needs and care, mind, social life, training, drawing; pet mode, care clicks, spray bottle, leashes |
+| `Figure.Body.cs` | Body weight: torso shape, tapered limbs, posture and gait |
+| `Clubs.cs`, `News.cs`, `Seasons.cs`, `App.World.cs`, `App.Paper.cs`, `App.Lasso.cs` | Clubs, the news log and stickers, seasons, trinkets and gardens, the weekly paper, lassos |
 | `Gfx.cs` | Graphics presets and shadow helpers |
 | `Studio/` | The Studio window (WebView2) and its hand-drawn web UI (`Studio/web`) |
 | `Overlay.cs` | Transparent, click-through, topmost window |
@@ -176,7 +199,9 @@ sees), `screengo Red word|link|watch|groove`, `wish Red`, `love Red Blue 0.8`, `
 `tracejumps` (log every jump, landing and route), `weather rain|storm|snow|clear`, `pet a cat`,
 `testwin open 1300 1500` / `testwin shake` / `testwin close`, `talk Red how are you?`,
 `game catch|tag|hideseek [Name] [quick]` / `game stop`, `photo`, `tourney`, `party Red`, `holiday halloween|none`,
-`back 3600` (pretend you were away), `home Red`, `baby Red Blue`, `grow Red 0.5`, `remove Red`, `clear`, `exit`.
+`back 3600` (pretend you were away), `home Red`, `baby Red Blue`, `grow Red 0.5`, `remove Red`, `summon a kitten`,
+`pets` (needs report), `petset Name hunger 0.9`, `petop Name treat|sit|come|leash|spraynow`, `petmode on|off`,
+`weight Red 0.8`, `season autumn`, `garden 1`, `trinket`, `snap [Name]` (offscreen picture to `%TEMP%\stickfight_snap.png`), `clear`, `exit`.
 `tools\burst.ps1` captures a contact sheet of frames around a figure; `tools\winshot.ps1` captures
 one of the app's windows; `tools\printwin.ps1` captures the Studio even when it's covered.
 

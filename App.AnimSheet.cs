@@ -60,6 +60,27 @@ sealed partial class App
         Fig("Talk", "Talking (8 s)", 8, f => f.SetAction(Act.Talk));
         foreach (var (label, act) in new[] { ("Talk", Act.Talk), ("Wave", Act.Wave), ("High five", Act.HighFive), ("Sit (edge)", Act.SitEdge), ("Sit (floor)", Act.SitFloor), ("Lie", Act.Lie), ("Curl", Act.Curl) })
             Fig("Actions", label, 2.5f, f => f.SetAction(act));
+        // Nets: a ball through the hoop, shots into the goal (high, low, a soft one), and someone walking into it.
+        Item? gear = null;
+        void Net(string label, string key, float dur, float size, Vector2 focus, Action<Item, Figure> start) =>
+            _animJobs.Add(new("Nets", label, dur, (f, _) =>
+            {
+                foreach (var p in _w.Props.ToList()) _w.RemoveProp(p);
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                gear = SpawnItem(ItemCatalog.Find(key)!);
+                gear!.Pos = new Vector2(1300, floor.Y); gear.Vel = Vector2.Zero; gear.OnGround = true;
+                f!.PlaceAt(floor, 600);
+                start(gear, f);
+            }, (_, _) => gear?.Local(focus.X, focus.Y) ?? Vector2.Zero, null, size));
+        Prop Ball(PropKind k, Vector2 at, Vector2 vel) { var b = SpawnProp(k); b.Pos = at; b.Vel = vel * _w.Scale; return b; }
+        Net("Swish", "hoop", 1.0f, 1.3f, new(-4, 66), (h, _) => Ball(PropKind.Basketball, h.Local(-4, 100), new(0, 0)));
+        Net("Swish (close)", "hoop", 0.4f, 0.75f, new(-4, 64), (h, _) => Ball(PropKind.Basketball, h.Local(-4, 84), new(0, 300)));
+        Net("Off the rim", "hoop", 1.2f, 1.3f, new(-4, 66), (h, _) => Ball(PropKind.Basketball, h.Local(-14, 100), new(40, 0)));
+        Net("Goal (high)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 22), new(1500, -120)));
+        Net("Goal (close)", "goal", 0.6f, 0.45f, new(6, 14), (g, _) => Ball(PropKind.SoccerBall, g.Local(-22, 14), new(1600, -60)));
+        Net("Goal (low)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 5), new(1700, 0)));
+        Net("Goal (rolled in)", "goal", 2.0f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-30, 5), new(500, 0)));
+        Net("Walk into it", "goal", 2.4f, 1.6f, new(4, 16), (g, f) => { f.PlaceAt(_w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero), g.Local(-24, 0).X); f.Facing = 1; f.DesiredVX = f.WalkSpeed; });
         foreach (var kind in Enum.GetValues<PetKind>())
         {
             Animal(kind, "Walk", 1.6f, p => p.PuppetWalk(1));

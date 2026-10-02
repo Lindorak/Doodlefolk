@@ -8,10 +8,13 @@ sealed partial class App
 {
     Item? _pressItem;
 
+    /// <summary>The thing drawn in front at this point: ones on the move are painted over ones at rest (which sit in
+    /// a cached layer), and within each, later over earlier.</summary>
     Item? HitItem(Vector2 c)
     {
-        for (int i = _w.Items.Count - 1; i >= 0; i--)
-            if (_w.Items[i].Holder == null && _w.Items[i].HitTest(c)) return _w.Items[i];
+        for (int pass = 0; pass < 2; pass++)
+            for (int i = _w.Items.Count - 1; i >= 0; i--)
+                if (_w.Items[i] is { Holder: null } it && IsStatic(it) == (pass == 1) && it.HitTest(c)) return it;
         return null;
     }
 

@@ -672,17 +672,15 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "goal", Name = "Soccer goal", Words = new[] { "goal", "soccer goal", "football goal", "goalpost", "goal post", "soccer net", "football net" }, W = 44, H = 34, Color = M.Hex(0xF4F4F4),
-            Shapes = new[] { C(5, 0.5f, -18, 32, -14, 0), C(5, 0.5f, -10, 31, -4, 0), C(5, 0.5f, -2, 29, 6, 0), C(5, 0.5f, 6, 27, 14, 0),
-                             C(5, 0.5f, -18, 22, 15, 18), C(5, 0.5f, -18, 12, 17, 9), L(-18, 0, 18, 0, 5, 1), L(12, 25, 18, 0, 0, 1.8f), L(-18, 32, 12, 25, 0, 2.2f), L(-18, 0, -18, 32, 0, 2.6f) },
+            Shapes = new[] { L(-18, 0, 18, 0, 5, 1), L(12, 25, 18, 0, 0, 1.8f), L(-18, 32, 12, 25, 0, 2.2f), L(-18, 0, -18, 32, 0, 2.6f) },   // the net is a NetCloth
             Verbs = new[] { Verb.Play }, Sport = "Soccer", Mass = 2, Likes = new[] { Thing.PlayingBall, Thing.SoccerBalls },
-            Colliders = new float[] { -18, 32, 12, 25, 1, 12, 25, 18, 0, 0.25f, -18, 30, -18, 33, 1 },
+            Colliders = new float[] { -18, 32, 12, 25, 1, 16, 26, 21, 0, 0.25f, -18, 30, -18, 33, 1 },
         });
         Add(new ItemDef
         {
             Key = "hoop", Name = "Basketball hoop", Words = new[] { "hoop", "basketball hoop", "basket", "basketball net", "net hoop" }, W = 30, H = 92, Color = M.Hex(0xFB8C00),
             Shapes = new[] { R(10, 0, 22, 3, 6), L(16, 0, 16, 82, 6, 2.6f), L(16, 80, 9, 80, 6, 2), R(6, 62, 9, 92, 7), R(6.6f, 66, 8.4f, 73, 9),
-                             C(7, 0.5f, -14, 72, -9, 60), C(7, 0.5f, -8, 72, -5, 60), C(7, 0.5f, -2, 72, -1, 60), C(7, 0.5f, 4, 72, 3, 60), C(7, 0.5f, -9, 60, 3, 60), C(7, 0.5f, -11.5f, 66, 3.5f, 66),
-                             L(-14, 72, 6, 72, 0, 1.6f) },
+                             L(-14, 72, 6, 72, 0, 1.6f) },   // the net is a NetCloth
             Verbs = new[] { Verb.Play }, Sport = "Basketball", Mass = 3, Likes = new[] { Thing.PlayingBall, Thing.Basketballs },
             Colliders = new float[] { 7, 62, 7, 92, 1, -14.5f, 71.5f, -13.5f, 72.5f, 1 },
         });

@@ -6,12 +6,14 @@ static class Program
     static void Main(string[] args)
     {
         AppPaths.Configure(args);
+        // The simulation tests: pick scenarios, run them side by side (each its own hidden --simrun), report.
+        if (args.Contains("--simtest")) { Environment.Exit(SimTest.Run(args)); return; }
         // The self-test runs alongside your Doodlefolk, with its own data, and reports by exit code.
-        if (args.Contains("--selftest") || args.Contains("--trailer") || args.Contains("--cardart") || args.Contains("--animsheet"))
+        if (args.Contains("--selftest") || args.Contains("--trailer") || args.Contains("--cardart") || args.Contains("--animsheet") || args.Contains("--simrun"))
         {
             if (!args.Contains("--data"))
             {
-                AppPaths.DataDir = Path.Combine(Path.GetTempPath(), args.Contains("--trailer") ? "Doodlefolk-trailer" : args.Contains("--cardart") ? "Doodlefolk-cardart" : args.Contains("--animsheet") ? "Doodlefolk-animsheet" : "Doodlefolk-selftest");
+                AppPaths.DataDir = Path.Combine(Path.GetTempPath(), args.Contains("--trailer") ? "Doodlefolk-trailer" : args.Contains("--cardart") ? "Doodlefolk-cardart" : args.Contains("--animsheet") ? "Doodlefolk-animsheet" : args.Contains("--simrun") ? "Doodlefolk-simrun" : "Doodlefolk-selftest");
                 AppPaths.PicturesDir = Path.Combine(AppPaths.DataDir, "pictures");
             }
             // Start from nothing every time, but only ever wipe a folder the self-test made itself.

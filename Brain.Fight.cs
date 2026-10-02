@@ -539,7 +539,7 @@ sealed partial class Brain
     // ---------------- boxing the cursor ----------------
 
     bool WantsCursorFight() =>
-        Rules.Enabled && Rules.PunchCursor && Stamina > 0.25f &&
+        Rules.Enabled && Rules.PunchCursor && !World.Calm && !World.Focus && Stamina > 0.25f &&
         ((P.Aggression > 0.55f && CursorTrust < 0.55f) || (UserFondness < -0.5f && P.Aggression > 0.4f && P.Bravery > 0.4f));
 
     void BeginCursorFight()

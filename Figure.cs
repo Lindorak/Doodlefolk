@@ -698,7 +698,7 @@ sealed partial class Figure
         return best;
     }
 
-    static readonly (int, int)[] Bones =
+    public static readonly (int, int)[] Bones =
     {
         (J.Neck, J.Pelvis), (J.Neck, J.ElbowN), (J.ElbowN, J.HandN), (J.Neck, J.ElbowF), (J.ElbowF, J.HandF),
         (J.Pelvis, J.KneeN), (J.KneeN, J.FootN), (J.Pelvis, J.KneeF), (J.KneeF, J.FootF),

@@ -42,7 +42,7 @@ sealed partial class World
     /// <summary>A rare coat turned up (for the Doodledex).</summary>
     public Action<string>? RareSeen;
     public readonly Fx Fx = new();
-    public readonly Random Rng = new();
+    public Random Rng = new();
     public FightSettings Fight = new();
     public Vector2 Cursor, CursorVel;
     /// <summary>A game with you in progress (hide-and-seek, tag, catch).</summary>

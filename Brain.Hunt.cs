@@ -31,6 +31,8 @@ sealed partial class Brain
     {
         Vector2 cur = w.Cursor;
         f.LookAt = cur;
+        // Calm mode or a focus session started mid-chase: let it go.
+        if (World.Calm || World.Focus) { f.Emote("…", 1); Go(G.Idle, rng.Range(1, 3)); return; }
         if (_t > _dur || Stamina < 0.15f)
         {
             // Out of breath: sit and glare for a bit, then go again.

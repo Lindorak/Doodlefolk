@@ -218,6 +218,7 @@ sealed class Prop
             var segs = it.Def.Colliders;
             if (segs.Length == 0 || it.Held) continue;
             if (Vector2.DistanceSquared(it.Pos, Pos) > MathF.Pow((it.Def.W + it.Def.H) * it.Sc, 2)) continue;
+            it.Net?.Collide(this, World.Dt);
             for (int i = 0; i + 4 < segs.Length; i += 5)
             {
                 Vector2 a = it.Local(segs[i], segs[i + 1]), b = it.Local(segs[i + 2], segs[i + 3]);

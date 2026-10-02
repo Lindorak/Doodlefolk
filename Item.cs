@@ -48,7 +48,11 @@ sealed partial class Item
         Color = def.Color;
         BitesLeft = def.Bites;
         Seated = new Figure?[Math.Max(1, def.Seats.Length)];
+        Net = NetCloth.For(def);
     }
+
+    /// <summary>The soft net of a hoop or a goal (null for everything else).</summary>
+    public readonly NetCloth? Net;
 
     /// <summary>World position of a point given in this object's local units (x right, y up).</summary>
     public Vector2 Local(float x, float y)
@@ -71,6 +75,7 @@ sealed partial class Item
     public void Step(float dt, World w)
     {
         var env = w.Env;
+        Net?.Step(this, w, dt);
         if (StepRidden(dt)) return;
         if (Def.Verbs.Contains(Verb.Hammock))
         {
@@ -214,6 +219,7 @@ sealed partial class Item
         }
         DrawWorldLive(r, over, time);
         if (over) return;
+        if (Net != null) Net.Draw(r, Col(Net.ColourIndex), Ink, Sc);
         if (Def.Verbs.Contains(Verb.Hammock)) DrawHammock(r);
         if (Def.Verbs.Contains(Verb.Warm)) DrawFire(r, time);
         if (Def.Key == "stickynote" && Label.Length > 0)
@@ -687,7 +693,7 @@ sealed partial class Item
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
     public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || Def.Key is "puddle" or "poop" or "fishtank" or "buildsite" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
-                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld;
+                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s;
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>
     public int StateKey() => HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
@@ -723,6 +729,7 @@ sealed partial class Item
     public System.Drawing.RectangleF Bounds()
     {
         var b = BoundsBody();
+        if (Net is { Placed: true }) b = System.Drawing.RectangleF.Union(b, Net.Bounds());
         return FlagRect() is { } fr ? System.Drawing.RectangleF.Union(b, fr) : b;
     }
 
@@ -742,6 +749,46 @@ sealed partial class Item
         if (Angle != 0) d = M.Rotate(d, -Angle);
         float sc = Sc;
         return MathF.Abs(d.X) < Def.W * sc * ScaleX * 0.5f + 2 * sc && d.Y < 3 * sc && d.Y > -Def.H * sc * ScaleY - 2 * sc;
+    }
+
+    /// <summary>Is the point on one of the parts drawn in front of whoever's using this (a chair back, a blanket)?
+    /// Those are on top of the figure, so a click there means the thing, not the person in it.</summary>
+    public bool HitOver(Vector2 p)
+    {
+        if (!Def.Shapes.Any(s => s.Over)) return false;
+        bool used = User != null || Seated.Any(s => s != null);
+        // Into the object's own units (the inverse of Local).
+        Vector2 d = p - Pos;
+        if (Angle != 0) d = M.Rotate(d, -Angle);
+        float sc = Sc, pad = 1.5f;
+        var q = new Vector2(d.X / (sc * ScaleX) * (Flip ? -1 : 1), -d.Y / (sc * ScaleY));
+        foreach (var sh in Def.Shapes)
+        {
+            if (!sh.Over || (sh.WhenUsed && !used) || (sh.Detail && !Gfx.Q.DetailedArt)) continue;
+            var a = sh.P;
+            bool hit = sh.Kind switch
+            {
+                'r' or 'o' => q.X >= MathF.Min(a[0], a[2]) - pad && q.X <= MathF.Max(a[0], a[2]) + pad && q.Y >= MathF.Min(a[1], a[3]) - pad && q.Y <= MathF.Max(a[1], a[3]) + pad,
+                'e' => MathF.Pow((q.X - a[0]) / (a[2] + pad), 2) + MathF.Pow((q.Y - a[1]) / (a[3] + pad), 2) <= 1,
+                'p' => InPolygon(q, a),
+                'l' or 'c' => Enumerable.Range(0, a.Length / 2 - 1).Any(i => M.DistToSegment(q, new(a[i * 2], a[i * 2 + 1]), new(a[i * 2 + 2], a[i * 2 + 3])) <= sh.W * 0.5f + pad),
+                _ => false,
+            };
+            if (hit) return true;
+        }
+        return false;
+    }
+
+    static bool InPolygon(Vector2 q, float[] xy)
+    {
+        bool inside = false;
+        int n = xy.Length / 2;
+        for (int i = 0, j = n - 1; i < n; j = i++)
+        {
+            float xi = xy[i * 2], yi = xy[i * 2 + 1], xj = xy[j * 2], yj = xy[j * 2 + 1];
+            if ((yi > q.Y) != (yj > q.Y) && q.X < (xj - xi) * (q.Y - yi) / (yj - yi) + xi) inside = !inside;
+        }
+        return inside;
     }
 
     public void Shadow(Env env, out Vector2 c, out float rx, out float ry, out float a)

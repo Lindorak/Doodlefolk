@@ -5,9 +5,10 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File tools\ci.ps1          # everything (about 3 minutes)
-  powershell -ExecutionPolicy Bypass -File tools\ci.ps1 -Quick   # skip the self-test (under a minute)
+  powershell -ExecutionPolicy Bypass -File tools\ci.ps1 -Quick   # skip the self-test (about a minute)
+  powershell -ExecutionPolicy Bypass -File tools\ci.ps1 -Deep    # the deep simulations: every triple of features
 #>
-param([switch]$Quick)
+param([switch]$Quick, [switch]$Deep)
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -42,6 +43,19 @@ try {
         foreach ($f in "studio.js") { node --check (Join-Path "Studio\web" $f); if ($LASTEXITCODE -ne 0) { throw "$f has a syntax error" } }
         node tests\studio.test.mjs
         if ($LASTEXITCODE -ne 0) { throw "Studio tests failed" }
+    }
+    Step "Simulations" {
+        # Towns with every pair of features meeting (-Deep: every triple, a few hundred towns, ~10 minutes).
+        $sims = Join-Path $env:TEMP "Doodlefolk-simtest-ci"
+        $tier = if ($Deep) { "deep" } else { "quick" }
+        $p = Start-Process (Join-Path $out "Doodlefolk.exe") -ArgumentList "--simtest", $tier, "--out", "`"$sims`"" -PassThru
+        if (-not $p.WaitForExit(1800000)) { $p.Kill(); throw "the simulations didn't finish in 30 minutes" }
+        $report = Join-Path $sims "simtest-report.txt"
+        $keep = Join-Path $root "ci-output"; New-Item -ItemType Directory -Force $keep | Out-Null
+        Copy-Item $report $keep -ErrorAction SilentlyContinue
+        if (Test-Path $report) { Get-Content $report -Encoding UTF8 | ForEach-Object { if ($_ -like "FAIL*") { Write-Host $_ -ForegroundColor Red } else { Write-Host $_ } } }
+        if ($p.ExitCode -eq 2) { throw "the simulations' folder already had other files in it" }
+        if ($p.ExitCode -ne 0) { throw "simulations exit code $($p.ExitCode)" }
     }
     if (-not $Quick) {
         Step "Self-test" {

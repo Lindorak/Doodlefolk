@@ -50,10 +50,12 @@ sealed partial class App : ApplicationContext
         Renderer.ForceWarp = args.Contains("--warp");
         _cardArt = args.Contains("--cardart");
         _animSheet = args.Contains("--animsheet");
-        _trailer = args.Contains("--trailer") || _cardArt || _animSheet;
+        _simRun = args.Contains("--simrun");
+        _trailer = args.Contains("--trailer") || _cardArt || _animSheet || _simRun;
         World.Debug = _debug;
         if (_selfTest) SelfTestPrepare();
         if (_trailer) TrailerPrepare(args);
+        if (_simRun) SimPrepare(args);
         var boot = System.Diagnostics.Stopwatch.StartNew();
         var marks = new List<string>();
         void Mark(string what) { marks.Add($"{what} {boot.ElapsedMilliseconds}"); }
@@ -83,7 +85,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
         if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; SelfTestStage(); }
-        if (_trailer) { _tray.Visible = false; if (_cardArt) CardArtStage(); else if (_animSheet) AnimSheetStage(); else TrailerStage(); }
+        if (_trailer) { _tray.Visible = false; if (_cardArt) CardArtStage(); else if (_animSheet) AnimSheetStage(); else if (_simRun) SimStage(); else TrailerStage(); }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;
@@ -470,29 +472,17 @@ sealed partial class App : ApplicationContext
             }
         }
 
-        var hitProp = HitProp(c);
-        var (fig, _) = hitProp == null ? HitTest(c) : (null, -1);
-        _w.Hover = _dragging ? null : fig;
-        if (_w.Offer != null) _w.Offer.Hot = OfferHit(c);
-        if (_w.Wish != null) _w.Wish.Hot = WishHit(c);
+        var top = Pick(c);
+        _w.Hover = _dragging ? null : top.Fig;
+        if (_w.Offer != null) _w.Offer.Hot = top.Kind == PickKind.Offer;
+        if (_w.Wish != null) _w.Wish.Hot = top.Kind == PickKind.Wish;
         if (_resizeIt != null) ResizeStep(c);
         bool overEdge = ResizeHover(c);
-        _overlay.SetClickThrough(!_sprayTool && !overEdge && _w.Offer?.Hot != true && _w.Wish?.Hot != true && _pressPet == null && HitPet(c) == null && fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
+        _overlay.SetClickThrough(!_sprayTool && !overEdge && top.Kind == PickKind.None && _pressPet == null && _pressFig == null && _pressProp == null && _pressItem == null);
     }
 
-    (Figure? fig, int joint) HitTest(Vector2 c)
-    {
-        Figure? best = null;
-        int bj = -1;
-        float bd = 0;
-        foreach (var f in _w.Figures)
-        {
-            if (f.Mode == Mode.Spawning || f.Dead) continue;
-            float d = f.DistanceTo(c, out int j);
-            if (d <= bd) { bd = d; best = f; bj = j; }
-        }
-        return (best, bj);
-    }
+    /// <summary>The figure drawn in front at this point (anyone hiding behind something comes last).</summary>
+    (Figure? fig, int joint) HitTest(Vector2 c) => FrontFigure(c, hiding: false) is { fig: not null } f ? f : FrontFigure(c, hiding: true);
 
     Prop? HitProp(Vector2 c)
     {
@@ -516,15 +506,17 @@ sealed partial class App : ApplicationContext
             return;
         }
         if (e.Button == MouseButtons.Left && StartResize(_w.Cursor)) return;
-        if (HitPet(_w.Cursor) is { } pet && HitTest(_w.Cursor).fig == null)
+        // Whatever's drawn in front gets the click.
+        var top = Pick(_w.Cursor);
+        if (top.Pet is { } pet)
         {
             if (e.Button == MouseButtons.Left) { pet.Grab(); _pressPet = pet; }
             else if (e.Button == MouseButtons.Right) ShowPop("pet", pet.Id);
             return;
         }
-        if (e.Button == MouseButtons.Left && OfferHit(_w.Cursor)) { TakeOffer(); return; }
-        if (e.Button == MouseButtons.Left && WishHit(_w.Cursor)) { GrantWish(); return; }
-        if (HitProp(_w.Cursor) is { } prop)
+        if (top.Kind == PickKind.Offer) { if (e.Button == MouseButtons.Left) TakeOffer(); return; }
+        if (top.Kind == PickKind.Wish) { if (e.Button == MouseButtons.Left) GrantWish(); return; }
+        if (top.Prop is { } prop)
         {
             if (e.Button == MouseButtons.Left)
             {
@@ -537,11 +529,11 @@ sealed partial class App : ApplicationContext
             else if (e.Button == MouseButtons.Right) ShowPop("prop", prop.Id);
             return;
         }
-        var (fig, joint) = HitTest(_w.Cursor);
+        var (fig, joint) = (top.Fig, top.Joint);
         if (fig != null && e.Button == MouseButtons.Left && GameClick(fig)) return;
         if (fig == null)
         {
-            if (HitItem(_w.Cursor) is { } item)
+            if (top.Item is { } item)
             {
                 if (e.Button == MouseButtons.Left && CareClick(item)) return;
                 if (e.Button == MouseButtons.Left) GrabItem(item);

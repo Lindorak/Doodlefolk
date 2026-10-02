@@ -193,6 +193,7 @@ sealed partial class App
 
     void TrailerTick(double t)
     {
+        if (_simRun) return;
         while (_tScriptAt < _tScript.Count && t >= _tScript[_tScriptAt].at)
         {
             try { _tScript[_tScriptAt].act(); }
@@ -269,6 +270,7 @@ sealed partial class App
     {
         if (_cardArt) { CardArtFrame(); return; }
         if (_animSheet) { AnimSheetFrame(); return; }
+        if (_simRun) { SimFrame(); return; }
         double t = _tFrame / (double)TFps;
         var cam = TrailerCamera(t);
         float zoom = TW / cam.Width;

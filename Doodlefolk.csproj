@@ -13,7 +13,7 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>Doodlefolk</RootNamespace>
     <AssemblyName>Doodlefolk</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <PublishDocumentationFiles>false</PublishDocumentationFiles>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <!-- Precompiled code starts faster; the small managed heap does not need a background GC thread. -->

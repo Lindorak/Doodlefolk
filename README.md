@@ -1,4 +1,4 @@
-﻿# Doodlefolk
+# Doodlefolk
 
 Stick figures that live on your Windows desktop. They walk along your taskbar, jump between windows,
 climb window edges (or throw a grappling hook up them), nap, chat, dance and high-five each other, play
@@ -6,7 +6,7 @@ with balls, and fight, with knockouts, flying kicks and figures sent flying acro
 has its own personality, its own way of moving, its own likes and dislikes, friendships, and feelings
 about **you**, built from how you treat it.
 
-> Early preview (v0.4). Windows 10/11, 64-bit.
+> Version 1.2. Windows 10/11, 64-bit.
 
 ![The Doodlefolk Studio](docs/studio-cast.png)
 
@@ -26,12 +26,12 @@ or endorsed by him.*
 
 ## Download and run
 
-1. Grab `Doodlefolk-v1.1.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/Doodlefolk/releases/latest).
+1. Grab `Doodlefolk-v1.2.0-win-x64.zip` from the [latest release](https://github.com/Lindorak/Doodlefolk/releases/latest).
 2. Unzip it anywhere and run `Doodlefolk.exe`. It runs from wherever you put it; if you'd like it in the Start menu
-   (and in Installed apps, to remove it the usual way), click **Install Doodlefolk** in Studio â†’ Settings. No admin
+   (and in Installed apps, to remove it the usual way), click **Install Doodlefolk** in Studio → Settings. No admin
    rights needed, and your figures come along.
 3. Windows may show "Windows protected your PC" because the app isn't code-signed (that needs a paid code-signing
-   certificate): click **More info â†’ Run anyway**.
+   certificate): click **More info → Run anyway**.
 
 Doodlefolk checks GitHub once a day for a newer version and offers it in the Studio; updating is one click (you can
 switch the check off).
@@ -155,6 +155,28 @@ panel (draw a figure, toss in a toy, hide them, quit).
   choose), and a **battery saver** (lighter frame rate and graphics when unplugged, or always). It starts in about a
   second and uses about 150 MB.
 
+## New in 1.2
+
+- **A life of their own**: they learn which activities they enjoy and when you're usually busy; they ask for things
+  that suit them (a swing, a race, a new hat, a dog) on the Cast page; they sing songs you write for them; visitors
+  drop by (a bard, the mail carrier with gift crates and rare hats, a knight, an artist, a ghost on dark nights…).
+- **The pond** has 26 kinds of things to catch that change with the month, the hour and the rain (golden koi, eels
+  on rainy summer nights, the odd old boot), all in the **Doodledex**.
+- **Big moments are photographed** for the **Album** (just the town, never your screen), the **History** tab keeps
+  everything that's happened and a **family tree** (export it as a picture), and those the town loses are
+  **remembered** with a headstone, flowers and the occasional ghostly visit. Nobody dies of old age unless you say so.
+- **Focus sessions** with a to-do list (the town works quietly beside you), a **town mood** (Cozy, Classic, Chaos),
+  **ambient sound** that follows the town (rain, birds, the pond, crickets, chatter, a lo-fi beat), and a **toybox**
+  (moon gravity, a giant ball, earthquakes, slow motion, confetti).
+- **Where they live**: the whole desktop, a little **taskbar village**, or **behind your windows** like a live wallpaper.
+- **Prank mode** (off by default): sticky notes, whoopee cushions, muddy footprints, and memes that fit the moment.
+- **React to your work**: tell the town how your build went from git hooks or scripts ([docs/DEVHOOKS.md](docs/DEVHOOKS.md)).
+- **Stream mode**: your Twitch chat can `!join` the town; a clean stream view for OBS.
+- **Steam** (when Doodlefolk runs through Steam): Workshop mods, achievements, weekly community goals, a friends-only
+  weekly board, and sending a figure to visit a friend's desktop.
+- **Mods** can add characters, storytellers, festivals, scenarios, songs and new behaviours
+  ([docs/MODDING.md](docs/MODDING.md)), and the Studio checks a mod before you share it.
+
 ## How they behave
 
 Each figure has six traits (energy, curiosity, bravery, playfulness, aggression, sociability), needs
@@ -270,6 +292,13 @@ sees), `screengo Red word|link|watch|groove`, `wish Red`, `love Red Blue 0.8`, `
 `weight Red 0.8`, `season autumn`, `garden 1`, `trinket`, `snap [Name]` (offscreen picture to `%TEMP%\doodlefolk_snap.png`), `clear`, `exit`.
 `tools\burst.ps1` captures a contact sheet of frames around a figure; `tools\winshot.ps1` captures
 one of the app's windows; `tools\printwin.ps1` captures the Studio even when it's covered.
+
+## Thanks
+
+Some 1.2 ideas came from other little desktop worlds: leg-ups, dancing to the beat, break nudges and gestures-only
+mode from [StickBuddies](https://github.com/iandbuchanan/StickBuddies) (MIT); focus sessions from Spirit City and
+Rusty's Retirement; visitors and collections from Neko Atsume and Animal Crossing; storytellers from RimWorld;
+requests and songs from Tomodachi Life; legends from Dwarf Fortress; pranks (the friendly kind) from Desktop Goose.
 
 ## Licence
 

@@ -142,6 +142,7 @@ sealed partial class App
         });
         At(590, "reminder fired", () => Check("reminder fires", _settings.Reminders.All(r => r.Done)));
         At(592, "calm", () => { _settings.Calm = true; World.Calm = true; foreach (var f in _w.Figures) if (f.Brain.InFight) f.Brain.CalmDown(); });
+        At(618, "habits", () => Check("figures learn habits from experience", _w.Figures.Any(f => f.Brain.Learned.Count > 0), string.Join(", ", _w.Figures.SelectMany(f => f.Brain.Learned.Keys).Distinct().Take(8))));
         At(620, "calm holds", () => { Check("no fights in calm mode", !_w.Figures.Any(f => f.Brain.InFight)); _settings.Calm = World.Calm = false; });
         At(625, "everything at once", () =>
         {

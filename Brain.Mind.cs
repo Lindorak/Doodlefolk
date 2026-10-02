@@ -59,13 +59,14 @@ sealed partial class Brain
         if (opts.Items.Count == 0) { Go(G.Idle, 1); return; }
         // Decisive figures go for what they want most; playful, impulsive ones roll the dice more.
         float sharp = 1.4f + (1 - P.Playfulness) * 1.1f;
-        var scored = opts.Items.Select(o => (o.label, o.act, s: MathF.Pow(MathF.Max(0, o.weight), sharp) * Novelty(o.label))).ToList();
+        var scored = opts.Items.Select(o => (o.label, o.act, s: MathF.Pow(MathF.Max(0, o.weight), sharp) * Novelty(o.label) * LearnedTilt(o.label))).ToList();
         float total = scored.Sum(x => x.s);
         if (total <= 0) { opts.Items[0].act(); return; }
         Thoughts = scored.GroupBy(x => x.label).Select(g => (g.Key, g.Sum(x => x.s) / total)).OrderByDescending(x => x.Item2).Take(6).ToArray();
         float roll = rng.Range(0, total);
         var pick = scored[^1];
         foreach (var x in scored) { roll -= x.s; if (roll <= 0) { pick = x; break; } }
+        LearnFromLast(pick.label);
         LastDecision = pick.label;
         World.Audit($"decide\t{f.Name}\t{pick.label}\t{pick.s / total:F2}\t{string.Join("|", Thoughts.Take(4).Select(t => $"{t.label}:{t.share:F2}"))}");
         _decidedAt = _t0;

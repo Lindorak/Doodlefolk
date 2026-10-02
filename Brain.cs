@@ -114,6 +114,8 @@ sealed partial class Brain
         Gifts.AddRange(o.Gifts);
         Collection.AddRange(o.Collection);
         _hobby = o._hobby;
+        foreach (var (k, v) in o.Learned) Learned[k] = v;
+        foreach (var (k, v) in o.Tried) Tried[k] = v;
         Job = o.Job; Coins = o.Coins; AgeBank = o.AgeBank; _toldOld = o._toldOld; HapRole = o.HapRole;
         _datingSince = o._datingSince - o._t0 + _t0;
     }

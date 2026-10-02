@@ -9,8 +9,23 @@ sealed partial class App
 {
     double _screenTimeStart = -1, _lastBusyAt, _nudgedAt = -1e9, _breakTick;
 
+    double _busyTick;
+
+    /// <summary>Once a minute: were you busy (typing in the last minute)? Folded slowly into that hour's habit.</summary>
+    void LearnBusyHours(double now)
+    {
+        var hours = _settings.BusyByHour.Length == 24 ? _settings.BusyByHour : (_settings.BusyByHour = new float[24]);
+        int h = DateTime.Now.Hour;
+        World.UserBusy = hours[h];
+        if (now < _busyTick) return;
+        _busyTick = now + 60;
+        bool busy = _lastKeyAt > 0 && now - _lastKeyAt < 60;
+        hours[h] = hours[h] * 0.97f + (busy ? 0.03f : 0);
+    }
+
     void BreakFrame(double now)
     {
+        LearnBusyHours(now);
         if (!_settings.BreakNudges || now < _breakTick) return;
         _breakTick = now + 5;
         var m = _w.Screen?.Media ?? MediaNow.Quiet;

@@ -37,6 +37,9 @@ sealed class SavedFigure
     public int? Coins { get; set; }
     public float AgeBank { get; set; }
     public List<string> Collection { get; set; } = new();
+    /// <summary>Learned habits: activity kind → value (-1..1), and how often each was tried.</summary>
+    public Dictionary<string, float> Learned { get; set; } = new();
+    public Dictionary<string, int> Tried { get; set; } = new();
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -189,6 +192,8 @@ sealed class Settings
     /// <summary>Ideas from StickBuddies: dance in time to the beat; gestures instead of words; a nudge to take a break
     /// after a long stretch of games or videos.</summary>
     public bool BeatDance { get; set; } = true;
+    /// <summary>Learned: how busy you usually are at each hour of the day (0..1).</summary>
+    public float[] BusyByHour { get; set; } = new float[24];
     public bool GesturesOnly { get; set; }
     public bool BreakNudges { get; set; }
     public int BreakMinutes { get; set; } = 60;

@@ -803,6 +803,7 @@ const SUBPANELS = {
     const status = h("p", { class: "sub" });
     // What's on their mind: the options weighed at the last decision, and the route they're following.
     const decided = h("p", { class: "sub" });
+    const habits = h("div", { class: "hint" });
     const route = h("p", { class: "hint" });
     const thoughts = h("div", { class: "thoughts" });
     add(panel, h("div", { class: "split" },
@@ -811,7 +812,7 @@ const SUBPANELS = {
         h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"),
         h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice: juggling, climbing, fighting, ball games, dancing and drawing all get better the more they do them."),
         h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "party" }) }, "🎉 Throw them a party"), bday)),
-      h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), decided, thoughts, route,
+      h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), decided, thoughts, route, h("h3", null, "Habits they've formed"), habits,
         h("p", { class: "hint" }, "Each time they decide, every option gets a score from their needs, mood, likes and personality. Bars show how likely each one was. Things they've done a lot lately score lower, and places they couldn't reach are skipped for a while."))));
     const skillBox = h("div", { class: "thoughts" });
     const bday = h("span", { class: "hint" });
@@ -819,6 +820,9 @@ const SUBPANELS = {
     return f => {
       decided.textContent = f.decision ? `Last decided to: ${f.decision.toLowerCase()} (${ago(f.decidedAgo)})` : "Hasn't had to decide anything yet.";
       route.textContent = f.route ? `Route: ${f.route}` : "";
+      const hb = f.habits || [];
+      habits.textContent = hb.length ? hb.map(x => `${x.v > 0 ? "has grown to love" : "has gone off"} "${x.what}" (${x.v > 0 ? "+" : "−"}${Math.round(Math.abs(x.v) * 25)}%, tried ${x.tried}×)`).join(" · ")
+        : "Still finding out what they like: they learn from how each thing they do makes them feel.";
       bday.textContent = [f.birthday ? `Birthday: ${f.birthday}` : "", f.family || ""].filter(Boolean).join(" · ");
       const ss = (f.skills || []).map(x => x.name + x.v).join("|");
       if (ss !== skillSig) {

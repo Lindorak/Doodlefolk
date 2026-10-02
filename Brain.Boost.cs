@@ -2,8 +2,10 @@ using System.Numerics;
 
 namespace Doodlefolk;
 
-/// <summary>A leg-up (idea from StickBuddies, MIT): a window ledge that's too high to jump to? Ask a friend. The friend
-/// crouches with cupped hands, you run, step into them, and get thrown up onto it. And jumping gets more confident with
+/// <summary>A leg-up (idea from StickBuddies, MIT): a window ledge that's too high to jump to? Most figures would just
+/// climb or throw the hook, so this is a moment between friends rather than a way of getting about: kids ask (a parent
+/// first), so do those who never use the rope and those too tired to climb, and now and then two good friends. The
+/// friend crouches with cupped hands, you run, step into them, and get thrown up onto it. And jumping gets more confident with
 /// practice: beginners whoop when they land a big jump, old hands barely notice.</summary>
 sealed partial class Brain
 {
@@ -30,7 +32,7 @@ sealed partial class Brain
 
     void BoostOptions(World w, OptionList opts)
     {
-        if (_boostCd > _t0 || Baby || !f.Grounded) return;
+        if (_boostCd > _t0 || (Baby && Grown < 0.25f) || !f.Grounded) return;
         var here = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (here == null) return;
         // A ledge above that's out of reach alone, but within a leg-up.
@@ -45,13 +47,18 @@ sealed partial class Brain
             best = p; break;
         }
         if (best == null) return;
-        var friend = w.Figures.Where(o => o != f && o.Mode == Mode.Control && o.Grounded && !o.Brain.Baby && !o.Hunter && !o.Brain.Asleep && !o.Brain.InFight
+        var friend = w.Figures.Where(o => o != f && o.Mode == Mode.Control && o.Grounded && !o.Brain.Baby && o.SizeMul >= f.SizeMul * 0.8f && !o.Hunter && !o.Brain.Asleep && !o.Brain.InFight
                                           && o.Brain._g is not (G.Work or G.Build or G.Ride or G.Swim or G.Fish or G.Boost or G.Busy or G.Happening or G.Sport or G.Game or G.Tourney)
                                           && w.Env.SupportAt(o.Base.X, o.Base.Y, o.GroundHwnd) is { } there && MathF.Abs(there.Y - here.Y) < 3 && there.X1 <= f.Base.X && there.X2 >= f.Base.X && AffinityWith(o) > 0.15f && o.Brain.HapRole.Length == 0)
-                              .OrderBy(o => MathF.Abs(o.Base.X - f.Base.X)).FirstOrDefault();
+                              .OrderByDescending(o => ParentIds.Contains(o.Id) ? 1 : 0).ThenBy(o => MathF.Abs(o.Base.X - f.Base.X)).FirstOrDefault();
         if (friend == null) return;
         var target = best;
-        opts.Add(MathF.Max(0.02f, (0.2f + P.Curiosity * 0.4f + f.Tastes.Of(Thing.HighPlaces) * 0.4f) * (0.5f + Boredom)), () => AskForBoost(friend, target, w), $"Ask {friend.Name} for a leg-up");
+        // Who asks: kids (most of all with a parent there), the ones who never throw the hook, the tired; hook lovers hardly ever.
+        float need = Baby ? (ParentIds.Contains(friend.Id) ? 3f : 1.5f)
+                   : f.Style.Rope == RopeStyle.Never ? 1.5f
+                   : (1 - Stamina) * 0.8f + (1 - f.Style.GrappleChance) * 0.3f + (AffinityWith(friend) > 0.5f ? 0.2f : 0);
+        float want = MathF.Max(0.02f, (0.2f + P.Curiosity * 0.4f + f.Tastes.Of(Thing.HighPlaces) * 0.4f) * (0.5f + Boredom));
+        opts.Add(want * need, () => AskForBoost(friend, target, w), $"Ask {friend.Name} for a leg-up");
     }
 
     void AskForBoost(Figure friend, Platform target, World w)
@@ -83,7 +90,16 @@ sealed partial class Brain
         if (!_boostIsJumper)
         {
             // The booster: to the spot, crouch, cupped hands; a heave when the climber steps in.
-            if (_boostPhase == 0) { if (MoveToward(_boostX, 3 * S)) { _boostPhase = 1; f.Emote(Gestures ? "👍" : V("hop on!", "UP YOU GO!!", "fine. step up.", "o-okay, careful…", "my hands are your stair"), 1.2f); } return; }
+            if (_boostPhase == 0)
+            {
+                if (MoveToward(_boostX, 3 * S))
+                {
+                    _boostPhase = 1;
+                    bool myKid = o.Brain.ParentIds.Contains(f.Id);
+                    f.Emote(Gestures ? "👍" : myKid ? V("up you go, kiddo!", "UP YOU GO, CHAMP!!", "up. carefully.", "careful, sweetie…", "rise, little one") : V("hop on!", "UP YOU GO!!", "fine. step up.", "o-okay, careful…", "my hands are your stair"), 1.2f);
+                }
+                return;
+            }
             FaceTo(_boostX + _boostSide * 100);
             f.DesiredVX = 0;
             f.Boosting = _boostPhase == 1 ? 1 : 2;

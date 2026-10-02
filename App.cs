@@ -877,6 +877,8 @@ sealed partial class App : ApplicationContext
         if (s.Weight is float wt) f.Weight = Math.Clamp(wt, 0, 1);
         f.Brain.Gifts.AddRange(s.Gifts);
         f.Brain.Collection.AddRange(s.Collection);
+        foreach (var (k, v) in s.Learned) f.Brain.Learned[k] = Math.Clamp(v, -1, 1);
+        foreach (var (k, v) in s.Tried) f.Brain.Tried[k] = Math.Max(0, v);
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
         if (Enum.TryParse<Job>(s.Job, out var job)) f.Brain.Job = job;
         if (s.Coins is int coins) f.Brain.Coins = Math.Max(0, coins);
@@ -941,6 +943,7 @@ sealed partial class App : ApplicationContext
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
+            Learned = f.Brain.Learned.ToDictionary(kv => kv.Key, kv => MathF.Round(kv.Value, 3)), Tried = new(f.Brain.Tried),
             Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins, AgeBank = MathF.Round(f.Brain.AgeBank, 3),
         }).ToList();
         _settings.Items = SaveItems();

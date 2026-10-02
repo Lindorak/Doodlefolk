@@ -341,6 +341,7 @@ sealed partial class Brain
     /// <summary>Fans of the user come over to hang out with the cursor, show off, or bring it a ball.</summary>
     (float, Action)? UserOption(World w)
     {
+        if (World.UserBusy > 0.5f && rng.NextDouble() < (World.UserBusy - 0.5f) * 1.6f) return null;   // you're usually busy now
         float fond = UserFondness;
         if (fond < 0.35f || CursorTrust < 0.4f || _t0 < _fanUntil) return null;
         float d = MathF.Abs(w.Cursor.X - f.Base.X);

@@ -49,6 +49,16 @@ public class CatalogTests
         .Select(k => Stickers.Find(k)?.Art ?? "");
 }
 
+public class LearningTests
+{
+    [Theory]
+    [InlineData("Ride the bike", "ride the")]
+    [InlineData("Ride the go-kart", "ride the")]
+    [InlineData("Go fishing", "go fishing")]
+    [InlineData("Dance", "dance")]
+    public void ActivitiesGroupByKind(string label, string key) => Assert.Equal(key, Brain.ActivityKey(label));
+}
+
 public class TimeTests
 {
     [Fact]

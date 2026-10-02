@@ -48,6 +48,8 @@ sealed partial class World
     public static bool Calm, ColourBlind;
     /// <summary>Figures speak only in gestures and symbols (setting).</summary>
     public static bool Gestures;
+    /// <summary>How often you're busy (typing away) at this hour, learned over the weeks (0..1).</summary>
+    public static float UserBusy;
     /// <summary>The temperature outside in °C, when the real weather is on (null otherwise).</summary>
     public float? TempC;
     public static float LifePace;

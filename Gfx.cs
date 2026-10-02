@@ -15,8 +15,6 @@ sealed class GfxSettings
     public bool DropShadows { get; set; } = true;
     /// <summary>Light and shade on heads, limbs and objects.</summary>
     public bool Shading { get; set; } = true;
-    /// <summary>0 none, 1 eyes, 2 eyes and mouth.</summary>
-    public int Faces { get; set; } = 2;
     /// <summary>Cartoon smears behind fast punches, kicks and flips.</summary>
     public bool Trails { get; set; } = false;
     /// <summary>Detailed art for things (textures, stitching, extra parts) instead of the simple flat look.</summary>
@@ -24,12 +22,12 @@ sealed class GfxSettings
 
     public GfxSettings Clone() => (GfxSettings)MemberwiseClone();
 
-    public static GfxSettings For(string preset, int faces) => preset switch
+    public static GfxSettings For(string preset) => preset switch
     {
-        "low" => new() { Preset = "low", Shadows = 1, DropShadows = false, Shading = false, Faces = faces, Trails = false, DetailedArt = false },
-        "medium" => new() { Preset = "medium", Shadows = 2, DropShadows = false, Shading = true, Faces = faces, Trails = false },
-        "ultra" => new() { Preset = "ultra", Shadows = 2, DropShadows = true, Shading = true, Faces = faces, Trails = true },
-        _ => new() { Preset = "high", Shadows = 2, DropShadows = true, Shading = true, Faces = faces, Trails = false },
+        "low" => new() { Preset = "low", Shadows = 1, DropShadows = false, Shading = false, Trails = false, DetailedArt = false },
+        "medium" => new() { Preset = "medium", Shadows = 2, DropShadows = false, Shading = true, Trails = false },
+        "ultra" => new() { Preset = "ultra", Shadows = 2, DropShadows = true, Shading = true, Trails = true },
+        _ => new() { Preset = "high", Shadows = 2, DropShadows = true, Shading = true, Trails = false },
     };
 }
 

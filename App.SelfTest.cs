@@ -28,7 +28,9 @@ sealed partial class App
     string _albumFile = "", _questText = "", _memoName = "", _travellerName = "";
     double _perfAt = 5, _scriptLag;
     bool _sawRide, _sawPrint;
-    int _notified = -1;
+    int _notified = -1, _scaleItems;
+    Dictionary<int, float> _scaleBefore = new();
+    Dictionary<string, float> _petBefore = new();
 
     void Check(string name, bool pass, string detail = "")
     {
@@ -175,6 +177,19 @@ sealed partial class App
                   $"away {_away.Count}, back {back != null}, guests {_guests.Count}");
             _p2pSend = SteamHub.SendTo; _p2pReceive = SteamHub.Receive;
         });
+        At(179, "bigger", () =>
+        {
+            _scaleBefore = _w.Figures.ToDictionary(f => f.Id, f => f.S);
+            _petBefore = _w.Pets.ToDictionary(p => p.Name, p => p.S);
+            _scaleItems = _w.Items.Count(i => !i.Temporary);
+            Rescale(1.5f);
+            Check("everything gets bigger together, and everyone's still themselves",
+                  _w.Figures.Count == _scaleBefore.Count && _w.Figures.All(f => _scaleBefore.TryGetValue(f.Id, out var b) && MathF.Abs(f.S - b * 1.5f) < 0.02f * b)
+                  && _w.Items.Count(i => !i.Temporary) == _scaleItems
+                  && _w.Pets.Count == _petBefore.Count && _w.Pets.All(p => _petBefore.TryGetValue(p.Name, out var b) && MathF.Abs(p.S - b * 1.5f) < 0.05f * b),
+                  $"figures {_w.Figures.Count}/{_scaleBefore.Count}, items {_w.Items.Count(i => !i.Temporary)}/{_scaleItems}, pets {_w.Pets.Count}/{_petBefore.Count}");
+        });
+        At(182, "back to size", () => { Rescale(1f); Check("…and back again", _w.Figures.All(f => _scaleBefore.TryGetValue(f.Id, out var b) && MathF.Abs(f.S - b) < 0.02f * b)); });
         At(176, "village check", () =>
         {
             float top = _w.Env.BoundsAt(960).T;

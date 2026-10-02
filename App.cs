@@ -62,7 +62,8 @@ sealed partial class App : ApplicationContext
         CleanUpOldVersion();
         if (Migration.NeedsStartupEntry) { _settings.StartWithWindows = true; SetStartWithWindows(true); }
         _showPlatforms = args.Contains("--platforms");
-        _w.Scale = ComputeScale(args);
+        _baseScale = ComputeScale(args);
+        _w.Scale = _selfTest || _trailer ? _baseScale : _baseScale * Math.Clamp(_settings.WorldScale, 0.5f, 2f);
         _w.Fight = _settings.Fight;
         _w.Env.MinHeadroom = 75 * _w.Scale;
 
@@ -316,6 +317,7 @@ sealed partial class App : ApplicationContext
         StreamFrame(now);
         CommunityFrame(now);
         FriendVisitFrame(now);
+        RescaleFrame(now);
         VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
@@ -836,9 +838,9 @@ sealed partial class App : ApplicationContext
     }
 
     /// <summary>Rebuild a figure at a new size, keeping its identity, mood and friendships.</summary>
-    Figure ResizeFigure(Figure old, float size)
+    Figure ResizeFigure(Figure old, float size, bool force = false)
     {
-        if (!_w.Figures.Contains(old) || MathF.Abs(old.SizeMul - size) < 0.01f) return old;
+        if (!_w.Figures.Contains(old) || (!force && MathF.Abs(old.SizeMul - size) < 0.01f)) return old;
         var f = new Figure(old.Color, old.Name, _w.Scale * size, old.Traits, _w.Rng, old.Id) { SizeMul = size };
         f.Brain.CopyFrom(old.Brain);
         f.Gear = old.Gear;
@@ -1364,6 +1366,7 @@ sealed partial class App : ApplicationContext
                     break;
                 }
                 case "meme": _memeAt = 0; _memeReady = null; World.Log("meme: making one; context " + string.Join(",", MemeNow().Tags)); break;
+                case "worldscale": _settings.WorldScale = Math.Clamp(float.Parse(p[1], inv), 0.5f, 2f); Rescale(TargetScale); break;
                 case "layout": _settings.TownLayout = p.Length > 1 ? p[1] : "desktop"; World.Log("layout: " + ApplyLayout()); break;
                 case "chat":
                     // chat <user> <text…>: pretend a Twitch chatter said it.

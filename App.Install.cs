@@ -222,7 +222,7 @@ sealed partial class App
         if (lite == _lite && !force) return;
         _lite = lite;
         World.Log(lite ? "battery saver on" : "battery saver off");
-        Gfx.Q = lite ? GfxSettings.For("low", _settings.Gfx.Faces) : _settings.Gfx;
+        Gfx.Q = lite ? GfxSettings.For("low") : _settings.Gfx;
         ApplyFps();
         ForceFullRedraw();
     }

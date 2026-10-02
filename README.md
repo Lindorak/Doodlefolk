@@ -144,7 +144,7 @@ panel (draw a figure, toss in a toy, hide them, quit).
 - **Colours & fights**: decide how colours get along (friends, rivals who spar, enemies who really fight),
   how hard they hit, health bars, and what happens at zero health (up to **permanent death**).
 - **Graphics**: presets from low to ultra, or set each part yourself: soft shadows, shadows cast on the
-  window behind, shading, faces, motion smears, and a simple or detailed look for objects.
+  window behind, shading, motion smears, and a simple or detailed look for objects.
 - **Settings**: frame rate, paper or chalkboard look (the whole app follows it, bubbles included), sound and
   voices, screen features, romance, babies, wishes, celebrations, and remembering everyone between runs.
 - **Accessibility and comfort**: a **calm mode** (no fights, tournaments, cursor hunting, lightning or freeze-frames),

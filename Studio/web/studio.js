@@ -1616,7 +1616,6 @@ PAGES.settings = {
     });
     const gfxPart = (part, v) => send({ t: "setting", key: "gfx", part, v });
     const shadowSel = select([{ value: 0, label: "Off" }, { value: 1, label: "Simple" }, { value: 2, label: "Soft" }], g().shadows ?? 2, v => gfxPart("shadows", +v));
-    const faceSel = select([{ value: 0, label: "None (classic stick figures)" }, { value: 1, label: "Eyes" }, { value: 2, label: "Eyes and mouth" }], g().faces ?? 2, v => gfxPart("faces", +v));
     const gfxChecks = [
       check("Detailed art", "Wood grain, stitching, shine and extra parts on things, plus details on balls and pets. Off: the simple flat look.", () => g().detailedArt !== false, v => gfxPart("detail", v)),
       check("Shading", "Light and shade on figures, heads, things, balls and pets.", () => g().shading !== false, v => gfxPart("shading", v)),
@@ -1726,6 +1725,10 @@ PAGES.settings = {
     let workshopSig = null;
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
+    const wsv = h("span", { class: "val" });
+    const wsPct = v => Math.round(v * 100) + "%";
+    const worldScale = range(0.5, 2, 0.05, st().worldScale || 1, v => { wsv.textContent = wsPct(v); sendSoon("ws", { t: "setting", key: "worldScale", v }, 250); });
+    wsv.textContent = wsPct(st().worldScale || 1);
     const layoutChips = [["desktop", "🖥 The whole desktop"], ["strip", "▁ A taskbar village"], ["wallpaper", "🖼 Behind my windows"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townLayout", k); } }, l); c.key = k; return c; });
     const shv = h("span", { class: "val" });
     const stripH = range(110, 400, 10, st().stripHeight || 170, v => { shv.textContent = v + " px"; sendSoon("strip", { t: "setting", key: "stripHeight", v }); });
@@ -1783,6 +1786,9 @@ PAGES.settings = {
       h("h2", null, "Where they live"),
       h("p", { class: "sub" }, "All over the desktop; in a little strip along the taskbar (windows aren't terrain, lighter, out of your way); or behind every window, like a live wallpaper (they still walk on window tops, and clicks go straight through to your icons)."),
       h("div", { class: "row" }, layoutChips), stripRow,
+      h("div", { class: "field" }, h("label", null, "Size of everything"), worldScale, wsv,
+        h("button", { class: "btn small ghost", title: "Back to the usual size", onclick: () => { setRange(worldScale, 1); wsv.textContent = "100%"; send({ t: "setting", key: "worldScale", v: 1 }); } }, "Reset")),
+      h("p", { class: "hint" }, "Figures, things, animals, balls and bubbles, all together. Everyone stays who they are."),
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
       h("div", { class: "row" }, chips),
       h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
@@ -1791,7 +1797,6 @@ PAGES.settings = {
       h("p", { class: "sub" }, "Presets set everything at once; change any part below to make your own."),
       h("div", { class: "row" }, gfxChips),
       h("div", { class: "field" }, h("label", null, "Shadows"), shadowSel),
-      h("div", { class: "field" }, h("label", null, "Faces"), faceSel),
       gfxChecks,
       h("h2", null, "Sound"), soundC, voicesC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       ambOn, ambBox,
@@ -1861,7 +1866,7 @@ PAGES.settings = {
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
       smartFps.update();
       gfxChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === g().preset); });
-      shadowSel.set(g().shadows ?? 2); faceSel.set(g().faces ?? 2);
+      shadowSel.set(g().shadows ?? 2);
       gfxChecks.forEach(c => c.update());
       soundC.update(); voicesC.update(); setRange(vol, st().volume ?? 0.55); if (idle(vol)) vv.textContent = Math.round((st().volume ?? 0.55) * 100) + "%";
       checks.forEach(c => c.update());
@@ -1881,6 +1886,7 @@ PAGES.settings = {
       memeFolderLine.textContent = st().memeFolder ? ` ${st().memeFolder}` : " (none)";
       ageChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().mortality || "never")); });
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); });
+      if (idle(worldScale)) { setRange(worldScale, st().worldScale || 1); wsv.textContent = wsPct(st().worldScale || 1); }
       layoutChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townLayout || "desktop")); });
       stripRow.style.display = st().townLayout === "strip" ? "" : "none"; if (idle(stripH)) shv.textContent = (st().stripHeight || 170) + " px";
       hemiChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().hemisphere || "auto")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();

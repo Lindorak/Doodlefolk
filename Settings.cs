@@ -215,6 +215,8 @@ sealed class Settings
     public bool DevHooks { get; set; }
     /// <summary>"desktop" (everywhere), "strip" (a taskbar village) or "wallpaper" (behind your windows).</summary>
     public string TownLayout { get; set; } = "desktop";
+    /// <summary>"Size of everything": 1 = the usual size for your screen; 0.5 to 2.</summary>
+    public float WorldScale { get; set; } = 1;
     /// <summary>Stream mode: your Twitch chat can join the town (read anonymously; no account needed).</summary>
     public bool StreamOn { get; set; }
     public string StreamChannel { get; set; } = "";

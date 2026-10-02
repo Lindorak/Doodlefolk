@@ -195,6 +195,7 @@ sealed partial class App
                 fish = FishDex(),
             }, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
                 tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, hemisphere = _settings.Hemisphere, ambience = AmbienceState(), requests = _settings.Requests, autoAlbum = _settings.AutoAlbum,
+            worldScale = _settings.WorldScale,
             townLayout = _settings.TownLayout, stripHeight = _settings.StripHeight,
             devHooks = _settings.DevHooks, devHookStatus = DevHookStatus, devHookPort = DevHookPort, exePath = Environment.ProcessPath ?? "Doodlefolk.exe",
             pranks = _settings.Pranks, internetMemes = _settings.InternetMemes, realMemes = _settings.RealMemes, memeFolder = _settings.MemeFolder, memeReady = _memeReady != null, mortality = _settings.Mortality, ghosts = _settings.Ghosts, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
@@ -823,7 +824,7 @@ sealed partial class App
             case "platforms": _showPlatforms = v.GetBoolean(); break;
             case "hidden": _paused = v.GetBoolean(); break;
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
-            case "gfxPreset": _settings.Gfx = GfxSettings.For(v.GetString() ?? "high", _settings.Gfx.Faces); Gfx.Q = _settings.Gfx; ForceFullRedraw(); break;
+            case "gfxPreset": _settings.Gfx = GfxSettings.For(v.GetString() ?? "high"); Gfx.Q = _settings.Gfx; ForceFullRedraw(); break;
             case "gfx":
             {
                 var g = _settings.Gfx;
@@ -832,7 +833,6 @@ sealed partial class App
                     case "shadows": g.Shadows = v.GetInt32(); break;
                     case "drop": g.DropShadows = v.GetBoolean(); break;
                     case "shading": g.Shading = v.GetBoolean(); break;
-                    case "faces": g.Faces = v.GetInt32(); break;
                     case "trails": g.Trails = v.GetBoolean(); break;
                     case "detail": g.DetailedArt = v.GetBoolean(); break;
                 }
@@ -872,6 +872,7 @@ sealed partial class App
             case "mortality": _settings.Mortality = v.GetString() == "oldage" ? "oldage" : "never"; _nextTopmost = 0; break;
             case "ghosts": _settings.Ghosts = v.GetBoolean(); break;
             case "pranks": _settings.Pranks = v.GetBoolean(); if (_settings.Pranks) _memeAt = Math.Min(_memeAt, _clock.Elapsed.TotalSeconds + 120); break;
+            case "worldScale": _settings.WorldScale = Math.Clamp(v.GetSingle(), 0.5f, 2f); QueueRescale(); break;
             case "townLayout":
                 _settings.TownLayout = v.GetString() is "strip" or "wallpaper" ? v.GetString()! : "desktop";
                 PostAll(new { t = "toast", text = ApplyLayout() });

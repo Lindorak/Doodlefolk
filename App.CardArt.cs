@@ -253,8 +253,6 @@ sealed partial class App
         else { g.DrawLine(pen, neck, new PointF(x - s * 0.25f, y - s * 0.4f)); g.DrawLine(pen, neck, new PointF(x + s * 0.25f, y - s * 0.4f)); }
         using var fill = new SolidBrush(c);
         g.FillEllipse(fill, head.X - hr, head.Y - hr, hr * 2, hr * 2);
-        using var eye = new SolidBrush(Color.White);
-        if (s > 20) { g.FillEllipse(eye, head.X + hr * 0.1f, head.Y - hr * 0.3f, hr * 0.32f, hr * 0.32f); g.FillEllipse(eye, head.X + hr * 0.55f, head.Y - hr * 0.3f, hr * 0.32f, hr * 0.32f); }
         if (hat == "crown")
         {
             using var gold = new SolidBrush(Color.FromArgb(242, 193, 78));

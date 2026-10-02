@@ -42,17 +42,8 @@ sealed partial class Figure
         DrawTorso(r, near, outline, w);
         DrawFullFace(r, near, outline);
         r.ShadedDisc(Jt[J.Head], headR, near);
-        if (Blush > 0.04f && !(Action == Act.SitBack && FrontView))
-        {
-            // Rosy cheeks on the side of the face it's looking toward.
-            var pink = new Color4(1, 0.42f, 0.55f, MathF.Min(0.85f, Blush * 1.1f) * fade);
-            Vector2 cheek = Jt[J.Head] + new Vector2(Facing * HeadR * 0.42f, HeadR * 0.3f);
-            r.Oval(cheek, HeadR * 0.3f, HeadR * 0.2f, pink);
-            r.Oval(cheek - new Vector2(Facing * HeadR * 0.62f, 0), HeadR * 0.22f, HeadR * 0.16f, pink.A(0.6f));
-        }
         Bone(J.Pelvis, J.KneeN, near, true); Bone(J.KneeN, J.FootN, near, true);
         Bone(J.Neck, J.ElbowN, near, true); Bone(J.ElbowN, J.HandN, near, true);
-        DrawFace(r, fade);
         DrawSweat(r);
         DrawLookBody(r, fade);
         DrawLookFront(r, fade);

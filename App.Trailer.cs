@@ -43,7 +43,7 @@ sealed partial class App
         _settings.SoundOn = false; _settings.CheckUpdates = false; _settings.NoticeDownloads = false; _settings.NoticeFrustration = false;
         _settings.NoticeTyping = false; _settings.Notifications = false; _settings.ScreenTerrain = _settings.ScreenReact = _settings.ScreenLinks = _settings.ScreenMedia = false;
         _settings.WeatherMode = "off"; _settings.Events = false; _settings.Visitors = false; _settings.LassoCursor = false; _settings.Theme = "paper";
-        _settings.Gfx = GfxSettings.For("ultra", 2);
+        _settings.Gfx = GfxSettings.For("ultra");
         Ui.Update("paper");
         World.SoundTap = (s, at, vol, pitch) => _tSounds.Add((_tFrame / (double)TFps, s, at.X, vol, pitch));
     }

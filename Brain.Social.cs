@@ -43,7 +43,7 @@ sealed partial class Brain
     {
         float side = MathF.Sign(f.Base.X - o.Base.X);
         if (side == 0) side = 1;
-        Navigate(() => o.Mode is Mode.Control or Mode.GetUp && w.Figures.Contains(o) ? o.Base + new Vector2(side * 22 * S, 0) : null,
+        Navigate(() => o.Mode is Mode.Control or Mode.GetUp && w.Figures.Contains(o) ? o.Base + new Vector2(side * 28 * S, 0) : null,
                  6 * S, false, () => Meet(o, w), WalkPurpose.Social);
     }
 
@@ -158,7 +158,7 @@ sealed partial class Brain
         f.LookAt = o.Jt[J.Head];
         // Keep a comfortable distance.
         float gap = MathF.Abs(o.Base.X - f.Base.X);
-        f.DesiredVX = gap < 16 * S ? -MathF.Sign(o.Base.X - f.Base.X) * f.WalkSpeed * 0.5f : 0;
+        f.DesiredVX = gap < 24 * S ? -MathF.Sign(o.Base.X - f.Base.X) * f.WalkSpeed * 0.5f : 0;
 
         int turn = (int)(_t / 1.3f) % 2;
         _chatWith = o;

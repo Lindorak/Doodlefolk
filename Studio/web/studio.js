@@ -801,7 +801,7 @@ PAGES.settings = {
     const setS = (key, v) => send({ t: "setting", key, v });
     const chips = INIT.fps.map(o => {
       const c = h("button", { class: "chip", onclick: () => { touched(c); setS("fps", o.value); } }, o.value > 0 ? `${o.label} fps` : o.label);
-      c.value = o.value;
+      c.fps = o.value;
       return c;
     });
     const cv = h("span", { class: "val" });
@@ -828,7 +828,7 @@ PAGES.settings = {
         h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight") }, "GitHub page"),
         armed("Quit StickFight", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
     return () => {
-      chips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.value === st().fps); });
+      chips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.fps === st().fps); });
       setRange(custom, st().fps > 0 ? st().fps : 60);
       if (idle(custom)) cv.textContent = st().fps > 0 ? st().fps : "–";
       themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
@@ -923,7 +923,10 @@ const Mock = {
       style: { choice: { walk: 0, run: 0, idle: 0, climb: 0, jump: 0, fight: 0, celebrate: 0, rope: 0 }, resolved: { walk: "Bouncy", run: "Sprinter", idle: "Loose", climb: "Leaper", jump: "Flipper", fight: "Acrobat", celebrate: "Dance", rope: "Zip" }, describe: "Walks with a bounce, sprints, stands loose, fights with flips and flying kicks, and dances when it wins. Zips up a grappling hook." },
       rels: [],
     });
-    const figs = [mk(1, "Red", "#E53935", "Juggling"), mk(2, "Blue", "#1E88E5", "Chatting with Green"), mk(3, "Green", "#43A047", "Chatting with Blue"), mk(4, "Yellow", "#FDD835", "Climbing a rope")];
+    const figs = [mk(1, "Sparky", "#E53935", "Juggling"), mk(2, "Bubbles", "#1E88E5", "Chatting with Flip"), mk(3, "Flip", "#43A047", "Chatting with Bubbles"), mk(4, "Rocco", "#FB8C00", "Climbing a rope"), mk(5, "Snooze", "#8E24AA", "Napping")];
+    figs[3].feels = "Can't stand you"; figs[3].fond = -0.6; figs[4].feels = "Adores you"; figs[4].fond = 0.8;
+    figs[3].tastes.describe = "Loves fighting, high places, your cursor; hates napping, dancing. Favourite colour: red.";
+    figs[4].tastes.describe = "Loves napping, sitting, being picked up; hates exploring. Favourite colour: purple.";
     figs.forEach(f => f.rels = figs.filter(o => o !== f).map(o => ({ id: o.id, name: o.name, hex: o.hex, mine: Math.round(Math.sin(f.id * 3 + o.id) * 100) / 100, theirs: Math.round(Math.cos(f.id + o.id * 2) * 100) / 100, relation: "Neutral", similarity: 0.4, shared: ["Dancing"] })));
     this.state = {
       t: "state", figures: figs, props: [{ id: 7, kind: "SoccerBall", name: "Soccer ball", size: 1, bounce: 0.65, hex: "#E53935", held: null }, { id: 8, kind: "BeachBall", name: "Beach ball", size: 1.6, bounce: 0.8, hex: "#E53935", held: "Red" }],
@@ -931,6 +934,9 @@ const Mock = {
       fight: { enabled: true, punchCursor: true, frequency: 1, strength: 1, onZeroHealth: "KnockdownOnly", reviveSeconds: 15, healthBars: true, sameColour: "Friends", differentColour: "Neutral", pairs: { "Blue|Red": "Rivals" } },
       settings: { fps: 60, remember: true, platforms: false, hidden: false, theme: "auto" }, fpsNow: 60,
     };
+    const q = new URLSearchParams(location.search);
+    if (q.get("theme")) this.state.settings.theme = q.get("theme");
+    if (q.get("page")) { route.page = q.get("page"); route.id = +(q.get("id") || 1); route.sub = q.get("sub") || "personality"; }
     let t = 0;
     setInterval(() => {
       t += 0.16;

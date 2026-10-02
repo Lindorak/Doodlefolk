@@ -500,7 +500,7 @@ sealed partial class Brain
             if (o == f || o.Mode is Mode.Spawning || o.Dead || o == _partner || o == _foe || o == _reviving) continue;
             if (MathF.Abs(o.Base.Y - f.Base.Y) > 4 * S || MathF.Abs(o.Vel.X) > o.WalkSpeed * 1.5f) continue;
             float dx = f.Base.X - o.Base.X;
-            float want = 15 * S * (f.SizeMul + o.SizeMul) * 0.5f;
+            float want = 22 * S * (f.SizeMul + o.SizeMul) * 0.5f;
             if (MathF.Abs(dx) >= want) continue;
             float dir = MathF.Abs(dx) > 0.5f ? MathF.Sign(dx) : (f.Id < o.Id ? -1 : 1);
             push += dir * (1 - MathF.Abs(dx) / want);

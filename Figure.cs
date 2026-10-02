@@ -391,6 +391,13 @@ sealed partial class Figure
         float lead = Math.Clamp(vPlan * dur * 1.5f, -Leg * 0.6f, Leg * 0.6f);
         float stance = Action == Act.Fight ? (st.Fight == FightStyle.Kicker ? 10 : 8) * S : idle ? (JumpPending ? 7f : 5.5f) * S : 0;
         float tN = Base.X + Facing * stance, tF = Base.X - Facing * stance;
+        if (idle && Action != Act.Fight && !JumpPending)
+        {
+            // Standing around: feet staggered (one a little ahead), not side by side like a soldier.
+            float k = ((Id * 7919) % 100) / 100f;
+            tN = Base.X + Facing * (2.5f + 3.5f * k) * S;
+            tF = Base.X - Facing * (6.5f - 2.5f * k) * S;
+        }
 
         // Feet still in the air keep re-aiming: land half a step's travel ahead of where the body
         // will be when the swing finishes.

@@ -10,7 +10,9 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>StickFight</RootNamespace>
     <AssemblyName>StickFight</AssemblyName>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
+    <PublishDocumentationFiles>false</PublishDocumentationFiles>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
     <Product>StickFight</Product>
     <Description>Stick figures that live, play and fight on your Windows desktop.</Description>
   </PropertyGroup>

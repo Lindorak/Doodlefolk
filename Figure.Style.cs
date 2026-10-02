@@ -122,14 +122,25 @@ sealed partial class Figure
     {
         var st = Style;
         var md = Mood;
-        pdxT = MathF.Sin(_time * 0.55f + Id) * 0.9f * S * st.WeightShift;
+        // Relaxed, not at attention: soft knees, weight drifting slowly between the feet, arms hanging
+        // loose with a bend at the elbow and a little breathing sway.
+        float shift = MathF.Sin(_time * 0.45f + Id) + 0.35f * MathF.Sin(_time * 0.17f + Id * 2);
+        pdxT = shift * 0.9f * S * st.WeightShift;
+        hipT = StandHip * (0.955f - 0.01f * MathF.Max(0, shift));
         leanT = 0.02f + br * 0.012f + st.Posture * 0.6f + md.Tired * 0.12f + md.Sad * 0.12f;
         tiltT += (md.Sad * 0.35f + md.Tired * 0.15f) * Facing;
+        float sway = br * 0.6f * S;
+        hN = new(Arm * 0.13f + sway, Arm * 0.86f);
+        hF = new(-Arm * 0.04f + sway * 0.7f, Arm * 0.88f);
+        eN = eF = new(-1, 0.35f);
+        handW = 10;
         switch (st.Idle)
         {
             case IdleHabit.ArmsCrossed:
-                hN = new(Arm * 0.34f, Torso * 0.3f); hF = new(Arm * 0.4f, Torso * 0.24f);
-                eN = eF = new(1, 0.5f); handW = 14;
+                // Forearms folded across the chest, elbows down at the sides.
+                hN = new(Arm * 0.3f, Torso * 0.5f + br * 0.3f * S); hF = new(Arm * 0.24f, Torso * 0.44f + br * 0.3f * S);
+                eN = eF = new(0.15f, 1); handW = 14;
+                leanT -= 0.03f;
                 break;
             case IdleHabit.HandsBehind:
                 hN = new(-Arm * 0.38f, Torso * 0.74f); hF = new(-Arm * 0.44f, Torso * 0.7f);
@@ -140,17 +151,20 @@ sealed partial class Figure
                 eN = eF = new(-1, 0);
                 break;
             case IdleHabit.Fidgety:
-                hipT += MathF.Sin(_time * 5.5f + Id) * 0.5f * S;
-                hN += new Vector2(MathF.Sin(_time * 3 + Id) * 1.5f * S, 0);
+                // Can't stand still: rocks side to side and fiddles with its hands.
+                pdxT = MathF.Sin(_time * 2.2f + Id) * 1.6f * S;
+                hN = new(Arm * 0.32f + MathF.Sin(_time * 3 + Id) * 1.2f * S, Torso * 0.68f);
+                hF = new(Arm * 0.28f, Torso * 0.72f + MathF.Sin(_time * 3.4f + Id) * 0.8f * S);
+                eN = eF = new(-0.6f, 1);
                 break;
         }
         if (md.Scared > 0.4f)
         {
-            // Cowering: crouched a bit, hands up.
-            hipT *= 0.93f;
-            hN = new(Arm * 0.35f, Torso * 0.25f); hF = new(Arm * 0.3f, Torso * 0.2f);
-            eN = eF = new(-0.4f, 1);
-            leanT -= 0.06f;
+            // Nervous: knees bent, hunched, hands held up in front of the chest.
+            hipT = StandHip * 0.9f;
+            hN = new(Arm * 0.5f, Torso * 0.42f); hF = new(Arm * 0.44f, Torso * 0.5f);
+            eN = eF = new(-0.3f, 1);
+            leanT += 0.06f;
         }
         else if (md.Angry > 0.65f && st.Idle == IdleHabit.Loose)
         {

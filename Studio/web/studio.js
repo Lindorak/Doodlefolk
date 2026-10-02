@@ -360,7 +360,7 @@ function newFigureCard() {
 
 // ---------------- Figure ----------------
 
-const SUBS = [["personality", "Personality"], ["likes", "Likes & dislikes"], ["friends", "Friends"], ["moves", "Moves"], ["mood", "Mood"], ["look", "Look"]];
+const SUBS = [["personality", "Personality"], ["likes", "Likes & dislikes"], ["friends", "Friends"], ["moves", "Moves"], ["mood", "Mood"], ["look", "Look"], ["diary", "Diary"]];
 
 PAGES.figure = {
   sig: () => {
@@ -672,6 +672,39 @@ const SUBPANELS = {
         b.sel.set(f.style.choice[b.k]);
         b.now.textContent = f.style.choice[b.k] === 0 ? `→ ${f.style.resolved[b.k].toLowerCase()}` : "";
       }
+    };
+  },
+
+  diary(panel, f) {
+    // Their own words, newest first, grouped by day, on lined paper.
+    const page = h("div", { class: "diary" });
+    const empty = h("p", { class: "hint" }, `${f.name} hasn't written anything yet. Give it time: fights, friends, games, crushes and the things you do all end up in here.`);
+    add(panel, h("h2", { style: { marginTop: 0 } }, `${f.name}${f.name.endsWith("s") ? "'" : "'s"} diary`), page, empty);
+    let sig = "";
+    const dayName = d => {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const day = new Date(d); day.setHours(0, 0, 0, 0);
+      const diff = Math.round((today - day) / 86400000);
+      return diff === 0 ? "Today" : diff === 1 ? "Yesterday" : day.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+    };
+    return f => {
+      const d = f.diary || [];
+      const now = d.map(e => e.at + e.text).join("|");
+      if (now === sig) return;
+      sig = now;
+      empty.hidden = d.length > 0;
+      const kids = [];
+      let last = "";
+      for (const e of d) {
+        const when = new Date(e.at);
+        const dn = dayName(when);
+        if (dn !== last) { kids.push(h("h3", { class: "diary-day" }, dn)); last = dn; }
+        kids.push(h("div", { class: "diary-entry" },
+          h("span", { class: "diary-time" }, when.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })),
+          h("span", { class: "diary-mood" }, e.mood || ""),
+          h("span", { class: "diary-text" }, e.text)));
+      }
+      page.replaceChildren(...kids);
     };
   },
 

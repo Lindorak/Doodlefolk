@@ -183,6 +183,7 @@ sealed partial class App
             fond = R(b.UserFondness),
             hunter = f.Hunter,
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
+            diary = b.Diary.AsEnumerable().Reverse().Take(80).Select(d => new { at = d.At.ToString("yyyy-MM-ddTHH:mm:ss"), text = d.Text, mood = d.Mood }),
             decision = b.LastDecision, decidedAgo = R(b.DecidedAgo), route = b.RoutePlan,
             gender = f.Gender.ToString(),
             attraction = Enum.GetValues<Attraction>().Where(a => a is Attraction.Girls or Attraction.Boys or Attraction.Nonbinary && f.Attraction.HasFlag(a)).Select(a => a.ToString()),

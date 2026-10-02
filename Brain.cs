@@ -94,8 +94,12 @@ sealed partial class Brain
     float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o);
     public float AffinityWith(Figure o) => Math.Clamp(Baseline(o) + (Affinity.TryGetValue(o.Id, out var a) ? a : 0), -1, 1);
     public float AffinityDelta(Figure o) => Affinity.TryGetValue(o.Id, out var a) ? a : 0;
-    public void AddAffinity(Figure o, float d) =>
+    public void AddAffinity(Figure o, float d)
+    {
+        float before = AffinityWith(o);
         Affinity[o.Id] = Math.Clamp(AffinityDelta(o) + d, -1 - Baseline(o), 1 - Baseline(o));
+        DiaryFeelings(o, before, AffinityWith(o));
+    }
 
     // ================= hooks from the body =================
 
@@ -136,7 +140,7 @@ sealed partial class Brain
     public void OnRecovered(float throwSpeed, World w)
     {
         if (throwSpeed < 1 && AfterKnockdown(w)) return;
-        if (throwSpeed > 900 * S) TellWitnesses(w, M.Clamp01(throwSpeed / (2500 * S)));
+        if (throwSpeed > 900 * S) { TellWitnesses(w, M.Clamp01(throwSpeed / (2500 * S))); DiaryThrown(M.Clamp01(throwSpeed / (2500 * S))); }
         if (FeelAboutBeingThrown(throwSpeed)) return;
         float k = M.Clamp01(throwSpeed / (2500 * S));
         Annoyance = M.Clamp01(Annoyance + 0.2f + 0.4f * k);
@@ -557,6 +561,7 @@ sealed partial class Brain
         if (_t > 1.2f && f.CurrentEmote != "z") f.Emote("z", 3);
         if ((Stamina > 0.97f && _t > 8) || _t > _dur)
         {
+            if (_t > 10) DiaryNapped(null);
             f.Emote("♪", 0.8f);
             Cheered(0.2f);
             Go(G.Cheer, 0.7f);   // a big stretch

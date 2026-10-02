@@ -255,6 +255,7 @@ sealed partial class Brain
                     w.Fx.Dust(f.Jt[J.Head] + new Vector2(f.Facing * 3 * S, 2 * S), S * 0.4f, 2, 0.2f, w.Rng);
                     if (it.BitesLeft <= 0)
                     {
+                        DiaryAte(it);
                         f.CarryingItem = null;
                         it.Holder = null;
                         w.RemoveItem(it);
@@ -302,6 +303,7 @@ sealed partial class Brain
         var it = _item;
         _item = null;
         if (it == null) return;
+        if (_g == G.UseItem && _verb is Verb.Lie or Verb.Hammock && _t > 12) DiaryNapped(it);
         for (int i = 0; i < it.Seated.Length; i++) if (it.Seated[i] == f) it.Seated[i] = null;
         if (it.User == f) it.User = null;
         if (f.CarryingItem == it)

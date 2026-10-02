@@ -74,7 +74,9 @@ sealed partial class Brain
                     ? (aff - 0.2f + MathF.Max(0, f.Tastes.Similarity(o.Tastes)) * 0.3f) * (together ? 0.012f : 0.0015f) * (0.6f + P.Sociability)
                     : aff < -0.2f ? -0.01f : 0;
                 if (Dating(o)) grow = MathF.Max(grow, together ? 0.008f : 0.001f);
+                bool wasCrush = love > 0.45f;
                 AddLove(o, grow * dt);
+                if (!wasCrush && LoveFor(o) > 0.45f && !Dating(o)) DiaryCrush(o);
             }
             else if (love > 0 && !Dating(o)) Love[o.Id] = MathF.Max(0, love - dt * 0.0006f);   // out of sight, slowly out of mind
         }
@@ -188,11 +190,15 @@ sealed partial class Brain
         for (int i = 0; i < 6; i++) w.Fx.Spark(mid + new Vector2(rng.Range(-14, 14), rng.Range(-8, 8)) * S, S * 0.7f, w.Rng, 0.6f, new Color4(1, 0.45f, 0.65f, 1));
         World.Play(Sfx.Chime, mid, 0.45f);
         World.Log($"{f.Name} and {c.Name} are dating");
+        DiaryConfessed(c, true);
+        c.Brain.DiaryAskedOut(f, true);
         w.CoupleFormed(f, c);
     }
 
     void Rejected(Figure c)
     {
+        DiaryConfessed(c, false);
+        c.Brain.DiaryAskedOut(f, false);
         Saddened(0.35f);
         Love[c.Id] = MathF.Max(0, LoveFor(c) - 0.3f);
         _heartbreakAt = _t0 - 90;   // a short sting, not a full heartbreak
@@ -215,6 +221,7 @@ sealed partial class Brain
             a.Saddened(0.5f);
             a.AddAffinity(b.f, -0.2f);
             a.Love[b.f.Id] = MathF.Min(a.LoveFor(b.f), 0.2f);
+            a.DiaryBreakup(b.f);
             if (a.f.Mode == Mode.Control) a.f.Emote("💔", 2);
         }
         World.Log($"{f.Name} and {sh.Name} broke up");

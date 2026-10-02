@@ -160,6 +160,7 @@ sealed partial class Brain
     public void OnMatchOver(Match m, bool won, bool tie, World w)
     {
         Match = null;
+        DiaryMatch(m, won, tie);
         if (f.Weapon?.Def.Key is "racket" or "badmintonracket") f.DropWeapon(Vector2.Zero);
         if (f.Carrying == m.Ball) f.DropCarried(Vector2.Zero);
         foreach (var o in m.Players)

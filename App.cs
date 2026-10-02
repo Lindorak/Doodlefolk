@@ -565,7 +565,9 @@ sealed partial class App : ApplicationContext
     {
         int ci = colorIndex ?? NextColor();
         var (cname, color) = Palette.All[ci];
-        return SpawnFigure(color, UniqueName(cname), traits ?? Personality.Random(_w.Rng), 1);
+        var nf = SpawnFigure(color, UniqueName(cname), traits ?? Personality.Random(_w.Rng), 1);
+        nf?.Brain.DiaryBorn();
+        return nf;
     }
 
     Figure? SpawnFigure(Color4 color, string name, Personality traits, float size)
@@ -653,6 +655,8 @@ sealed partial class App : ApplicationContext
         if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
         f.Hunter = s.Hunter;
         if (s.Gender is Gender g) f.Gender = g;
+        f.Brain.Diary.Clear();
+        f.Brain.Diary.AddRange(s.Diary);
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -695,6 +699,7 @@ sealed partial class App : ApplicationContext
             Attraction = f.Attraction,
             Love = _w.Figures.Where(o => o != f && f.Brain.LoveFor(o) > 0.01f).ToDictionary(o => o.Name, o => MathF.Round(f.Brain.LoveFor(o), 3)),
             Sweetheart = f.Brain.Sweetheart(_w)?.Name,
+            Diary = f.Brain.Diary.TakeLast(150).ToList(),
         }).ToList();
         _settings.Items = SaveItems();
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();

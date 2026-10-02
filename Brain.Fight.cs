@@ -405,6 +405,7 @@ sealed partial class Brain
         _spar = spar;
         f.Emote(spar ? "♪" : P.Aggression > 0.5f ? "ha" : "♪", 1.3f);
         Cheered(0.4f);
+        DiaryFightWon(o, spar);
         AddAffinity(o, spar ? 0.05f : -0.05f);
         Stamina = MathF.Max(0, Stamina - 0.05f);
     }

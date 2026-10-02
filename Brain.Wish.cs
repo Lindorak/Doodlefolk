@@ -22,6 +22,7 @@ sealed partial class Brain
 {
     float _nextWish = 60, _nextCreate, _pencilSince, _pencilBreak, _pencilKeep = 240;
     ItemDef? _drawing;
+    Want? _drawingWant;
     PropKind? _drawingBall;
     Item? _gift;
     Prop? _giftBall;
@@ -141,6 +142,7 @@ sealed partial class Brain
     /// <summary>You clicked the thought bubble: here's the thing it asked for.</summary>
     public void WishGranted(Want what, Item? item, Prop? ball)
     {
+        DiaryWish(what, true);
         f.Emote(rng.NextDouble() < 0.5 ? "yay! thank you!" : "♥ thanks!", 1.6f);
         Cheered(0.25f);
         Boredom = MathF.Max(0, Boredom - 0.2f);
@@ -151,8 +153,9 @@ sealed partial class Brain
     }
 
     /// <summary>The bubble went unanswered. A little disappointing, nothing more.</summary>
-    public void WishIgnored()
+    public void WishIgnored(Want what)
     {
+        DiaryWish(what, false);
         f.Emote(rng.NextDouble() < 0.5 ? "oh well" : "…", 1.2f);
         Saddened(0.05f);
     }
@@ -163,6 +166,7 @@ sealed partial class Brain
     {
         _drawing = want.Item;
         _drawingBall = want.Ball;
+        _drawingWant = want;
         Go(G.Create, 4);
         f.Emote(want.Say.Length > 0 ? $"✎ {want.Say}" : "✎ hmm…", 1.2f);
     }
@@ -197,6 +201,7 @@ sealed partial class Brain
         w.Fx.Dust(at, S, 10, 0.7f, w.Rng);
         World.Play(Sfx.TaDa, at, 0.4f);
         f.Emote(rng.NextDouble() < 0.6 ? "ta-da!" : "✨", 1.4f);
+        if (_drawingWant != null) DiaryDrew(_drawingWant);
         Cheered(0.15f);
         Boredom = MathF.Max(0, Boredom - 0.3f);
         _nextCreate = _t0 + rng.Range(45, 120) * (1.6f - P.Playfulness);

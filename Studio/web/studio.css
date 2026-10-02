@@ -402,3 +402,11 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 /* what's on their mind */
 .thoughts .meter label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .thoughts .meter.picked label { color: var(--accent-ink); font-weight: 600; }
+
+/* diary: handwriting on lined paper */
+.diary { max-width: 720px; background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px); border-left: 2px solid var(--margin); padding: 0 0 8px 18px; }
+.diary-day { margin: 14px 0 2px; font: 18px var(--hand); color: var(--accent-ink); line-height: 32px; }
+.diary-entry { display: grid; grid-template-columns: 64px 22px 1fr; align-items: baseline; line-height: 32px; }
+.diary-time { font: 12px var(--body); color: var(--pencil); }
+.diary-mood { font-size: 15px; color: var(--accent); text-align: center; }
+.diary-text { font: 17px var(--scrawl); color: var(--ink); }

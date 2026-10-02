@@ -18,7 +18,7 @@ sealed partial class App
         var f = wish.By;
         bool gone = !_w.Figures.Contains(f) || f.Dead || f.Mode == Mode.Ragdoll;
         if (gone || !_w.Wishes) { _w.Wish = null; return; }
-        if (World.Now > wish.Until) { _w.Wish = null; f.Brain.WishIgnored(); }
+        if (World.Now > wish.Until) { _w.Wish = null; f.Brain.WishIgnored(wish.What); }
     }
 
     RectangleF? WishRect()

@@ -103,6 +103,7 @@ sealed partial class Brain
             {
                 Navigate(() => target.Resolve(env), 4 * S, false, () =>
                 {
+                    if (startY - f.Base.Y > 250 * S) DiaryClimbed(startY - f.Base.Y);
                     if (startY - f.Base.Y > 120 * S && P.Playfulness > 0.45f && rng.NextDouble() < 0.6) Go(G.Cheer, 0.9f);
                     else Go(G.Idle, rng.Range(0.5f, 2f));
                 }, WalkPurpose.Explore);

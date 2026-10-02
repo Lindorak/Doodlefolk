@@ -20,6 +20,7 @@ sealed class SavedFigure
     /// <summary>Romantic feelings toward other saved figures, by name, and who they're dating.</summary>
     public Dictionary<string, float> Love { get; set; } = new();
     public string? Sweetheart { get; set; }
+    public List<DiaryEntry> Diary { get; set; } = new();
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();

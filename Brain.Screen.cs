@@ -150,6 +150,7 @@ sealed partial class Brain
         }
         if (it.Seen.Feeling is { } feel)
         {
+            DiaryWord(word, feel.Joy - feel.Fear);
             f.Emote(feel.Emote, 1.8f);
             if (feel.Joy > 0) { Cheered(feel.Joy * 0.5f); if (feel.Joy >= 0.4f) f.SetAction(Act.Cheer); }
             else Saddened(-feel.Joy * 0.4f);
@@ -158,6 +159,7 @@ sealed partial class Brain
         }
         if (it.Seen.About is not Thing t) return;
         float o = f.Tastes.Of(t);
+        DiaryWord(word, o);
         if (o > 0.35f)
         {
             f.Emote(rng.NextDouble() < 0.5 ? $"♥ {word}" : $"{word}!!", 1.8f);
@@ -186,6 +188,7 @@ sealed partial class Brain
     /// <summary>The user clicked the bubble and opened the link.</summary>
     public void LinkTaken()
     {
+        DiaryLinkOpened();
         f.Emote("yay!", 1.4f);
         Cheered(0.2f);
         FeelUser(0.04f, "Opened a link I found");
@@ -212,6 +215,7 @@ sealed partial class Brain
         Cheered(World.Dt * 0.03f);
         Boredom = MathF.Max(0, Boredom - World.Dt * 0.02f);
         Stamina = MathF.Max(0, Stamina - World.Dt * 0.004f);
+        if (_t > 10 && _t - World.Dt <= 10) DiaryDanced();
         if (_t > _dur || Stamina < 0.15f) Go(G.Idle, rng.Range(1, 2.5f));
     }
 
@@ -251,6 +255,7 @@ sealed partial class Brain
             f.Emote(Joy > 0.5f || P.Playfulness > 0.6f ? (rng.NextDouble() < 0.6 ? "ha" : "♥") : rng.NextDouble() < 0.5 ? "ooh" : "hm", 1.2f);
         Cheered(World.Dt * 0.01f);
         Boredom = MathF.Max(0, Boredom - World.Dt * 0.03f);
+        if (_t > 20 && _t - World.Dt <= 20) DiaryVideo();
         Loneliness = MathF.Max(0, Loneliness - World.Dt * 0.01f * w.Figures.Count(o => o != f && o.Brain._g == G.WatchScreen));
         Stamina = MathF.Min(1, Stamina + World.Dt * 0.01f);
         if (_t > _dur) Go(G.Idle, rng.Range(1, 2));

@@ -201,7 +201,7 @@ sealed partial class Brain
         float o = f.Tastes.Of(Thing.YourCursor);
         FeelUser(dt * (0.01f + MathF.Max(0, o) * 0.03f), "Petted them");
         if (o > 0.35f && _pettingT > 0.7f && f.CurrentEmote == null) { f.Emote("♥", 1.2f); Cheered(0.15f); }
-        if (_pettingT > 0.7f && _pettingT - dt <= 0.7f) w.Witness(null, f, SocialAct.Kind, 0.5f);
+        if (_pettingT > 0.7f && _pettingT - dt <= 0.7f) { w.Witness(null, f, SocialAct.Kind, 0.5f); if (o > -0.2f) DiaryPetted(); }
     }
 
     // ---------------- things it loves or hates nearby ----------------

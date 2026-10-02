@@ -281,6 +281,7 @@ sealed partial class Figure
 
     void OutOfHealth(Figure from, World w)
     {
+        if (w.Fight.OnZeroHealth != DeathRule.KnockdownOnly) Brain.DiaryKnockedOut(from == this ? null : from);
         switch (w.Fight.OnZeroHealth)
         {
             case DeathRule.KnockdownOnly:

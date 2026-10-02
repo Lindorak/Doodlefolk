@@ -5,6 +5,9 @@ namespace StickFight;
 
 static class M
 {
+    /// <summary>Clamp that tolerates lo &gt; hi (e.g. a margin wider than a narrow platform): returns the middle.</summary>
+    public static float ClampIn(float v, float lo, float hi) => lo <= hi ? Math.Clamp(v, lo, hi) : (lo + hi) * 0.5f;
+
     public static float Clamp01(float x) => x < 0 ? 0 : x > 1 ? 1 : x;
     public static float Lerp(float a, float b, float t) => a + (b - a) * t;
     public static float Smooth(float t) { t = Clamp01(t); return t * t * (3 - 2 * t); }

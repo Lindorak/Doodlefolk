@@ -4,7 +4,7 @@ namespace StickFight;
 enum Thing
 {
     // Activities
-    PlayingBall, Juggling, Climbing, Exploring, Chatting, HighFives, Fighting, Sparring, Napping, Tricks, Dancing, Sitting,
+    PlayingBall, Juggling, Climbing, Exploring, Chatting, HighFives, Fighting, Sparring, Napping, Tricks, Dancing, Sitting, Eating, Reading,
     // Places
     HighPlaces, Taskbar, Ledges,
     // Toys
@@ -107,6 +107,8 @@ sealed class Tastes
             [Thing.Tricks] = Pl * 0.6f + E * 0.4f - 0.45f,
             [Thing.Dancing] = Pl * 0.6f + So * 0.4f - 0.45f,
             [Thing.Sitting] = (1 - E) * 0.7f - 0.3f,
+            [Thing.Eating] = (1 - E) * 0.3f + Pl * 0.2f - 0.15f,
+            [Thing.Reading] = C * 0.6f + (1 - E) * 0.4f - 0.5f,
             [Thing.HighPlaces] = B * 0.8f + C * 0.2f - 0.5f,
             [Thing.Taskbar] = (1 - C) * 0.5f - 0.25f,
             [Thing.Ledges] = (1 - E) * 0.4f + B * 0.3f - 0.3f,

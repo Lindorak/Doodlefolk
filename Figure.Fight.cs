@@ -44,6 +44,38 @@ sealed partial class Figure
         SetAction(Act.Fight);
     }
 
+    /// <summary>A punch thrown in mid-air (jumping at the cursor).</summary>
+    public void StartAirAttack(AttackKind k)
+    {
+        if (Atk != null || Mode != Mode.Control || Grounded) return;
+        Atk = AttackDef.Get(k);
+        AtkT = 0;
+        _atkHit = false;
+        LastAttackLanded = false;
+    }
+
+    bool Striking(AttackDef a) => AtkT >= a.Windup && AtkT < a.Windup + a.Active + a.Recovery * 0.35f;
+
+    /// <summary>Fighting the cursor: point the striking hand straight at it (wherever it is) instead of the
+    /// move's usual fixed height. Facing space, relative to the neck.</summary>
+    void AimAtCursor(ref Vector2 hN, ref Vector2 hF, ref float handW)
+    {
+        if (PunchTarget is not Vector2 pt || Atk is not AttackDef a || a.Foot || a.Kind == AttackKind.FlyingKick) return;
+        Vector2 d = pt - Jt[J.Neck];
+        Vector2 local = M.ClampLength(new Vector2(d.X * Facing, d.Y), Arm * 0.99f);
+        if (AtkT < a.Windup) local = local * -0.15f + new Vector2(Arm * 0.2f, 0);   // cock the fist back
+        else if (!Striking(a)) return;
+        if (a.Kind is AttackKind.Cross or AttackKind.Uppercut or AttackKind.Haymaker) hF = local; else hN = local;
+        handW = 60;
+    }
+
+    /// <summary>Kicking at the cursor: the foot goes for it (world space).</summary>
+    Vector2? AimFootAtCursor(Vector2 pelvis)
+    {
+        if (PunchTarget is not Vector2 pt || Atk is not AttackDef a || !a.Foot || !Striking(a)) return null;
+        return pelvis + M.ClampLength(pt - pelvis, Leg * 0.99f);
+    }
+
     public void StartFlyingKick(Vector2 v)
     {
         if (!Grounded || JumpPending || Atk != null || HitStun > 0) return;
@@ -104,9 +136,18 @@ sealed partial class Figure
         var (dmgMul, knockMul, poiseMul) = a.Foot ? (1f, 1f, 1f) : GearInfo.Punch(Gear);
         Vector2 knock = new Vector2(a.Knock.X * Facing, a.Knock.Y) * S * w.Fight.Strength * knockMul;
 
-        if (PunchTarget is Vector2 cur && Vector2.Distance(p, cur) < 12 * S)
+        // The cursor counts as hit anywhere along the striking forearm or shin, not just at the tip.
+        bool cursorHit = false;
+        if (PunchTarget is Vector2 cur0)
+        {
+            int tip = a.Foot ? J.FootN : a.Kind is AttackKind.Cross or AttackKind.Uppercut or AttackKind.Haymaker ? J.HandF : J.HandN;
+            int mid = a.Foot ? J.KneeN : tip == J.HandF ? J.ElbowF : J.ElbowN;
+            cursorHit = Vector2.Distance(p, cur0) < 14 * S || M.DistToSegment(cur0, Jt[mid], Jt[tip]) < 8 * S;
+        }
+        if (PunchTarget is Vector2 cur && cursorHit)
         {
             _atkHit = LastAttackLanded = true;
+            World.Log($"{Name} {a.Kind} hit the cursor");
             w.Fx.Spark(cur, S, w.Rng, 0.8f + a.Damage * 0.03f, new Color4(1, 1, 1, 1));
             w.HitStop = MathF.Max(w.HitStop, 0.04f);
             w.CursorPush += Vector2.Normalize(knock) * (25 + a.Damage * 3.5f) * S;

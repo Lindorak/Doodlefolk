@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Text;
 using static StickFight.Native;
 
@@ -11,6 +11,10 @@ sealed class Platform
     public IntPtr Hwnd;
     public float Y, PrevY, X1, X2;
     public bool Solid;
+    /// <summary>Springiness (trampolines): landing on it launches you back up.</summary>
+    public float Bounce;
+    /// <summary>Set when this is part of an object (a seat, a mattress, a table top).</summary>
+    public Item? Item;
 }
 
 /// <summary>The visible part of a window's left (Side = -1) or right (Side = +1) edge. Climbable;
@@ -172,16 +176,50 @@ sealed class Env
         return -1;
     }
 
+    // Objects on the desktop offer surfaces too; they get negative pseudo-handles (see Item.Handle).
+    readonly Dictionary<IntPtr, Vector2> _itemDelta = new();
+    readonly Dictionary<IntPtr, (Vector2 last, RECT rect)> _items = new();
+
+    /// <summary>Add the surfaces of desktop objects (seats, mattresses, table tops) as platforms.</summary>
+    public void AddItemSurfaces(List<Item> items)
+    {
+        _itemDelta.Clear();
+        var seen = new HashSet<IntPtr>();
+        foreach (var it in items)
+        {
+            var h = it.Handle;
+            seen.Add(h);
+            Vector2 d = _items.TryGetValue(h, out var prev) ? it.Pos - prev.last : Vector2.Zero;
+            if (d.LengthSquared() > 400 * 400) d = Vector2.Zero;   // teleported: don't fling riders
+            _itemDelta[h] = d;
+            var rect = new RECT { Left = (int)MathF.Round(it.Pos.X), Top = (int)MathF.Round(it.Pos.Y - it.Def.H * it.Sc), Right = (int)MathF.Round(it.Pos.X + 1), Bottom = (int)MathF.Round(it.Pos.Y) };
+            _items[h] = (it.Pos, rect);
+            foreach (var (y, x1, x2, bounce) in it.Surfaces())
+                Platforms.Add(new Platform { Hwnd = h, Y = y, PrevY = y - d.Y, X1 = x1, X2 = x2, Bounce = bounce, Item = it });
+        }
+        foreach (var k in _items.Keys.Where(k => !seen.Contains(k)).ToList()) _items.Remove(k);
+    }
+
     /// <summary>How far a window moved since the previous refresh.</summary>
     public Vector2 Delta(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero) return Vector2.Zero;
+        if ((long)hwnd < 0) return _itemDelta.TryGetValue(hwnd, out var id) ? id : Vector2.Zero;
         if (_rects.TryGetValue(hwnd, out var r) && _prev.TryGetValue(hwnd, out var p))
             return new(r.Left - p.Left, r.Top - p.Top);
         return Vector2.Zero;
     }
 
-    public bool TryRect(IntPtr hwnd, out RECT r) => _rects.TryGetValue(hwnd, out r);
+    public bool TryRect(IntPtr hwnd, out RECT r)
+    {
+        if ((long)hwnd < 0)
+        {
+            bool ok = _items.TryGetValue(hwnd, out var it);
+            r = it.rect;
+            return ok;
+        }
+        return _rects.TryGetValue(hwnd, out r);
+    }
 
     /// <summary>The platform under a standing point, preferring the one the figure was already on.</summary>
     public Platform? SupportAt(float x, float y, IntPtr hwnd)

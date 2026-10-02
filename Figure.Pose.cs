@@ -30,9 +30,10 @@ sealed partial class Figure
 
     void Pose(float dt)
     {
+        if (Mode == Mode.Control && Grounded && Action is Act.SitFront or Act.SitBack) { FrontPose(dt); return; }
         float speed = MathF.Abs(Vel.X);
         float run = M.Clamp01((speed - 90 * S) / (120 * S));
-        bool sitting = Grounded && Action is Act.SitEdge or Act.SitFloor or Act.Lie;
+        bool sitting = Grounded && Action is Act.SitEdge or Act.SitFloor or Act.Lie or Act.Curl or Act.Eat or Act.Read or Act.Warm;
         bool feetFree = !Grounded || sitting;
         float br = MathF.Sin(_time * 2.3f + Id);
 
@@ -65,6 +66,7 @@ sealed partial class Figure
                 FightPose(ref hipT, ref leanT, ref handW, ref hN, ref hF, ref eN, ref eF, ref tiltT);
             }
             else if (SuperLandingPose(ref hipT, ref leanT, ref hN, ref hF, ref eN)) { }
+            else if (ItemActPose(ref hipT, ref leanT, ref tiltT, ref handW, ref hN, ref hF, ref fN, ref fF, ref eN, ref eF, ref kPref)) { }
             else switch (Action)
             {
                 case Act.Fidget:
@@ -186,6 +188,7 @@ sealed partial class Figure
             }
         }
 
+        AimAtCursor(ref hN, ref hF, ref handW);
         CarryArms(ref hN, ref hF, ref eN, ref eF, ref handW);
         GrapplePose(ref hN, ref hF, ref eN, ref eF, ref handW, ref leanT);
 
@@ -257,6 +260,7 @@ sealed partial class Figure
                 Vector2 planted = footN - pelvis;
                 Vector2 local = new(planted.X * Facing, planted.Y);
                 footN = pelvis + W(AttackUsesFoot ? AttackFootLocal(local) : KickFootLocal(local));
+                if (AttackUsesFoot && AimFootAtCursor(pelvis) is Vector2 aimed) footN = aimed;
             }
         }
         var (knN, fNEnd) = M.IK(pelvis, footN, Thigh, Shin, W(kPref));

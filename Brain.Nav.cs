@@ -11,12 +11,12 @@ readonly struct Anchor
     Anchor(IntPtr hwnd, float x, float y) { _hwnd = hwnd; _x = x; _y = y; }
 
     public static Anchor On(Env env, Platform p, float x) =>
-        p.Hwnd != IntPtr.Zero && env.TryRect(p.Hwnd, out var r) ? new(p.Hwnd, x - r.Left, 0) : new(IntPtr.Zero, x, p.Y);
+        p.Hwnd != IntPtr.Zero && env.TryRect(p.Hwnd, out var r) ? new(p.Hwnd, x - r.Left, p.Y - r.Top) : new(IntPtr.Zero, x, p.Y);
 
     public Vector2? Resolve(Env env)
     {
         if (_hwnd == IntPtr.Zero) return new Vector2(_x, _y);
-        return env.TryRect(_hwnd, out var r) ? new Vector2(r.Left + _x, r.Top) : null;
+        return env.TryRect(_hwnd, out var r) ? new Vector2(r.Left + _x, r.Top + _y) : null;
     }
 }
 
@@ -87,7 +87,7 @@ sealed partial class Brain
                 var tp = env.SupportAt(t.X, t.Y, IntPtr.Zero) ?? env.Below(t.X, t.Y - 4 * S);
                 if (tp != null && !SameSegment(tp, seg))
                 {
-                    if (_hops >= 4 || !PlanHop(env, seg, tp, Math.Clamp(t.X, tp.X1 + 10 * S, tp.X2 - 10 * S), true))
+                    if (_hops >= 4 || !PlanHop(env, seg, tp, M.ClampIn(t.X, tp.X1 + 10 * S, tp.X2 - 10 * S), true))
                     {
                         f.Emote("?", 1);
                         Go(G.Idle, 1);
@@ -155,7 +155,7 @@ sealed partial class Brain
     {
         float side = MathF.Sign(landX - f.Base.X);
         if (side == 0) side = 1;
-        float tk = Math.Clamp(landX - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        float tk = M.ClampIn(landX - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
         if (SolveJump(new(tk, seg.Y), new(landX, tp.Y), out _))
         {
             if (commit)
@@ -191,7 +191,7 @@ sealed partial class Brain
             if (_forceGrapple || (rise > f.Height * 1.6f && _t0 >= _noGrappleUntil && rng.NextDouble() < f.Style.GrappleChance * Taste(Thing.Climbing) * 0.8f))
             {
                 float back = Math.Clamp(rise * 0.3f, 40 * S, 110 * S);
-                float tx = Math.Clamp(best.X + best.Side * back, seg.X1 + 6 * S, seg.X2 - 6 * S);
+                float tx = M.ClampIn(best.X + best.Side * back, seg.X1 + 6 * S, seg.X2 - 6 * S);
                 if (MathF.Abs(tx - best.X) > 30 * S && f.Style.Rope != RopeStyle.Never) { _takeoffX = tx; _nav = Nav.ToThrow; }
             }
             _forceGrapple = false;
@@ -207,7 +207,7 @@ sealed partial class Brain
     {
         float side = MathF.Sign(x - f.Base.X);
         if (side == 0) side = 1;
-        float tk = Math.Clamp(x - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        float tk = M.ClampIn(x - side * 80 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
         return SolveJump(new(tk, seg.Y), new(x, tp.Y), out _);
     }
 
@@ -272,7 +272,7 @@ sealed partial class Brain
                 var target = env.Platforms.Where(p => p.Y < seg.Y - f.Height && !p.Solid)
                     .FirstOrDefault(p => PlanHop(env, seg, p, (p.X1 + p.X2) / 2, false) && !SolveJump(f.Base, new((p.X1 + p.X2) / 2, p.Y), out _));
                 if (target == null) return false;
-                var a = Anchor.On(env, target, Math.Clamp(f.Base.X, target.X1 + 20 * S, target.X2 - 20 * S));
+                var a = Anchor.On(env, target, M.ClampIn(f.Base.X, target.X1 + 20 * S, target.X2 - 20 * S));
                 Navigate(() => a.Resolve(env), 4 * S, false, () => Go(G.Idle, 1), WalkPurpose.Explore);
                 return true;
             }
@@ -283,7 +283,7 @@ sealed partial class Brain
                 var target = env.Platforms.Where(p => p.Y < seg.Y - f.Height * 2 && !p.Solid)
                     .FirstOrDefault(p => !SolveJump(f.Base, new((p.X1 + p.X2) / 2, p.Y), out _) && PlanHop(env, seg, p, (p.X1 + p.X2) / 2, false));
                 if (target == null) return false;
-                var a = Anchor.On(env, target, Math.Clamp(f.Base.X, target.X1 + 30 * S, target.X2 - 30 * S));
+                var a = Anchor.On(env, target, M.ClampIn(f.Base.X, target.X1 + 30 * S, target.X2 - 30 * S));
                 Navigate(() => a.Resolve(env), 4 * S, false, () => Go(G.Idle, 1), WalkPurpose.Explore);
                 _forceGrapple = true;
                 return true;

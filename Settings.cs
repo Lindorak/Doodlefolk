@@ -19,6 +19,14 @@ sealed class SavedFigure
     public Dictionary<string, float> Affinity { get; set; } = new();
 }
 
+sealed class SavedItem
+{
+    public string Key { get; set; } = "";
+    public float Size { get; set; } = 1;
+    public string Color { get; set; } = "";
+    public bool Flip { get; set; }
+}
+
 sealed class SavedProp
 {
     public PropKind Kind { get; set; }
@@ -43,6 +51,7 @@ sealed class Settings
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>
     public List<SavedFigure> Library { get; set; } = new();
     public List<SavedProp> Props { get; set; } = new();
+    public List<SavedItem> Items { get; set; } = new();
 
     static string PathOnDisk => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StickFight", "settings.json");

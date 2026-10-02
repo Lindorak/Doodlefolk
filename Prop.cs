@@ -244,6 +244,8 @@ sealed class Prop
             OnGround = false;
             float hit = -vn * MathF.Sqrt(Mass);
             if (f.Mode == Mode.Ragdoll) f.Rag.Push(joint, -n * hit * 0.5f);
+            // Your own ball bouncing back at you is a stumble at most, never a knockdown by "yourself".
+            else if (LastTouch == f && !ThrownByUser) { if (hit > 350 * _s) f.HitStun = MathF.Max(f.HitStun, 0.15f); }
             else if (hit > 350 * _s) f.TakeHit(-n * hit, ThrownByUser ? null : LastTouch, w);
         }
     }

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Vortice.Mathematics;
 
 namespace StickFight;
@@ -85,13 +85,13 @@ sealed partial class Figure
         return Vector2.Lerp(strike, planted, M.Smooth((k - 0.58f) / 0.42f));
     }
 
-    float CarryRadius => Carrying?.Radius ?? 4 * S;
+    float CarryRadius => Carrying?.Radius ?? (CarryingItem != null ? MathF.Max(CarryingItem.Def.W, CarryingItem.Def.H) * CarryingItem.Sc * 0.4f : 4 * S);
     Vector2 HoldLocal => new(MathF.Min(CarryRadius + 4 * S, Arm * 0.75f), Torso * 0.38f);
 
     /// <summary>Overrides arm targets while holding something (except mid-throw).</summary>
     void CarryArms(ref Vector2 hN, ref Vector2 hF, ref Vector2 eN, ref Vector2 eF, ref float handW)
     {
-        if (Carrying == null || Action == Act.Throw) return;
+        if ((Carrying == null && CarryingItem == null) || Action is Act.Throw or Act.Eat or Act.Read) return;
         float r = CarryRadius;
         hN = HoldLocal + new Vector2(-0.2f * r, -0.75f * r);
         hF = HoldLocal + new Vector2(-0.2f * r, 0.75f * r);
@@ -102,7 +102,10 @@ sealed partial class Figure
     void UpdateHoldPoint(Vector2 neck, Vector2 handN, Vector2 handF, float dt)
     {
         Vector2 prev = HoldPoint;
-        HoldPoint = Action == Act.Throw ? (handN + handF) * 0.5f + new Vector2(0, -CarryRadius * 0.3f) : neck + W(HoldLocal);
+        HoldPoint = Action == Act.Throw ? (handN + handF) * 0.5f + new Vector2(0, -CarryRadius * 0.3f)
+                  : Action == Act.Eat ? handN
+                  : Action == Act.Read ? (handN + handF) * 0.5f + new Vector2(0, -2 * S)
+                  : neck + W(HoldLocal);
         HoldVelocity = dt > 0 ? (HoldPoint - prev) / dt : Vector2.Zero;
     }
 

@@ -365,7 +365,7 @@ sealed partial class Brain
         if (seg == null) return;
         float side = MathF.Sign(f.Base.X - w.Cursor.X);
         if (side == 0) side = 1;
-        Navigate(() => new Vector2(Math.Clamp(w.Cursor.X + side * 30 * S, seg.X1 + 6 * S, seg.X2 - 6 * S), f.Base.Y), 8 * S, false, () =>
+        Navigate(() => new Vector2(M.ClampIn(w.Cursor.X + side * 30 * S, seg.X1 + 6 * S, seg.X2 - 6 * S), f.Base.Y), 8 * S, false, () =>
         {
             FaceTo(w.Cursor.X);
             if (rng.NextDouble() < 0.5) { f.Emote("♥", 1.2f); Go(G.Wave, 1.5f); }
@@ -379,7 +379,7 @@ sealed partial class Brain
     {
         if (!_bringToUser || f.Carrying is not { } b) return false;
         var seg = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
-        float target = seg != null ? Math.Clamp(w.Cursor.X - f.Facing * 25 * S, seg.X1 + 6 * S, seg.X2 - 6 * S) : f.Base.X;
+        float target = seg != null ? M.ClampIn(w.Cursor.X - f.Facing * 25 * S, seg.X1 + 6 * S, seg.X2 - 6 * S) : f.Base.X;
         _run = false;
         if (!MoveToward(target, 10 * S) && _t < 8) return true;
         _bringToUser = false;

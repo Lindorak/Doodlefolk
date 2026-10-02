@@ -18,6 +18,7 @@ sealed partial class Brain
             return _g switch
             {
                 G.Idle => "Hanging out",
+                G.Walk when _item != null && _itemPending => $"Heading for the {_item.Def.Name.ToLowerInvariant()}",
                 G.Walk => _fleeing ? "Running away" : _purpose switch
                 {
                     WalkPurpose.Explore => "Exploring",
@@ -51,9 +52,35 @@ sealed partial class Brain
                 G.CursorFight => "Boxing your cursor",
                 G.Revive => "Helping a friend up",
                 G.Hunt => "Hunting your cursor",
+                G.UseItem => _item == null ? "Busy" : _verb switch
+                {
+                    Verb.Sit => $"Sitting in the {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Lie => $"Napping on the {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Hammock => "Swinging in the hammock",
+                    Verb.Bounce => "Bouncing on the trampoline",
+                    Verb.Eat => $"Eating {_item.Def.Article} {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Hide => $"Hiding in the {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Dance => "Dancing to the radio",
+                    Verb.Read => $"Reading {_item.Def.Article} {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Warm => "Warming up by the fire",
+                    _ => $"Standing on the {_item.Def.Name.ToLowerInvariant()}",
+                },
                 _ => "Busy",
             };
         }
+    }
+
+    /// <summary>After an internal error: drop whatever it was doing and start fresh.</summary>
+    public void Reset()
+    {
+        try { LeaveItem(); } catch (Exception) { }
+        _item = null;
+        _partner = null;
+        _foe = null;
+        _g = G.Idle;
+        _t = 0;
+        _dur = 1;
+        f.DesiredVX = 0;
     }
 
     /// <summary>Set how this figure feels about <paramref name="o"/> overall (-1..1).</summary>

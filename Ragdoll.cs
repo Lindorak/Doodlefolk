@@ -161,7 +161,7 @@ sealed class Ragdoll
                     (p.Solid || O[J.Pelvis].Y <= p.PrevY + f.Torso * 0.3f))
                 {
                     P[i].Y = p.Y - r;
-                    O[i].Y = P[i].Y + v.Y * 0.18f;  // small bounce
+                    O[i].Y = P[i].Y + v.Y * (p.Bounce > 0 ? p.Bounce : 0.18f);  // small bounce (big on a trampoline)
                     O[i].X = P[i].X - v.X * 0.55f;  // friction
                     _touch[i] = true;
                     _touchHwnd[i] = p.Hwnd;

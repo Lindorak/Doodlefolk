@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 namespace StickFight;
 
 enum Mode { Spawning, Control, Ragdoll, GetUp }
-enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget }
+enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm }
 
 /// <summary>Joint indices. N = near side (drawn in front), F = far side (drawn behind, slightly darker).</summary>
 static class J
@@ -102,6 +102,37 @@ sealed partial class Figure
     public string Team => FightSettings.Team(Color);
     /// <summary>Hunts your cursor relentlessly and never forgives you.</summary>
     public bool Hunter;
+    /// <summary>An object in hand (food, a book).</summary>
+    public Item? CarryingItem;
+
+    /// <summary>Sit/lie on a surface of an object (or anything): stand right there, grounded on it.</summary>
+    public void Mount(Vector2 at, IntPtr hwnd)
+    {
+        Base = at;
+        Grounded = true;
+        GroundHwnd = hwnd;
+        Vel = default;
+        _jumpVel = null;
+        Flailing = false;
+        KeepFacing = false;
+        _fN.Pos = new(at.X + 3 * S, at.Y); _fN.Stepping = false;
+        _fF.Pos = new(at.X - 3 * S, at.Y); _fF.Stepping = false;
+    }
+
+    /// <summary>Get down off an object (seat, bed, table): a little hop past its nearer end.</summary>
+    public void HopOff()
+    {
+        var sup = World.Current.Env.SupportAt(Base.X, Base.Y, GroundHwnd);
+        if (sup == null) { Grounded = false; return; }
+        float l = Base.X - sup.X1, r = sup.X2 - Base.X;
+        float dir = l < r ? -1 : 1;
+        float target = (dir < 0 ? sup.X1 : sup.X2) + dir * 12 * S;
+        float t = 0.42f;
+        Grounded = false;
+        Vel = new Vector2((target - Base.X) / t, -260 * S);
+        if (!KeepFacing) Facing = (int)dir;
+        SetAction(Act.Stand);
+    }
     public readonly Brain Brain;
     public readonly Ragdoll Rag;
 
@@ -352,6 +383,15 @@ sealed partial class Figure
     void Land(Platform p, World w)
     {
         float impact = Vel.Y;
+        if (p.Bounce > 0 && impact > 700 * S)
+        {
+            // Boing.
+            Base.Y = p.Y;
+            Vel.Y = -impact * p.Bounce;
+            Vel.X *= 0.85f;
+            w.Fx.Dust(Base, S, 3, 0.3f, w.Rng);
+            return;
+        }
         Base.Y = p.Y;
         Grounded = true;
         GroundHwnd = p.Hwnd;
@@ -520,6 +560,14 @@ sealed partial class Figure
 
     public void DropCarried(Vector2 vel)
     {
+        if (CarryingItem is { } ci)
+        {
+            CarryingItem = null;
+            ci.Holder = null;
+            ci.Open = false;
+            ci.Vel = vel;
+            ci.OnGround = false;
+        }
         if (Carrying == null) return;
         Carrying.Release(vel);
         Carrying = null;
@@ -549,7 +597,7 @@ sealed partial class Figure
         Mode = Mode.GetUp;
         _getUpT = 0;
         Vector2 pel = Rag.P[J.Pelvis];
-        Base = new(Math.Clamp(pel.X, p.X1 + 3 * S, p.X2 - 3 * S), p.Y);
+        Base = new(M.ClampIn(pel.X, p.X1 + 3 * S, p.X2 - 3 * S), p.Y);
         Vel = default;
         Grounded = true;
         GroundHwnd = p.Hwnd;

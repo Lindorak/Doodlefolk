@@ -1,0 +1,282 @@
+using System.Numerics;
+using System.Text.RegularExpressions;
+using Vortice.Mathematics;
+
+namespace StickFight;
+
+/// <summary>Things a figure knows how to do with an object. Objects are described by their verbs, so any object
+/// (built in, or one day made up from a typed word) is usable as long as its verbs are ones the brain knows.</summary>
+enum Verb
+{
+    Sit,        // chair, couch, stool: sit on the seat (side view, or facing out of / into the screen)
+    Lie,        // bed, mattress, sleeping bag: lie down and nap
+    Hammock,    // lie in it and sway
+    Bounce,     // trampoline: jump on it, higher and higher
+    Stand,      // table, crate: just a surface to stand or sit on
+    Eat,        // food: pick it up, sit down, eat it bite by bite
+    Hide,       // box, barrel, tent: curl up inside, peek out
+    Dance,      // radio: plays music; dancers come over
+    Read,       // book: sit and read
+    Warm,       // campfire: sit around it, hands out
+}
+
+/// <summary>How seated figures face.</summary>
+enum SeatFacing { Side, Out, In }
+
+/// <summary>One doodle shape in object-local units (S), origin at the bottom centre, y pointing up.
+/// Kind: 'r' rect x0 y0 x1 y1, 'o' rounded rect x0 y0 x1 y1 radius, 'e' ellipse cx cy rx ry, 'p' polygon x y ...,
+/// 'l' line x0 y0 x1 y1 (width W), 'c' open polyline x y ... (width W). Col: 0 main colour, 1 darker, 2 lighter,
+/// 3+ a fixed colour (see ItemDef.Fixed). Over: drawn in front of figures using the object (chair backs, blankets).</summary>
+readonly record struct Shape(char Kind, float[] P, int Col, float W = 1.4f, bool Over = false, bool NoOutline = false, bool WhenUsed = false);
+
+sealed class ItemDef
+{
+    public string Key = "", Name = "";
+    public string[] Words = Array.Empty<string>();
+    public float W, H;                         // bounding size (S units)
+    public Color4 Color;
+    public Shape[] Shapes = Array.Empty<Shape>();
+    public Verb[] Verbs = Array.Empty<Verb>();
+    public float Surface = -1, SurfX1, SurfX2; // a standable top (height, x range); -1: none
+    public float SeatY, Comfort = 0.5f, Bounce, Mass = 1;
+    public float[] Seats = Array.Empty<float>();// seat x positions
+    public SeatFacing Facing;
+    public bool Carry;                         // small enough to carry around (food, books)
+    public int Bites = 4;                      // food portions
+    /// <summary>Which tastes decide whether a figure likes this thing.</summary>
+    public Thing[] Likes = Array.Empty<Thing>();
+    public string Article => "aeiou".Contains(char.ToLowerInvariant(Name[0])) ? "an" : "a";
+
+    public static readonly Color4[] Fixed =
+    {
+        default, default, default,
+        M.Hex(0xA0703C), M.Hex(0x6E4B26), M.Hex(0x9AA3AD), M.Hex(0x5D6670), M.Hex(0xF7F5EF),   // 3 wood, 4 dark wood, 5 metal, 6 dark metal, 7 white
+        M.Hex(0x2A2A2A), M.Hex(0xE53935), M.Hex(0x43A047), M.Hex(0xFDD835), M.Hex(0xFB8C00),   // 8 black, 9 red, 10 green, 11 yellow, 12 orange
+        M.Hex(0x7B5134), M.Hex(0xF48FB1), M.Hex(0xF2C14E), M.Hex(0x1E88E5), M.Hex(0xE3B26B),   // 13 brown, 14 pink, 15 gold, 16 blue, 17 bread
+        M.Hex(0x7CB342), M.Hex(0xFF7043), M.Hex(0xFFD54F), M.Hex(0xEFE6D2), M.Hex(0x8E24AA),   // 18 lettuce, 19 flame, 20 flame light, 21 cream, 22 purple
+    };
+}
+
+/// <summary>The built-in catalogue, and turning typed words ("a giant red couch") into objects.</summary>
+static class ItemCatalog
+{
+    static Shape R(float x0, float y0, float x1, float y1, int c, bool over = false, bool used = false) => new('r', new float[] { x0, y0, x1, y1 }, c, Over: over, WhenUsed: used);
+    static Shape O(float x0, float y0, float x1, float y1, float r, int c, bool over = false) => new('o', new float[] { x0, y0, x1, y1, r }, c, Over: over);
+    static Shape E(float cx, float cy, float rx, float ry, int c, bool over = false) => new('e', new[] { cx, cy, rx, ry }, c, Over: over);
+    static Shape P(int c, params float[] xy) => new('p', xy, c);
+    static Shape POver(int c, params float[] xy) => new('p', xy, c, Over: true);
+    static Shape L(float x0, float y0, float x1, float y1, int c, float w = 1.6f) => new('l', new[] { x0, y0, x1, y1 }, c, w);
+    static Shape C(int c, float w, params float[] xy) => new('c', xy, c, w);
+
+    public static readonly ItemDef[] All = Build();
+
+    static ItemDef[] Build()
+    {
+        var list = new List<ItemDef>();
+        void Add(ItemDef d) => list.Add(d);
+
+        // ---------------- seats ----------------
+        Add(new ItemDef
+        {
+            Key = "chair", Name = "Chair", Words = new[] { "chair", "seat", "dining chair", "wooden chair" }, W = 22, H = 40, Color = M.Hex(0xA0703C),
+            Shapes = new[] { L(-8, 0, -8, 16, 1, 2), L(7, 0, 7, 16, 1, 2), R(-9, 15, 9, 18, 0), R(6, 16, 9, 40, 0), L(6.5f, 24, 8.5f, 24, 1), L(6.5f, 32, 8.5f, 32, 1) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { -1f }, SeatY = 18, Facing = SeatFacing.Side, Comfort = 0.4f, Likes = new[] { Thing.Sitting },
+        });
+        Add(new ItemDef
+        {
+            Key = "armchair", Name = "Armchair", Words = new[] { "armchair", "arm chair", "recliner", "comfy chair", "easy chair" }, W = 34, H = 34, Color = M.Hex(0x8E24AA),
+            Shapes = new[] { O(-15, 18, 15, 34, 5, 0), R(-12, 3, 12, 16, 1), O(-17, 3, -10, 22, 3, 0, true), O(10, 3, 17, 22, 3, 0, true), L(-14, 0, -14, 3, 8, 2), L(14, 0, 14, 3, 8, 2) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { 0f }, SeatY = 15, Facing = SeatFacing.Out, Comfort = 0.85f, Likes = new[] { Thing.Sitting, Thing.Napping },
+        });
+        Add(new ItemDef
+        {
+            Key = "couch", Name = "Couch", Words = new[] { "couch", "sofa", "settee", "loveseat", "love seat" }, W = 76, H = 32, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { O(-36, 16, 36, 32, 5, 0), R(-32, 3, 32, 15, 1), L(-11, 4, -11, 15, 0, 1), L(11, 4, 11, 15, 0, 1),
+                             O(-38, 3, -31, 22, 3, 0, true), O(31, 3, 38, 22, 3, 0, true), L(-34, 0, -34, 3, 8, 2), L(34, 0, 34, 3, 8, 2) },
+            Verbs = new[] { Verb.Sit, Verb.Lie }, Seats = new[] { -21f, 0, 21 }, SeatY = 15, Facing = SeatFacing.Out, Comfort = 0.8f, Surface = 15, SurfX1 = -30, SurfX2 = 30,
+            Likes = new[] { Thing.Sitting, Thing.Napping, Thing.Chatting }, Mass = 3,
+        });
+        Add(new ItemDef
+        {
+            Key = "tvchair", Name = "Watching chair", Words = new[] { "watching chair", "tv chair", "movie chair", "cinema seat", "theater seat", "theatre seat", "gaming chair" }, W = 30, H = 34, Color = M.Hex(0xE53935),
+            // Seen from behind: the occupant sits facing into the screen, watching whatever window it's on.
+            Shapes = new[] { R(-11, 0, -9, 10, 6), R(9, 0, 11, 10, 6), R(-13, 9, 13, 14, 1), O(-14, 12, 14, 34, 6, 0, true), L(-8, 18, 8, 18, 1), L(-8, 26, 8, 26, 1) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { 0f }, SeatY = 14, Facing = SeatFacing.In, Comfort = 0.8f, Likes = new[] { Thing.Sitting },
+        });
+        Add(new ItemDef
+        {
+            Key = "stool", Name = "Stool", Words = new[] { "stool", "bar stool", "barstool", "footstool" }, W = 16, H = 22, Color = M.Hex(0xA0703C),
+            Shapes = new[] { L(-6, 0, -4, 20, 1, 2), L(6, 0, 4, 20, 1, 2), L(-5, 8, 5, 8, 1, 1.2f), E(0, 21, 8, 2, 0) },
+            Verbs = new[] { Verb.Sit, Verb.Stand }, Seats = new[] { 0f }, SeatY = 22, Facing = SeatFacing.Out, Comfort = 0.3f, Surface = 22, SurfX1 = -7, SurfX2 = 7, Likes = new[] { Thing.Sitting },
+        });
+        Add(new ItemDef
+        {
+            Key = "beanbag", Name = "Beanbag", Words = new[] { "beanbag", "bean bag", "beanbag chair", "pouf", "pouffe" }, W = 32, H = 16, Color = M.Hex(0xFB8C00),
+            Shapes = new[] { P(0, -15, 0, -16, 6, -10, 14, 2, 16, 12, 12, 16, 5, 15, 0), C(1, 1, -6, 8, 0, 10, 6, 8) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { 0f }, SeatY = 10, Facing = SeatFacing.Out, Comfort = 1f, Likes = new[] { Thing.Sitting, Thing.Napping },
+        });
+        Add(new ItemDef
+        {
+            Key = "bench", Name = "Bench", Words = new[] { "bench", "park bench", "pew" }, W = 56, H = 30, Color = M.Hex(0x43A047),
+            Shapes = new[] { L(-24, 0, -24, 14, 6, 2), L(24, 0, 24, 14, 6, 2), R(-27, 13, 27, 16, 0), R(-27, 20, 27, 23, 0), R(-27, 26, 27, 29, 0), L(-24, 16, -24, 29, 6, 1.6f), L(24, 16, 24, 29, 6, 1.6f) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { -13f, 13 }, SeatY = 16, Facing = SeatFacing.Out, Comfort = 0.4f, Likes = new[] { Thing.Sitting, Thing.Chatting }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "throne", Name = "Throne", Words = new[] { "throne", "royal chair", "king's chair", "kings chair" }, W = 34, H = 54, Color = M.Hex(0xE53935),
+            Shapes = new[] { P(15, -14, 0, 14, 0, 14, 44, 10, 54, 0, 48, -10, 54, -14, 44), O(-10, 18, 10, 44, 4, 0), R(-12, 5, 12, 16, 1),
+                             O(-17, 3, -11, 26, 2, 15, true), O(11, 3, 17, 26, 2, 15, true), E(0, 49, 2.5f, 2.5f, 9) },
+            Verbs = new[] { Verb.Sit }, Seats = new[] { 0f }, SeatY = 16, Facing = SeatFacing.Out, Comfort = 0.9f, Likes = new[] { Thing.Sitting, Thing.HighPlaces },
+        });
+
+        // ---------------- beds ----------------
+        Add(new ItemDef
+        {
+            Key = "bed", Name = "Bed", Words = new[] { "bed", "double bed", "single bed", "cot", "four poster" }, W = 80, H = 34, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { R(-40, 0, -36, 34, 4), R(36, 0, 40, 22, 4), R(-37, 5, 37, 9, 3), O(-36, 9, 36, 15, 2, 7), O(-34, 14, -20, 19, 3, 7),
+                             new('o', new float[] { -18, 9, 37, 17, 2 }, 0, Over: true, WhenUsed: true), O(-18, 13, 37, 16, 2, 2) },
+            Verbs = new[] { Verb.Lie }, Surface = 15, SurfX1 = -33, SurfX2 = 34, Comfort = 1f, Likes = new[] { Thing.Napping }, Mass = 3,
+        });
+        Add(new ItemDef
+        {
+            Key = "hammock", Name = "Hammock", Words = new[] { "hammock" }, W = 96, H = 46, Color = M.Hex(0xFB8C00),
+            Shapes = new[] { L(-46, 0, -44, 46, 4, 3), L(46, 0, 44, 46, 4, 3) },     // the swinging net is drawn by Item
+            Verbs = new[] { Verb.Hammock }, Comfort = 1f, Likes = new[] { Thing.Napping, Thing.Sitting }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "sleepingbag", Name = "Sleeping bag", Words = new[] { "sleeping bag", "sleepingbag", "bedroll", "futon", "mattress", "air mattress" }, W = 64, H = 8, Color = M.Hex(0x43A047),
+            Shapes = new[] { O(-32, 0, 32, 7, 3, 0), O(-30, 1, -18, 7, 3, 2), new('o', new float[] { -16, 0, 32, 9, 3 }, 1, Over: true, WhenUsed: true) },
+            Verbs = new[] { Verb.Lie }, Surface = 6, SurfX1 = -30, SurfX2 = 30, Comfort = 0.7f, Likes = new[] { Thing.Napping },
+        });
+
+        // ---------------- play ----------------
+        Add(new ItemDef
+        {
+            Key = "trampoline", Name = "Trampoline", Words = new[] { "trampoline", "tramp", "bouncy castle", "bounce house" }, W = 60, H = 14, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { L(-26, 0, -22, 11, 8, 2), L(26, 0, 22, 11, 8, 2), L(-3, 0, 0, 11, 8, 2), O(-30, 10, 30, 14, 2, 0), R(-26, 11.5f, 26, 13, 8) },
+            Verbs = new[] { Verb.Bounce }, Surface = 14, SurfX1 = -26, SurfX2 = 26, Bounce = 0.92f, Likes = new[] { Thing.Tricks, Thing.HighPlaces }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "radio", Name = "Radio", Words = new[] { "radio", "boombox", "boom box", "stereo", "speaker", "jukebox", "music" }, W = 22, H = 15, Color = M.Hex(0xE53935),
+            Shapes = new[] { L(-7, 12, -11, 19, 5, 1), O(-11, 0, 11, 12, 2, 0), E(-5.5f, 6, 3.5f, 3.5f, 8), E(5.5f, 6, 3.5f, 3.5f, 8), E(-5.5f, 6, 1.4f, 1.4f, 5), E(5.5f, 6, 1.4f, 1.4f, 5), R(-2, 8, 2, 10, 11) },
+            Verbs = new[] { Verb.Dance }, Carry = false, Likes = new[] { Thing.Dancing },
+        });
+        Add(new ItemDef
+        {
+            Key = "book", Name = "Book", Words = new[] { "book", "novel", "comic", "comic book", "manga", "magazine", "storybook" }, W = 9, H = 11, Color = M.Hex(0xE53935),
+            Shapes = new[] { R(-4.5f, 0, 4.5f, 11, 0), R(-4.5f, 0, -3.3f, 11, 1), L(-2, 8, 3, 8, 7, 0.8f) },
+            Verbs = new[] { Verb.Read }, Carry = true, Likes = new[] { Thing.Exploring },
+        });
+        Add(new ItemDef
+        {
+            Key = "campfire", Name = "Campfire", Words = new[] { "campfire", "camp fire", "fire", "bonfire", "fireplace", "fire pit" }, W = 28, H = 14, Color = M.Hex(0xFF7043),
+            Shapes = new[] { L(-12, 1, 12, 5, 4, 3.4f), L(-12, 5, 12, 1, 3, 3.4f) },     // flames are drawn live by Item
+            Verbs = new[] { Verb.Warm }, Likes = new[] { Thing.Chatting, Thing.Sitting },
+        });
+
+        // ---------------- hide / stand ----------------
+        Add(new ItemDef
+        {
+            Key = "box", Name = "Box", Words = new[] { "box", "cardboard box", "crate", "wooden crate", "chest", "toy box" }, W = 34, H = 30, Color = M.Hex(0xC8A26B),
+            Shapes = new[] { R(-17, 0, 17, 30, 1), new('r', new float[] { -17, 0, 17, 30 }, 0, Over: true), L(-17, 30, -22, 36, 1, 1.8f), L(17, 30, 22, 36, 1, 1.8f), L(-10, 15, 10, 15, 1, 1) },
+            Verbs = new[] { Verb.Hide, Verb.Stand }, Surface = 30, SurfX1 = -16, SurfX2 = 16, Likes = new[] { Thing.Exploring }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "barrel", Name = "Barrel", Words = new[] { "barrel", "keg", "drum", "bin", "trash can", "dustbin", "garbage can" }, W = 24, H = 32, Color = M.Hex(0xA0703C),
+            Shapes = new[] { R(-11, 0, 11, 32, 1), new('o', new float[] { -12, 0, 12, 32, 6 }, 0, Over: true), L(-12, 7, 12, 7, 6, 2), L(-12, 25, 12, 25, 6, 2) },
+            Verbs = new[] { Verb.Hide, Verb.Stand }, Surface = 32, SurfX1 = -10, SurfX2 = 10, Likes = new[] { Thing.Exploring }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi", "fort", "blanket fort" }, W = 64, H = 42, Color = M.Hex(0x43A047),
+            Shapes = new[] { P(1, -30, 0, 0, 42, 30, 0), POver(0, -32, 0, -6, 0, 0, 40, -2, 40), POver(2, 6, 0, 32, 0, 2, 40, 0, 40), L(0, 40, 0, 46, 6, 1.4f) },
+            Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.6f, Likes = new[] { Thing.Napping, Thing.Exploring }, Mass = 2,
+        });
+        Add(new ItemDef
+        {
+            Key = "table", Name = "Table", Words = new[] { "table", "desk", "coffee table", "picnic table", "workbench" }, W = 56, H = 24, Color = M.Hex(0xA0703C),
+            Shapes = new[] { R(-28, 21, 28, 24, 0), L(-24, 0, -24, 21, 1, 2.4f), L(24, 0, 24, 21, 1, 2.4f) },
+            Verbs = new[] { Verb.Stand }, Surface = 24, SurfX1 = -27, SurfX2 = 27, Likes = new[] { Thing.HighPlaces }, Mass = 2,
+        });
+
+        // ---------------- food ----------------
+        ItemDef Food(string key, string name, string[] words, float w, float h, uint col, Shape[] shapes, int bites = 4) => new()
+        {
+            Key = key, Name = name, Words = words, W = w, H = h, Color = M.Hex(col), Shapes = shapes, Verbs = new[] { Verb.Eat }, Carry = true, Bites = bites, Likes = new[] { Thing.Eating },
+        };
+        Add(Food("apple", "Apple", new[] { "apple", "apples" }, 8, 9, 0xE53935, new[] { E(0, 4, 4, 4, 0), L(0, 7.5f, 0.6f, 9.5f, 13, 0.9f), E(2, 8.6f, 1.6f, 0.8f, 10) }));
+        Add(Food("banana", "Banana", new[] { "banana", "bananas" }, 12, 5, 0xFDD835, new[] { P(0, -6, 3, -3, 0.8f, 3, 0, 6, 3, 5, 4, 2, 2, -3, 2.4f), L(6, 3, 6.6f, 4, 13, 1) }));
+        Add(Food("pizza", "Pizza", new[] { "pizza", "pizza slice", "slice of pizza" }, 14, 10, 0xFFCA28, new[] { P(17, -7, 10, 7, 10, 0, 0), P(0, -6, 8.6f, 6, 8.6f, 0, 1.4f), E(-1, 6, 1.2f, 1.2f, 9), E(2, 4.5f, 1.2f, 1.2f, 9), E(-2.5f, 3.5f, 1, 1, 9) }));
+        Add(Food("burger", "Burger", new[] { "burger", "hamburger", "cheeseburger", "sandwich", "sub" }, 12, 10, 0xE3B26B, new[] { O(-6, 0, 6, 3, 1.2f, 17), R(-6, 3, 6, 4.5f, 13), R(-6.3f, 4.5f, 6.3f, 5.5f, 18), P(0, -6, 5.5f, -4, 9, 4, 9, 6, 5.5f) }));
+        Add(Food("cake", "Cake", new[] { "cake", "birthday cake", "cupcake", "pie" }, 16, 14, 0xF48FB1, new[] { R(-8, 0, 8, 9, 21), R(-8, 7, 8, 10, 0), L(0, 10, 0, 14, 11, 1.2f), E(0, 14.5f, 0.8f, 1.2f, 19) }, 6));
+        Add(Food("cookie", "Cookie", new[] { "cookie", "cookies", "biscuit", "donut", "doughnut" }, 8, 8, 0xC8A26B, new[] { E(0, 4, 4, 4, 0), E(-1.5f, 5, 0.7f, 0.7f, 13), E(1.5f, 3, 0.7f, 0.7f, 13), E(0.5f, 5.5f, 0.6f, 0.6f, 13) }, 2));
+        Add(Food("icecream", "Ice cream", new[] { "ice cream", "icecream", "ice-cream", "ice cream cone", "gelato" }, 8, 14, 0xF48FB1, new[] { P(17, -3, 7, 3, 7, 0, 0), E(0, 9, 3.6f, 3.6f, 0), E(0, 12.5f, 2.6f, 2.6f, 21) }, 3));
+        Add(Food("watermelon", "Watermelon", new[] { "watermelon", "melon" }, 16, 9, 0xE53935, new[] { P(10, -8, 9, 8, 9, 0, 0), P(0, -6.6f, 9, 6.6f, 9, 0, 1.6f), E(-2, 6.4f, 0.5f, 0.7f, 8), E(2, 6.4f, 0.5f, 0.7f, 8) }, 5));
+
+        // ---------------- comfort & toys ----------------
+        Add(new ItemDef
+        {
+            Key = "pillow", Name = "Pillow", Words = new[] { "pillow", "cushion" }, W = 16, H = 7, Color = M.Hex(0xF7F5EF),
+            Shapes = new[] { O(-8, 0, 8, 7, 3, 0) }, Verbs = new[] { Verb.Lie }, Surface = 7, SurfX1 = -7, SurfX2 = 7, Comfort = 0.6f, Carry = true, Likes = new[] { Thing.Napping },
+        });
+        return list.ToArray();
+    }
+
+    // ---------------- words → objects ----------------
+
+    static readonly Dictionary<string, float> SizeWords = new()
+    {
+        ["tiny"] = 0.45f, ["mini"] = 0.55f, ["little"] = 0.7f, ["small"] = 0.7f, ["big"] = 1.4f, ["large"] = 1.4f,
+        ["huge"] = 2f, ["giant"] = 2.6f, ["gigantic"] = 3f, ["enormous"] = 3f, ["massive"] = 2.6f,
+    };
+
+    static readonly Dictionary<string, uint> ColourWords = new()
+    {
+        ["red"] = 0xE53935, ["blue"] = 0x1E88E5, ["green"] = 0x43A047, ["orange"] = 0xFB8C00, ["purple"] = 0x8E24AA,
+        ["yellow"] = 0xFDD835, ["cyan"] = 0x00ACC1, ["pink"] = 0xEC407A, ["black"] = 0x2E2E2E, ["white"] = 0xF4F4F4,
+        ["brown"] = 0x7B5134, ["grey"] = 0x9E9E9E, ["gray"] = 0x9E9E9E, ["gold"] = 0xF2C14E, ["golden"] = 0xF2C14E,
+        ["silver"] = 0xC0C6CC, ["teal"] = 0x00897B, ["navy"] = 0x283593, ["lime"] = 0xC0CA33, ["maroon"] = 0x8E2430,
+    };
+
+    /// <summary>What "a giant red couch" means: the object, a size multiplier and maybe a colour.</summary>
+    public static (ItemDef? def, float size, Color4? colour, string noun) Parse(string text)
+    {
+        string t = Regex.Replace(text.ToLowerInvariant(), "[^a-z' -]", " ").Trim();
+        t = Regex.Replace(t, @"^(an?|the|some|one)\s+", "");
+        float size = 1;
+        Color4? colour = null;
+        var words = t.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        for (int i = 0; i < words.Count;)
+        {
+            if (SizeWords.TryGetValue(words[i], out float s)) { size *= s; words.RemoveAt(i); continue; }
+            if (ColourWords.TryGetValue(words[i], out uint c)) { colour = M.Hex(c); words.RemoveAt(i); continue; }
+            if (words[i] is "very" or "really" or "super") { size *= words.Count > i + 1 && SizeWords.ContainsKey(words[i + 1]) ? 1.2f : 1; words.RemoveAt(i); continue; }
+            i++;
+        }
+        string noun = string.Join(' ', words);
+        if (noun.Length == 0) return (null, size, colour, noun);
+        var def = Find(noun) ?? (noun.EndsWith("es") ? Find(noun[..^2]) : null) ?? (noun.EndsWith('s') ? Find(noun[..^1]) : null)
+                  ?? Find(words[^1]);   // "comfy old couch" → couch
+        return (def, Math.Clamp(size, 0.3f, 3.5f), colour, noun);
+    }
+
+    public static ItemDef? Find(string noun)
+    {
+        foreach (var d in All)
+            if (d.Key == noun || d.Words.Contains(noun)) return d;
+        return null;
+    }
+
+    /// <summary>Ball words map to the existing ball props.</summary>
+    public static PropKind? BallFor(string noun) => noun switch
+    {
+        "ball" or "balls" or "rubber ball" or "bouncy ball" => PropKind.Ball,
+        "soccer ball" or "football" or "soccerball" => PropKind.SoccerBall,
+        "basketball" or "basket ball" => PropKind.Basketball,
+        "beach ball" or "beachball" => PropKind.BeachBall,
+        _ => null,
+    };
+}

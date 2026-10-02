@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem,
     }
 
     readonly Figure f;
@@ -48,6 +48,8 @@ sealed partial class Brain
     void Go(G g, float dur)
     {
         _snub = false;
+        if (_item != null && g != G.UseItem && !(_itemPending && g == G.Walk)) LeaveItem();
+        if (g != G.Walk) _itemPending = false;
         if (g != G.Throw) _fastball = false;
         if (g is not (G.Carry or G.Walk)) _huntThrow = false;
         if (f.GrappleBusy && !f.Climbing) f.CancelGrapple();
@@ -300,6 +302,7 @@ sealed partial class Brain
             case G.Fight: DoFight(w); break;
             case G.CursorFight: DoCursorFight(w); break;
             case G.Hunt: DoHunt(w); break;
+            case G.UseItem: DoUseItem(w); break;
             case G.Revive: DoRevive(w); break;
             case G.DanceWith: DoDanceWith(w); break;
             case G.Victory:
@@ -312,6 +315,7 @@ sealed partial class Brain
 
     void UpdateNeeds(float dt, World w)
     {
+        Hunger = M.Clamp01(Hunger + dt * 0.0012f * (0.6f + P.Energy * 0.8f));
         float speed = MathF.Abs(f.Vel.X);
         float cost = _g switch
         {
@@ -554,7 +558,7 @@ sealed partial class Brain
         float away = -MathF.Sign(cur.X - f.Base.X);
         if (away == 0) away = 1;
         bool scared = CursorTrust < 0.25f;
-        float x = Math.Clamp(f.Base.X + away * (scared ? 300 : 90) * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        float x = M.ClampIn(f.Base.X + away * (scared ? 300 : 90) * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
         WalkTo(x, scared, () => Go(G.Idle, 1.5f));
     }
 
@@ -588,6 +592,7 @@ sealed partial class Brain
         if (Stamina > 0.3f && BallOption(w) is { } ball) opts.Add(ball);
         if (UserOption(w) is { } user) opts.Add(user);
         if (HuntOption(w) is { } hunt) opts.Add(hunt);
+        if (ItemOption(w) is { } useItem) opts.Add(useItem);
 
         float total = opts.Sum(o => o.weight);
         float roll = rng.Range(0, total);
@@ -601,8 +606,8 @@ sealed partial class Brain
 
     void Wander(Platform seg)
     {
-        float x = Math.Clamp(f.Base.X + rng.Range(-500, 500) * S, seg.X1 + 8 * S, seg.X2 - 8 * S);
-        if (MathF.Abs(x - f.Base.X) < 30 * S) x = Math.Clamp(f.Base.X - MathF.Sign(x - f.Base.X + 0.1f) * 200 * S, seg.X1 + 8 * S, seg.X2 - 8 * S);
+        float x = M.ClampIn(f.Base.X + rng.Range(-500, 500) * S, seg.X1 + 8 * S, seg.X2 - 8 * S);
+        if (MathF.Abs(x - f.Base.X) < 30 * S) x = M.ClampIn(f.Base.X - MathF.Sign(x - f.Base.X + 0.1f) * 200 * S, seg.X1 + 8 * S, seg.X2 - 8 * S);
         bool run = P.Energy > 0.6f && Stamina > 0.5f && rng.NextDouble() < 0.35 && MathF.Abs(x - f.Base.X) > 250 * S;
         WalkTo(x, run, () => Go(G.Idle, rng.Range(1, 3)));
     }

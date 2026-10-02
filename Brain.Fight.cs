@@ -134,8 +134,8 @@ sealed partial class Brain
         if (seg == null) { Go(G.Idle, 1); return; }
         float away = -MathF.Sign(from.Base.X - f.Base.X);
         if (away == 0) away = 1;
-        float x = Math.Clamp(f.Base.X + away * 600 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
-        if (MathF.Abs(x - f.Base.X) < 60 * S) x = Math.Clamp(f.Base.X - away * 600 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        float x = M.ClampIn(f.Base.X + away * 600 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
+        if (MathF.Abs(x - f.Base.X) < 60 * S) x = M.ClampIn(f.Base.X - away * 600 * S, seg.X1 + 6 * S, seg.X2 - 6 * S);
         Navigate(() => new Vector2(x, f.Base.Y), 6 * S, true, () => { _fleeing = false; Go(G.Idle, 2); }, WalkPurpose.Other);
         _fleeing = true;
         _foe = null;
@@ -534,16 +534,23 @@ sealed partial class Brain
         f.Emote("#@!", 1);
     }
 
+    bool _airPunch;
+
     void DoCursorFight(World w)
     {
         Vector2 cur = w.Cursor;
         float dx = cur.X - f.Base.X, d = MathF.Abs(dx);
-        float rel = f.Base.Y - cur.Y;                         // cursor height above our feet
-        bool reachable = rel > -4 * S && rel < f.Height * 1.05f;
-        _cursorAwayT = d > 260 * S || !reachable ? _cursorAwayT + World.Dt : 0;
+        Vector2 neck = f.Jt[J.Neck];
+        float up = neck.Y - cur.Y;                            // how far the cursor is above our shoulders
+        float rel = f.Base.Y - cur.Y;                         // ...and above our feet
+        float armReach = f.Arm * 0.95f;
+        bool punchable = rel > -4 * S && up <= armReach;
+        bool overhead = up > armReach && up < armReach + f.Height * 1.6f;
+        _cursorAwayT = d > 450 * S || (!punchable && !overhead) ? _cursorAwayT + World.Dt : 0;
         if (_cursorAwayT > 1.5f || _t > _dur || !Rules.PunchCursor || (Control.MouseButtons & MouseButtons.Left) != 0)
         {
             f.PunchTarget = null;
+            _airPunch = false;
             if (_landed >= 2) { f.Emote("ha", 1.2f); Go(G.Victory, 1.4f); } else Go(G.Annoyed, 1);
             return;
         }
@@ -553,21 +560,60 @@ sealed partial class Brain
         f.LookAt = cur;
         f.PunchTarget = cur;
         if (f.LastAttackLanded) { _landed++; f.LastAttackLanded = false; }
+
+        // Mid-air: throw the punch as we reach the top of the jump.
+        if (!f.Grounded)
+        {
+            f.DesiredVX = 0;
+            // Time the jab so its strike lands right at the top of the jump.
+            var jab = AttackDef.Get(AttackKind.Jab);
+            if (_airPunch && f.Vel.Y > -f.Gravity * (jab.Windup + jab.Active * 0.5f)) { f.StartAirAttack(AttackKind.Jab); _airPunch = false; }
+            return;
+        }
+        if (f.JumpPending) { f.DesiredVX = 0; return; }   // crouching to jump: keep the punch queued
+        _airPunch = false;
         if (f.Atk != null || f.HitStun > 0) { f.DesiredVX = 0; return; }
-        // Pick a strike that reaches the cursor's height.
-        AttackKind k = rel > f.StandHip + f.Torso * 0.6f ? (rng.NextDouble() < 0.5 ? AttackKind.Uppercut : AttackKind.Roundhouse)
-                     : rel > f.StandHip * 0.6f ? (rng.NextDouble() < 0.6 ? AttackKind.Jab : AttackKind.Cross)
-                     : AttackKind.FrontKick;
-        var def = AttackDef.Get(k);
-        float reach = (def.Foot ? f.Leg : f.Arm) * 0.9f;
-        float err = d - reach;
         _atkCd -= World.Dt;
-        if (err > 4 * S) f.DesiredVX = MathF.Sign(dx) * f.WalkSpeed * 1.3f;
+
+        // Too high to reach standing: get under it and jump at it.
+        if (overhead)
+        {
+            if (d > 40 * S) { f.DesiredVX = MathF.Sign(dx) * f.RunSpeed * 0.8f; return; }
+            f.DesiredVX = 0;
+            if (_atkCd > 0) return;
+            float need = up - f.Arm * 0.6f;
+            float vy = MathF.Sqrt(2 * f.Gravity * MathF.Max(need, 20 * S));
+            f.RequestJump(new Vector2(dx * 1.2f, -vy), 0.06f);
+            _airPunch = true;
+            _atkCd = rng.Range(0.5f, 0.9f);
+            if (rng.NextDouble() < 0.3) f.Emote("#@!", 0.7f);
+            return;
+        }
+
+        // Pick a strike for the cursor's height, and stand where that strike reaches it.
+        float hipY = f.Base.Y - f.StandHip;
+        bool low = cur.Y > hipY - f.Torso * 0.15f;
+        AttackKind k;
+        float reachH;
+        if (low)
+        {
+            k = rng.NextDouble() < 0.6 ? AttackKind.FrontKick : AttackKind.Roundhouse;
+            float dyHip = cur.Y - hipY;
+            reachH = MathF.Sqrt(MathF.Max(0, f.Leg * f.Leg * 0.92f - dyHip * dyHip));
+        }
+        else
+        {
+            k = up > f.Arm * 0.35f ? (rng.NextDouble() < 0.5 ? AttackKind.Uppercut : AttackKind.Jab) : (rng.NextDouble() < 0.6 ? AttackKind.Jab : AttackKind.Cross);
+            reachH = MathF.Sqrt(MathF.Max(0, armReach * armReach - up * up));
+        }
+        float want = MathF.Max(reachH * 0.72f, 5 * S);
+        float err = d - want;
+        if (err > 4 * S) f.DesiredVX = MathF.Sign(dx) * f.WalkSpeed * (err > 60 * S ? 2.2f : 1.3f);
         else if (err < -10 * S) f.DesiredVX = -MathF.Sign(dx) * f.WalkSpeed;
         else
         {
             f.DesiredVX = 0;
-            if (_atkCd <= 0) { f.StartAttack(k); _atkCd = rng.Range(0.3f, 0.7f) * (1.3f - P.Aggression * 0.5f); }
+            if (_atkCd <= 0) { f.StartAttack(k); _atkCd = rng.Range(0.3f, 0.65f) * (1.3f - P.Aggression * 0.5f); }
         }
     }
 }

@@ -63,7 +63,7 @@ sealed partial class Brain
         var target = env.Below(cur.X, cur.Y - 2 * S);
         if (target == null) { f.DesiredVX = 0; return; }
         var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
-        float tx = Math.Clamp(cur.X, target.X1 + 8 * S, target.X2 - 8 * S);
+        float tx = M.ClampIn(cur.X, target.X1 + 8 * S, target.X2 - 8 * S);
         if (seg != null && SameSegment(seg, target))
         {
             _run = true;

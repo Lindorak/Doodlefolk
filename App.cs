@@ -184,6 +184,8 @@ sealed partial class App : ApplicationContext
         _hiddenCleared = false;
 
         UpdateCursor(now);
+        foreach (var it in _w.Items) it.ApplyCarry(_w.Env);
+        _w.Env.AddItemSurfaces(_w.Items);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
 
@@ -204,8 +206,19 @@ sealed partial class App : ApplicationContext
             if (_dragging && _pressFig != null) _pressFig.Rag.PinTarget = pin;
             if (_pressProp != null) _pressProp.PinTarget = pin;
             // Iterate over copies: brains may add/remove things (e.g. drop a ball) mid-step.
-            foreach (var f in _w.Figures.ToArray()) f.Step(World.Dt, _w);
+            foreach (var f in _w.Figures.ToArray())
+            {
+                try { f.Step(World.Dt, _w); }
+                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IndexOutOfRangeException or NullReferenceException)
+                {
+                    // One confused figure shouldn't freeze everyone: log it and reset its mind.
+                    LogOnce(ex);
+                    f.Brain.Reset();
+                }
+            }
             foreach (var p in _w.Props.ToArray()) p.Step(World.Dt, _w);
+            if (_pressItem != null) _pressItem.PinTarget = pin;
+            foreach (var it in _w.Items.ToArray()) it.Step(World.Dt, _w);
             foreach (var f in _w.Figures.Where(f => f.Gone).ToArray())
             {
                 if (_pressFig == f) { _pressFig = null; _dragging = false; }
@@ -235,7 +248,17 @@ sealed partial class App : ApplicationContext
         if (_debug && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
     }
 
+    readonly HashSet<string> _logged = new();
+
+    void LogOnce(Exception ex)
+    {
+        string key = ex.GetType().Name + ex.StackTrace?.Split('\n').FirstOrDefault();
+        if (_logged.Add(key)) File.AppendAllText(_logPath, $"{DateTime.Now:O} {ex}\n");
+    }
+
     Vector2 _shove;
+    /// <summary>Debug: pretend the cursor is here (tests without moving the real mouse).</summary>
+    Vector2? _fakeCursor;
 
     /// <summary>Figures punching the cursor knock it across the screen over a few frames.
     /// Never while the user is holding a mouse button.</summary>
@@ -243,6 +266,7 @@ sealed partial class App : ApplicationContext
     {
         _shove += _w.CursorPush;
         _w.CursorPush = Vector2.Zero;
+        if (_fakeCursor != null) { _shove = Vector2.Zero; return; }
         if (_shove.LengthSquared() < 1 || !_w.Fight.PunchCursor || Control.MouseButtons != MouseButtons.None) { _shove = Vector2.Zero; return; }
         Vector2 step = _shove * 0.35f;
         _shove -= step;
@@ -258,7 +282,7 @@ sealed partial class App : ApplicationContext
     void UpdateCursor(double now)
     {
         GetCursorPos(out var p);
-        var c = new Vector2(p.X, p.Y);
+        var c = _fakeCursor ?? new Vector2(p.X, p.Y);
         _cursorHist.Enqueue((now, c));
         while (_cursorHist.Count > 2 && now - _cursorHist.Peek().t > 0.08) _cursorHist.Dequeue();
         var (t0, p0) = _cursorHist.Peek();
@@ -280,7 +304,7 @@ sealed partial class App : ApplicationContext
         var hitProp = HitProp(c);
         var (fig, _) = hitProp == null ? HitTest(c) : (null, -1);
         _w.Hover = _dragging ? null : fig;
-        _overlay.SetClickThrough(fig == null && hitProp == null && _pressFig == null && _pressProp == null);
+        _overlay.SetClickThrough(fig == null && hitProp == null && _pressFig == null && _pressProp == null && _pressItem == null && HitItem(c) == null);
     }
 
     (Figure? fig, int joint) HitTest(Vector2 c)
@@ -320,7 +344,15 @@ sealed partial class App : ApplicationContext
             return;
         }
         var (fig, joint) = HitTest(_w.Cursor);
-        if (fig == null) return;
+        if (fig == null)
+        {
+            if (HitItem(_w.Cursor) is { } item)
+            {
+                if (e.Button == MouseButtons.Left) GrabItem(item);
+                else if (e.Button == MouseButtons.Right) OpenStudio("toys", item.Id);
+            }
+            return;
+        }
         if (e.Button == MouseButtons.Left)
         {
             _pressFig = fig;
@@ -334,6 +366,7 @@ sealed partial class App : ApplicationContext
 
     void EndPress()
     {
+        ReleaseItem();
         if (_pressProp != null)
         {
             var p = _pressProp;
@@ -363,6 +396,12 @@ sealed partial class App : ApplicationContext
             if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
         }
         foreach (var p in _w.Props) _regNow.Add(ToRect(p.Bounds(_w.Env)));
+        foreach (var it in _w.Items)
+        {
+            _regNow.Add(ToRect(it.Bounds()));
+            it.Shadow(_w.Env, out var sc, out float srx, out float sry, out _);
+            if (srx > 0) _regNow.Add(ToRect(RectangleF.FromLTRB(sc.X - srx, sc.Y - sry, sc.X + srx, sc.Y + sry)));
+        }
         if (_w.Fx.Bounds() is RectangleF fx) _regNow.Add(ToRect(fx));
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -387,6 +426,12 @@ sealed partial class App : ApplicationContext
             foreach (var wl in _w.Env.Walls)
                 if (wl.ReachesTop) _r.Line(new(wl.X, wl.Y1), new(wl.X, wl.Y2), new Color4(0.3f, 0.7f, 1, 0.6f), 2);
         }
+        foreach (var it in _w.Items)
+        {
+            it.Shadow(_w.Env, out var ic, out float irx, out float iry, out float ia);
+            if (ia > 0) _r.Oval(ic, irx, iry, new Color4(0, 0, 0, ia));
+        }
+        DrawItems(false);
         foreach (var f in _w.Figures)
             if (Shadow(f, out var c, out float rx, out float ry, out float a))
                 _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
@@ -395,6 +440,8 @@ sealed partial class App : ApplicationContext
                 _r.Oval(c, rx, ry, new Color4(0, 0, 0, a));
         _w.Fx.Draw(_r);
         foreach (var f in _w.Figures) f.Draw(_r);
+        DrawItems(true);
+        foreach (var it in _w.Items) if (it.Holder != null) it.Draw(_r, false, _clock.Elapsed.TotalSeconds);   // carried things in front
         foreach (var p in _w.Props) p.Draw(_r);
     }
 
@@ -494,7 +541,7 @@ sealed partial class App : ApplicationContext
         f.Hunter = old.Hunter;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
         if (plat == null) return old;
-        f.PlaceAt(plat, Math.Clamp(old.Base.X, plat.X1 + 4, plat.X2 - 4));
+        f.PlaceAt(plat, M.ClampIn(old.Base.X, plat.X1 + 4, plat.X2 - 4));
         f.SpawnT = 0.999f;
         old.DropCarried(Vector2.Zero);
         _w.Figures[_w.Figures.IndexOf(old)] = f;
@@ -588,6 +635,7 @@ sealed partial class App : ApplicationContext
             Traits = f.Traits.Clone(),
             Affinity = _w.Figures.Where(o => o != f).ToDictionary(o => o.Name, o => f.Brain.AffinityDelta(o)),
         }).ToList();
+        _settings.Items = SaveItems();
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();
         _settings.Save();
     }
@@ -606,6 +654,7 @@ sealed partial class App : ApplicationContext
         foreach (var (f, s) in made)
             foreach (var (name, a) in s.Affinity)
                 if (made.FirstOrDefault(m => m.f.Name == name).f is { } o) f.Brain.Affinity[o.Id] = a;
+        RestoreItems(_settings.Items);
         foreach (var s in _settings.Props)
         {
             var p = SpawnProp(s.Kind);
@@ -796,6 +845,20 @@ sealed partial class App : ApplicationContext
                 case "forgive":
                     foreach (var ff2 in _w.Figures.Where(x => !x.Hunter && (p.Length < 2 || x.Name == p[1]))) ff2.Brain.Forgive();
                     break;
+                case "summon":
+                    World.Log("summon: " + Summon(line[(line.IndexOf(' ') + 1)..]));
+                    break;
+                case "use":
+                    // use <Name> <itemKey> <verb>
+                    if (p.Length >= 4 && _w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } uf && _w.Items.FirstOrDefault(i => i.Def.Key == p[2]) is { } ui && Enum.TryParse<Verb>(p[3], true, out var uv))
+                        uf.Brain.ForceUse(ui, uv, _w);
+                    break;
+                case "fakecursor":
+                    _fakeCursor = p.Length >= 3 ? new Vector2(float.Parse(p[1], inv), float.Parse(p[2], inv)) : null;
+                    break;
+                case "boxcursor":
+                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } bcf) bcf.Brain.Force("boxcursor", Array.Empty<string>(), _w);
+                    break;
                 case "duck":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } dkf) dkf.DuckT = 1.2f;
                     break;
@@ -877,6 +940,7 @@ sealed partial class App : ApplicationContext
                 bbox = new[] { f.Jt.Min(j => j.X), f.Jt.Min(j => j.Y), f.Jt.Max(j => j.X), f.Jt.Max(j => j.Y) },
             }),
             props = _w.Props.Select(p => new { kind = p.Kind.ToString(), x = p.Pos.X, y = p.Pos.Y, vx = p.Vel.X, vy = p.Vel.Y, held = p.Holder?.Name, r = p.Radius }),
+            items = _w.Items.Select(i => new { key = i.Def.Key, x = i.Pos.X, y = i.Pos.Y, ground = i.OnGround, w = i.Def.W * i.Sc, h = i.Def.H * i.Sc, user = i.User?.Name, seated = i.Seated.Where(s => s != null).Select(s => s!.Name), holder = i.Holder?.Name }),
         };
         try { File.WriteAllText(Path.Combine(Path.GetTempPath(), "stickfight_state.json"), JsonSerializer.Serialize(state)); }
         catch (IOException) { }

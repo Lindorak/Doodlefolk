@@ -79,11 +79,17 @@ sealed partial class App
     {
         float S = _w.Scale;
         var v = _w.Env.Virtual;
-        // Frame the subjects (or, with nobody named, everyone).
-        var pts = who.Where(f => _w.Figures.Contains(f)).SelectMany(f => new[] { f.Base, f.Jt[J.Head] - new Vector2(0, f.HeadR + 30 * f.S) })
-                     .Concat(pets.Where(pt => _w.Pets.Contains(pt)).Select(pt => pt.Pos)).ToList();
-        if (pts.Count == 0) pts = _w.Figures.Select(f => f.Base).ToList();
-        if (pts.Count == 0) return "";
+        // Frame the subjects (or, with nobody named, everyone): where they're scattered about, the biggest group of
+        // them, so the picture is of people rather than of a whole screen with specks on it.
+        var subjects = who.Where(f => _w.Figures.Contains(f)).Select(f => (at: f.Base, top: f.Jt[J.Head] - new Vector2(0, f.HeadR + 30 * f.S)))
+                          .Concat(pets.Where(pt => _w.Pets.Contains(pt)).Select(pt => (at: pt.Pos, top: pt.Pos - new Vector2(0, 40 * pt.S)))).ToList();
+        if (subjects.Count == 0) subjects = _w.Figures.Select(f => (at: f.Base, top: f.Jt[J.Head] - new Vector2(0, f.HeadR + 30 * f.S))).ToList();
+        if (subjects.Count == 0) return "";
+        float near = 360 * S;
+        bool Close((Vector2 at, Vector2 top) a, (Vector2 at, Vector2 top) b) => MathF.Abs(a.at.X - b.at.X) < near && MathF.Abs(a.at.Y - b.at.Y) < near * 0.6f;
+        var hub = subjects.OrderByDescending(s => subjects.Count(o => Close(s, o))).First();
+        var group = subjects.Where(s => Close(hub, s)).ToList();
+        var pts = group.SelectMany(s => new[] { s.at, s.top }).ToList();
         float x0 = pts.Min(q => q.X), x1 = pts.Max(q => q.X), y0 = pts.Min(q => q.Y), y1 = pts.Max(q => q.Y);
         float w = MathF.Max(MathF.Max((x1 - x0) + 260 * S, (y1 - y0 + 200 * S) * AlbumW / AlbumH), 520 * S);
         float h = w * AlbumH / AlbumW;

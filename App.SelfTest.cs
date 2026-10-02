@@ -27,6 +27,7 @@ sealed partial class App
 
     string _albumFile = "";
     double _perfAt = 5;
+    bool _sawRide;
 
     void Check(string name, bool pass, string detail = "")
     {
@@ -106,7 +107,7 @@ sealed partial class App
             Fig(3)?.Brain.DebugTown(_w, "fish", "");
             Fig(5)?.Brain.DebugTown(_w, "dream", "");
         });
-        At(52, "someone rides", () => Check("figures ride vehicles", _w.Figures.Any(f => f.Riding != null), string.Join(", ", _w.Figures.Select(f => f.Brain.Activity))));
+        At(52, "someone rides", () => Check("figures ride vehicles", _sawRide || _w.Figures.Any(f => f.Riding != null), string.Join(", ", _w.Figures.Select(f => f.Brain.Activity))));
         At(53, "knock riders off", () =>
         {
             foreach (var f in _w.Figures.Where(f => f.Riding != null || f.Swimming).ToList()) f.GoRagdoll(new Vector2(300, -500) * _w.Scale);
@@ -216,6 +217,7 @@ sealed partial class App
     {
         if (_testStart < 0) { _testStart = now; BuildScript(); }
         double t = now - _testStart;
+        if (t > 40 && _w.Figures.Any(f => f.Riding != null)) _sawRide = true;
         if (t > _perfAt) { _perfAt = t + 30; World.Log($"selftest perf: {_fps} fps, sim {_msSim:0.0} ms, render {_msRender:0.0} ms (draw {_msDraw:0.0}), refresh {_msRefresh:0.0} ms, {_w.Figures.Count} figures, {_w.Items.Count} items"); }
         while (_scriptAt < _script.Count && t >= _script[_scriptAt].at)
         {

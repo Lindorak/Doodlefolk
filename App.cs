@@ -198,6 +198,7 @@ sealed partial class App : ApplicationContext
         ScreenFrame();
         _w.Nav.Refresh();
         WishFrame();
+        EventsFrame(now);
         TidyGear(now);
         foreach (var f in _w.Figures) f.ApplyCarry(_w.Env, dt);
         foreach (var p in _w.Props) p.ApplyCarry(_w.Env);
@@ -965,6 +966,7 @@ sealed partial class App : ApplicationContext
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } la && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } lb)
                         World.Log("love: " + la.Brain.ForceLove(lb, p.Length > 3 ? float.Parse(p[3], inv) : 0.8f));
                     break;
+                case "testwin": TestWindow(p); break;
                 case "say":
                     // say <Name> <text...>: an emote bubble (debug)
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } sayf) sayf.Emote(string.Join(' ', p.Skip(2)), 5);

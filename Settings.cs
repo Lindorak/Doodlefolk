@@ -62,6 +62,9 @@ sealed class Settings
     public bool ScreenReact { get; set; } = true;
     public bool ScreenLinks { get; set; } = true;
     public bool ScreenMedia { get; set; } = true;
+    /// <summary>Notice when you finish typing (timing only) and when notifications pop up.</summary>
+    public bool NoticeTyping { get; set; } = true;
+    public bool Notifications { get; set; } = true;
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
     /// <summary>Crushes, dating, jealousy and breakups.</summary>

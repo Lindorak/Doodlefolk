@@ -351,7 +351,13 @@ sealed partial class Figure
             Base.X = nx;
 
             var sup = env.SupportAt(Base.X, Base.Y, GroundHwnd);
-            if (sup == null) { Fall(!AllowWalkOff); return; }
+            if (sup == null)
+            {
+                // Was the whole window just closed or minimised under us?
+                if (!AllowWalkOff && GroundHwnd != IntPtr.Zero && (long)GroundHwnd > 0 && !env.TryRect(GroundHwnd, out _)) Brain.OnFloorVanished();
+                Fall(!AllowWalkOff);
+                return;
+            }
             GroundHwnd = sup.Hwnd;
             Base.Y = sup.Y;
             if (!KeepFacing && MathF.Abs(Vel.X) > 6 * S) Facing = MathF.Sign(Vel.X);
@@ -535,6 +541,7 @@ sealed partial class Figure
         Vector2 v = d / MathF.Max(frameDt, 1e-3f);
         Vector2 prev = _carryVel;
         _carryVel = Vector2.Lerp(_carryVel, v, 0.5f);
+        if (Mode == Mode.Control && _carryVel.Length() > 350 * S && GroundHwnd != IntPtr.Zero && (long)GroundHwnd > 0) Brain.OnRiding(_carryVel);
         if (d != Vector2.Zero)
         {
             Base += d;
@@ -556,6 +563,7 @@ sealed partial class Figure
         {
             World.Log($"{Name} flung off a window that stopped suddenly");
             GoRagdoll(prev * 0.8f);
+            Brain.OnShakenOff();
         }
     }
 

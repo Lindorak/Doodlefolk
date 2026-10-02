@@ -1097,6 +1097,8 @@ PAGES.settings = {
       check("React to words", "They wander over to words they know (pizza, cats, spiders...) and love them, hate them, or run.", () => st().screenReact, v => setS("screenReact", v)),
       check("Point out links", "Now and then one shows you a link in a bubble. It only opens if you click the bubble.", () => st().screenLinks, v => setS("screenLinks", v)),
       check("Music and videos", "Dance when an app plays music; sit down and watch when a video is on.", () => st().screenMedia, v => setS("screenMedia", v)),
+      check("Notice your typing", "Fans cheer you on when you finish a long stretch of typing. Only the timing is noticed, never what you type.", () => st().noticeTyping !== false, v => setS("noticeTyping", v)),
+      check("Notifications", "They look over when a notification pops up, and the bold ones jump on it.", () => st().notifications !== false, v => setS("notifications", v)),
     ];
     add(root, h("h1", null, "Settings"),
       h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),

@@ -159,7 +159,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume,
-            wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
+            noticeTyping = _settings.NoticeTyping, notifications = _settings.Notifications, wishes = _settings.Wishes, romance = _settings.Romance, screenTerrain = _settings.ScreenTerrain, screenReact = _settings.ScreenReact, screenLinks = _settings.ScreenLinks, screenMedia = _settings.ScreenMedia,
         },
         fpsNow = _fps,
     };
@@ -510,6 +510,8 @@ sealed partial class App
             case "theme": _settings.Theme = v.GetString() ?? "auto"; Ui.Update(_settings.Theme); break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
+            case "noticeTyping": _settings.NoticeTyping = v.GetBoolean(); break;
+            case "notifications": _settings.Notifications = v.GetBoolean(); break;
             case "wishes": _settings.Wishes = v.GetBoolean(); if (!_settings.Wishes) _w.Wish = null; break;
             case "screenTerrain": _settings.ScreenTerrain = v.GetBoolean(); ApplyScreenSettings(); break;
             case "screenReact": _settings.ScreenReact = v.GetBoolean(); ApplyScreenSettings(); break;

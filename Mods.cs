@@ -285,7 +285,7 @@ static class Mods
     static string SafePath(string dir, string file)
     {
         string full = Path.GetFullPath(Path.Combine(dir, file));
-        if (!full.StartsWith(Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase)) throw new FormatException($"\"{file}\" must be inside the mods folder");
+        if (!full.StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir)) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new FormatException($"\"{file}\" must be inside the mods folder");
         return full;
     }
 

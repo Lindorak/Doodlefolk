@@ -57,7 +57,14 @@ sealed partial class App
             try
             {
                 using var gif = new GifWriter(File.Create(rec.Path), rec.W, rec.H);
-                foreach (var frame in rec.Queue.GetConsumingEnumerable()) gif.AddFrame(frame, 1000 / rec.Fps);
+                int i = 0;
+                foreach (var frame in rec.Queue.GetConsumingEnumerable())
+                {
+                    // GIF delays are in hundredths: alternate so the average matches the frame rate (15 fps: 7, 7, 6, …).
+                    int cs = (int)Math.Round((i + 1) * 100.0 / rec.Fps) - (int)Math.Round(i * 100.0 / rec.Fps);
+                    gif.AddFrame(frame, cs * 10);
+                    i++;
+                }
             }
             catch (Exception e) { World.Log("recording: " + e.Message); }
         });

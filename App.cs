@@ -227,6 +227,7 @@ sealed partial class App : ApplicationContext
 
         if (_paused || _w.Env.FullscreenActive || QuietHours())
         {
+            if (now > _reminderTick) { _reminderTick = now + 5; ReminderTick(hidden: true); }
             EndPress();
             _overlay.SetClickThrough(true);
             if (!_hiddenCleared)

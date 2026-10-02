@@ -27,6 +27,8 @@ sealed partial class App
         return Path.Combine(CastDir, (safe.Length == 0 ? "cast" : safe) + ".json");
     }
 
+    bool SameCast(string a, string b) => string.Equals(CastFile(a), CastFile(b), StringComparison.OrdinalIgnoreCase);
+
     object CastsJson()
     {
         var list = new List<object>();
@@ -40,7 +42,7 @@ sealed partial class App
                         using var doc = JsonDocument.Parse(File.ReadAllText(file));
                         var r = doc.RootElement;
                         string name = r.TryGetProperty("Name", out var n) ? n.GetString() ?? "" : Path.GetFileNameWithoutExtension(file);
-                        if (name == _settings.CastName) continue;
+                        if (SameCast(name, _settings.CastName)) continue;
                         list.Add(new
                         {
                             name,
@@ -78,7 +80,7 @@ sealed partial class App
         name = name.Trim();
         if (name.Length is 0 or > 40) return "Give it a name (up to 40 letters).";
         if (PetMode) return "Switch off pet-only mode first.";
-        if (name != _settings.CastName && File.Exists(CastFile(name))) return $"There's already a cast called \"{name}\". Pick another name.";
+        if (!SameCast(name, _settings.CastName) && File.Exists(CastFile(name))) return $"There's already a cast called \"{name}\". Pick another name.";
         var c = CurrentCast();
         c.Name = name;
         _settings.CastName = name;
@@ -93,7 +95,7 @@ sealed partial class App
         name = name.Trim();
         if (name.Length is 0 or > 40) return "Give it a name (up to 40 letters).";
         if (PetMode) return "Switch off pet-only mode first.";
-        if (name == _settings.CastName) return "That's the cast you're on.";
+        if (SameCast(name, _settings.CastName)) return "That's the cast you're on.";
         if (fresh && File.Exists(CastFile(name))) return $"There's already a cast called \"{name}\". Pick another name, or switch to it.";
         SavedCast? next = null;
         if (!fresh)
@@ -129,7 +131,7 @@ sealed partial class App
 
     string DeleteCast(string name)
     {
-        if (name == _settings.CastName) return "That's the cast you're on.";
+        if (SameCast(name, _settings.CastName)) return "That's the cast you're on.";
         try { File.Delete(CastFile(name)); return $"Deleted \"{name}\"."; }
         catch (Exception e) { return "Couldn't delete it: " + e.Message; }
     }

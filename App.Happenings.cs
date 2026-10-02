@@ -18,6 +18,9 @@ sealed class Happening
     public readonly List<Item> Temp = new();
     public Item? Stage, Flag;
     public int Turn = -1;
+    /// <summary>The last countdown number called, and whether the results are in.</summary>
+    public int Called = -1;
+    public bool Wrapped;
     public float StartX, FinishX;
     public Figure? Winner;
     public float Centre => (Left + Right) / 2;
@@ -245,9 +248,13 @@ sealed partial class App
             {
                 var starter = h.Crowd.FirstOrDefault() ?? h.Who.FirstOrDefault();
                 if (starter == null) break;
-                int n = (int)h.PhaseT, prev = (int)(h.PhaseT - World.Dt);
-                if (n != prev && n <= 3) starter.Emote(n < 3 ? (3 - n).ToString() : "GO!", 0.9f);
-                if (n != prev && n <= 3) World.Play(Sfx.Pip, starter.Base, 0.4f, n < 3 ? 1 : 1.6f);
+                int n = Math.Min(3, (int)h.PhaseT);
+                if (n > h.Called)
+                {
+                    h.Called = n;
+                    starter.Emote(n < 3 ? (3 - n).ToString() : "GO!", 0.9f);
+                    World.Play(Sfx.Pip, starter.Base, 0.4f, n < 3 ? 1 : 1.6f);
+                }
                 if (h.PhaseT > 3) { h.Phase = 2; h.PhaseT = 0; }
                 break;
             }
@@ -266,8 +273,9 @@ sealed partial class App
                 if (h.Finished.Count == h.Who.Count || h.PhaseT > 40) { h.Phase = 3; h.PhaseT = 0; }
                 break;
             case 3:
-                if (h.PhaseT < World.Dt * 1.5f)
+                if (!h.Wrapped)
                 {
+                    h.Wrapped = true;
                     _w.Sticker("race");
                     foreach (var f in h.Who.Concat(h.Crowd)) if (f != h.Winner) f.Brain.Remember("race", _w);
                     if (h.Finished.Count > 1) World.Log("race: " + string.Join(", ", h.Finished.Select((f, i) => $"{i + 1}. {f.Name}")));

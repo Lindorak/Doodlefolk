@@ -49,10 +49,14 @@ sealed partial class App
         return Directory.Exists(fallback) ? fallback : null;
     }
 
+    double _watchRetryAt;
+
     void WatchDownloads(bool on)
     {
         if (!on) { _downloads?.Dispose(); _downloads = null; return; }
-        if (_downloads != null || DownloadsFolder() is not { } dir) return;
+        if (_downloads != null || _clock.Elapsed.TotalSeconds < _watchRetryAt) return;
+        _watchRetryAt = _clock.Elapsed.TotalSeconds + 60;
+        if (DownloadsFolder() is not { } dir) return;
         try
         {
             _downloads = new FileSystemWatcher(dir) { IncludeSubdirectories = false, NotifyFilter = NotifyFilters.FileName };
@@ -130,17 +134,21 @@ sealed partial class App
 
     // ---------------- reminders ----------------
 
-    void ReminderTick()
+    readonly DateTime _bootTime = DateTime.Now;
+
+    void ReminderTick(bool hidden = false)
     {
         var due = _settings.Reminders.Where(r => !r.Done && r.When <= DateTime.Now).ToList();
         foreach (var r in due)
         {
             // Long overdue (the PC was off): mention it, but don't make a fuss.
-            bool stale = (DateTime.Now - r.When).TotalHours > 2;
+            bool stale = r.When < _bootTime && (DateTime.Now - r.When).TotalHours > 2;
+            // Everyone's hidden (quiet hours, a full-screen app): a Windows notification instead.
+            if (hidden && !stale) { try { _tray.ShowBalloonTip(15000, "StickFight reminder", r.Text, ToolTipIcon.Info); } catch { } stale = true; }
             var bringer = _w.Figures.Where(f => f.Mode == Mode.Control && !f.Brain.InFight).OrderByDescending(f => f.Brain.UserFondness + (f.Brain.Asleep ? -1 : 0)).FirstOrDefault();
             if (!stale) bringer?.Brain.BringReminder(r.Text, _w);
             World.Log($"reminder: {r.Text}{(stale ? " (missed)" : "")}");
-            if (!stale) PostAll(new { t = "toast", text = $"⏰ {r.Text}" });
+            if (!stale || hidden) PostAll(new { t = "toast", text = $"⏰ {r.Text}" });
             r.When = r.Repeat switch
             {
                 "daily" => NextAfter(r.When, d => d.AddDays(1)),
@@ -166,6 +174,13 @@ sealed partial class App
         text = text.Trim();
         if (text.Length is 0 or > 120) return "Write what to remind you about (up to 120 letters).";
         if (when <= DateTime.Now && repeat == "none") return "That time has already passed.";
+        if (when <= DateTime.Now)
+            when = repeat switch
+            {
+                "weekly" => NextAfter(when, d => d.AddDays(7)),
+                "weekdays" => NextAfter(when, d => { d = d.AddDays(1); while (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) d = d.AddDays(1); return d; }),
+                _ => NextAfter(when, d => d.AddDays(1)),
+            };
         int id = _settings.Reminders.Count == 0 ? 1 : _settings.Reminders.Max(r => r.Id) + 1;
         _settings.Reminders.Add(new Reminder { Id = id, Text = text, When = when, Repeat = repeat });
         _settings.Save();

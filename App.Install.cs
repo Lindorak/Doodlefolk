@@ -51,7 +51,7 @@ sealed partial class App
                 k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
                 k.SetValue("EstimatedSize", (int)(new FileInfo(InstalledExe).Length / 1024), RegistryValueKind.DWord);
             }
-            if (_settings.StartWithWindows) SetStartWithWindows(true);
+            if (_settings.StartWithWindows) SetStartWithWindows(true, InstalledExe);
             World.Log("installed to " + InstallDir);
             // Hand over to the installed copy.
             SaveCast();
@@ -68,22 +68,22 @@ sealed partial class App
         try { File.Delete(StartMenuLink); } catch { }
         try { Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false); } catch { }
         try { using var run = Registry.CurrentUser.OpenSubKey(RunKey, true); run?.DeleteValue("StickFight", false); } catch { }
+        MessageBox.Show("StickFight has been removed. Your figures and settings are still in %APPDATA%\\StickFight, in case you come back.", "StickFight");
         // The program can't delete itself while running: a moment after it exits, the folder goes.
         try
         {
-            Process.Start(new ProcessStartInfo("cmd.exe", $"/c timeout /t 2 /nobreak >nul & rmdir /s /q \"{InstallDir}\"")
-            { CreateNoWindow = true, UseShellExecute = false });
+            Process.Start(new ProcessStartInfo("cmd.exe", $"/c timeout /t 3 /nobreak >nul & rmdir /s /q \"{InstallDir}\"")
+            { CreateNoWindow = true, UseShellExecute = false, WorkingDirectory = Path.GetTempPath() });
         }
         catch { }
-        MessageBox.Show("StickFight has been removed. Your figures and settings are still in %APPDATA%\\StickFight, in case you come back.", "StickFight");
     }
 
-    void SetStartWithWindows(bool on)
+    void SetStartWithWindows(bool on, string? exe = null)
     {
         try
         {
             using var run = Registry.CurrentUser.CreateSubKey(RunKey);
-            if (on) run.SetValue("StickFight", $"\"{(IsInstalled ? InstalledExe : ExePath)}\"");
+            if (on) run.SetValue("StickFight", $"\"{exe ?? (IsInstalled ? InstalledExe : ExePath)}\"");
             else run.DeleteValue("StickFight", false);
         }
         catch (Exception e) { World.Log("startup entry: " + e.Message); }
@@ -187,7 +187,8 @@ sealed partial class App
             string current = ExePath, old = current + ".old";
             if (File.Exists(old)) File.Delete(old);
             File.Move(current, old);
-            File.Move(newExe, current);
+            try { File.Move(newExe, current); }
+            catch { File.Move(old, current); throw; }
             if (IsInstalled) try { using var k = Registry.CurrentUser.OpenSubKey(UninstallKey, true); k?.SetValue("DisplayVersion", u.version.ToString(3)); } catch { }
             _overlay.BeginInvoke(() =>
             {

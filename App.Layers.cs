@@ -25,8 +25,7 @@ sealed partial class App
         _clip = new RectangleF(-1e7f, -1e7f, 2e7f, 2e7f);
         double t = _clock.Elapsed.TotalSeconds;
         // Where each still thing reaches: its outline plus room for its shadow and any glow.
-        float pad = 90 * _w.Scale;
-        var reach = _static.ToDictionary(it => it, it => { var b = it.Bounds(); b.Inflate(pad, pad); return b; });
+        var reach = _static.ToDictionary(it => it, it => { var b = it.Bounds(); float pad = 90 * _w.Scale * MathF.Max(1, it.SizeMul); b.Inflate(pad, pad); return b; });
         var overAreas = _static.Where(it => it.Def.Shapes.Any(s => s.Over)).Select(it => reach[it]).ToList();
         _r.BuildLayers(tile =>
         {

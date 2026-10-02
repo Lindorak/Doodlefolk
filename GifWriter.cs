@@ -33,7 +33,7 @@ sealed class GifWriter : IDisposable
         var (palette, indices) = Quantize(bgra);
         // Graphic control: delay, no transparency, leave in place.
         _out.WriteByte(0x21); _out.WriteByte(0xF9); _out.WriteByte(4);
-        _out.WriteByte(0x04); Short(Math.Max(2, delayMs / 10)); _out.WriteByte(0); _out.WriteByte(0);
+        _out.WriteByte(0x04); Short(Math.Max(2, (int)Math.Round(delayMs / 10.0))); _out.WriteByte(0); _out.WriteByte(0);
         // Image descriptor with a local 256-colour table.
         _out.WriteByte(0x2C); Short(0); Short(0); Short(_w); Short(_h);
         _out.WriteByte(0x87);

@@ -39,8 +39,9 @@ sealed partial class App
             {
                 using var doc = JsonDocument.Parse(await Http.GetStringAsync(url));
                 var cur = doc.RootElement.GetProperty("current");
-                _realWxPending = (cur.GetProperty("weather_code").GetInt32(), (float)cur.GetProperty("temperature_2m").GetDouble(),
-                                  (float)cur.GetProperty("wind_speed_10m").GetDouble(), cur.TryGetProperty("is_day", out var d) && d.GetInt32() == 1);
+                var wx = (cur.GetProperty("weather_code").GetInt32(), (float)cur.GetProperty("temperature_2m").GetDouble(),
+                          (float)cur.GetProperty("wind_speed_10m").GetDouble(), cur.TryGetProperty("is_day", out var d) && d.GetInt32() == 1);
+                _overlay.BeginInvoke(() => _realWxPending = wx);
             }
             catch (Exception e)
             {

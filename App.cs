@@ -212,6 +212,7 @@ sealed partial class App : ApplicationContext
         EventsFrame(now);
         GameFrame(now);
         PetFrame(now);
+        WorldFrame(now);
         LassoFrame(now, dt);
         TourneyFrame(now);
         _w.UpdateClubs(now);
@@ -496,6 +497,7 @@ sealed partial class App : ApplicationContext
         if (SprayRect() is RectangleF spr) _regNow.Add(ToRect(spr));
         if (LeashRect() is RectangleF lr) _regNow.Add(ToRect(lr));
         if (LassoRect() is RectangleF lsr) _regNow.Add(ToRect(lsr));
+        foreach (var sd in _w.Seasons.Dirty) _regNow.Add(ToRect(sd));
         if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -533,6 +535,7 @@ sealed partial class App : ApplicationContext
             if (ia > 0) Gfx.GroundShadow(_r, ic, irx, iry, ia);
         }
         _w.Weather.DrawCover(_r, _w.Env, _w.Scale);
+        _w.Seasons.DrawFallen(_r, _w.Scale, Dirty);
         var figVisible = new bool[_w.Figures.Count];
         for (int i = 0; i < _w.Figures.Count; i++) figVisible[i] = Dirty(FigureRect(_w.Figures[i]));
         if (Gfx.Q.DropShadows)
@@ -575,6 +578,7 @@ sealed partial class App : ApplicationContext
         DrawWish();
         DrawTourney();
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
+        _w.Seasons.DrawAir(_r, _w.Scale, _clock.Elapsed.TotalSeconds);
         DrawStickerToast();
         DrawSprayTool();
         DrawGameCurtain();
@@ -798,6 +802,7 @@ sealed partial class App : ApplicationContext
         f.Brain.ChampionOn = s.ChampionOn;
         if (s.Weight is float wt) f.Weight = Math.Clamp(wt, 0, 1);
         f.Brain.Gifts.AddRange(s.Gifts);
+        f.Brain.Collection.AddRange(s.Collection);
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
@@ -857,7 +862,7 @@ sealed partial class App : ApplicationContext
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
-            Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(),
+            Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
         }).ToList();
         _settings.Items = SaveItems();
         SaveSocial();
@@ -1159,6 +1164,9 @@ sealed partial class App : ApplicationContext
                     break;
                 case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;
                 case "petmode": SetPetMode(p[1] == "on"); break;
+                case "season": _w.Seasons.Override = Enum.TryParse<Season>(p[1], true, out var sn) ? sn : null; _w.Seasons.Gust(_clock.Elapsed.TotalSeconds); break;
+                case "garden": foreach (var gi in _w.Items.Where(i => i.IsPlant)) gi.Growth = float.Parse(p[1], inv); _gardenAt = 0; break;
+                case "trinket": _trinketAt = 0; break;
                 case "snap":
                 {
                     // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\stickfight_snap.png.

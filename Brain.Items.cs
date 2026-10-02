@@ -12,7 +12,7 @@ sealed partial class Brain
     static string VerbWord(Verb v) => v switch
     {
         Verb.Sit => "Sit in", Verb.Lie => "Nap on", Verb.Hammock => "Swing in", Verb.Bounce => "Bounce on", Verb.Eat => "Eat",
-        Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot or Verb.Lasso => "Grab",
+        Verb.Hide => "Hide in", Verb.Dance => "Dance by", Verb.Read => "Read", Verb.Warm => "Warm up by", Verb.Wield or Verb.Shoot or Verb.Lasso => "Grab", Verb.Collect => "Pick up", Verb.Tend => "Water",
         Verb.Create => "Grab", Verb.Shelter => "Take", _ => "Climb on",
     };
     Item? _item;
@@ -77,6 +77,8 @@ sealed partial class Brain
                     Verb.Warm => (P.Sociability * 0.5f + (1 - E) * 0.3f + 0.1f) * (w.Figures.Count(o => o.Brain._item == it) > 0 ? 1.6f : 1),
                     Verb.Stand => P.Playfulness * 0.06f,
                     Verb.Wield or Verb.Shoot => WeaponWant(it, v),
+                    Verb.Collect => it.Holder == null ? (Hobby == Hobby.Collecting ? 1.5f : 0.12f + P.Curiosity * 0.35f) * (0.5f + Boredom) * Taste(Thing.Exploring) : 0,
+                    Verb.Tend => it.Fill < 0.45f ? (Hobby == Hobby.Gardening ? 1.8f + (it.PlanterId == f.Id ? 1 : 0) : 0.08f + P.Sociability * 0.1f) * (1 - it.Fill) : 0,
                     Verb.Lasso => f.Weapon == null && it.Holder == null ? (0.15f + P.Playfulness * 0.45f + (f.Hunter ? 1.2f : 0)) * Taste(Thing.Tricks) : 0,
                     Verb.Shelter => it.Holder == null && !HasUmbrella ? (w.Weather.Raining && !LovesRain ? 2.5f + Wet * 3 : 0.04f * P.Curiosity) : 0,
                     // Everyone's curious about the Creator's Pencil; the playful and creative most of all.
@@ -113,6 +115,7 @@ sealed partial class Brain
                 Verb.Sit => item.SeatX(_seat),
                 Verb.Warm => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 12 * S),
                 Verb.Dance => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 20 * S),
+                Verb.Tend => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 8 * S),
                 _ => item.Pos.X,
             };
             // Trampolines and tables: go up onto the surface. Everything else: the ground beside/under it.
@@ -132,6 +135,7 @@ sealed partial class Brain
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
         if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter or Verb.Lasso) { Equipped(it); return; }
+        if (_verb == Verb.Collect) { _item = null; Collected(it, w); Go(G.Cheer, 1); return; }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {
@@ -143,6 +147,7 @@ sealed partial class Brain
             Verb.Read => rng.Range(12, 30),
             Verb.Warm => rng.Range(12, 30),
             Verb.Stand => rng.Range(3, 8),
+            Verb.Tend => 2.8f,
             _ => 30,
         };
         Go(G.UseItem, use);
@@ -303,6 +308,17 @@ sealed partial class Brain
                 break;
             case Verb.Stand:
                 f.SetAction(Act.Stand);
+                break;
+            case Verb.Tend:
+                FaceTo(it.Pos.X);
+                f.SetAction(Act.Tap);
+                if ((int)(_t * 4) != (int)((_t - World.Dt) * 4)) w.Fx.Spark(it.Pos + new Vector2(0, -6 * S), S * 0.5f, w.Rng, 0.3f, new Vortice.Mathematics.Color4(0.5f, 0.75f, 1, 1));
+                if (done)
+                {
+                    it.Fill = 1;
+                    if (Hobby == Hobby.Gardening) Cheered(0.08f);
+                    Write("water", V("Watered the garden.", "WATERED THE PLANTS!!", "Watered the plants. Someone had to.", "I gave the plants a drink.", "Water for the green things."), "★", 900);
+                }
                 break;
         }
         if (done) { LeaveItem(); Go(G.Idle, rng.Range(0.8f, 2)); }

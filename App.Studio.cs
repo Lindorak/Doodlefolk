@@ -274,6 +274,7 @@ sealed partial class App
         if (b.Baby) bits.Add($"{b.Grown * 100:0}% grown up");
         if (_w.ClubOf(f) is { } club) bits.Add($"Member of {club.Name}");
         if (b.Hobby != Hobby.None) bits.Add($"Loves {Brain.HobbyName(b.Hobby)}");
+        if (b.Collection.Count > 0) bits.Add($"Collection: {b.Collection.Count} treasure{(b.Collection.Count == 1 ? "" : "s")}");
         if (b.Gifts.Count > 0) bits.Add($"Your gifts: {string.Join(", ", b.Gifts.AsEnumerable().Reverse().Select(g => g.Name.ToLowerInvariant()).Distinct().Take(4))}");
         return string.Join(" · ", bits);
     }

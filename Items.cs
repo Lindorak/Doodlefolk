@@ -24,6 +24,8 @@ enum Verb
     Create,     // the Creator's Pencil: whoever holds it can draw things into the world
     Shelter,    // umbrella: carry it and stay dry
     Lasso,      // lasso: carry it, twirl it, rope a friend, a ball or your cursor
+    Collect,    // a trinket: pick it up and keep it
+    Tend,       // a plant: water it
 }
 
 enum Ammo { Dart, Water, Snow }
@@ -210,6 +212,64 @@ static class ItemCatalog
             Key = "lasso", Name = "Lasso", Words = new[] { "lasso", "lariat", "rope", "cowboy rope", "lasso rope" }, W = 14, H = 14, Color = M.Hex(0xC29A5B),
             Shapes = new[] { new Shape('e', new[] { 0f, 9, 6, 5 }, 0, 1.6f, NoOutline: true), C(1, 1.6f, 0, 4, -1, 2, 1, 0), C(0, 1.4f, -6, 9, -4, 13, 0, 14, 4, 13, 6, 9, 4, 5, 0, 4, -4, 5, -6, 9) },
             Verbs = new[] { Verb.Lasso }, Carry = true, Damage = 0.15f, Reach = 10, Likes = new[] { Thing.Tricks },
+        });
+
+        // ---------------- trinkets (collectibles) ----------------
+        ItemDef Trinket(string key, string name, string[] words, float w, float h, uint col, Shape[] shapes) => new()
+        {
+            Key = key, Name = name, Words = words, W = w, H = h, Color = M.Hex(col), Shapes = shapes, Verbs = new[] { Verb.Collect }, Carry = true, Mass = 0.2f, Likes = new[] { Thing.Exploring },
+        };
+        Add(Trinket("marble", "Marble", new[] { "marble", "marbles" }, 5, 5, 0x29B6F6, new[] { E(0, 2.5f, 2.5f, 2.5f, 0), C(7, 0.7f, -1.5f, 2.5f, 0, 3.5f, 1.5f, 2) }));
+        Add(Trinket("button", "Button", new[] { "button", "shiny button" }, 6, 2, 0xE53935, new[] { E(0, 1, 3, 1.1f, 0), E(-0.8f, 1, 0.4f, 0.3f, 1), E(0.8f, 1, 0.4f, 0.3f, 1) }));
+        Add(Trinket("seashell", "Seashell", new[] { "seashell", "shell", "sea shell" }, 7, 5, 0xF8BBD0, new[] { P(0, -3.5f, 0, 3.5f, 0, 0, 5), L(0, 0.2f, -2, 3.5f, 1, 0.6f), L(0, 0.2f, 0, 4.5f, 1, 0.6f), L(0, 0.2f, 2, 3.5f, 1, 0.6f) }));
+        Add(Trinket("feather", "Feather", new[] { "feather", "pretty feather" }, 9, 3, 0x7E57C2, new[] { P(0, -4.5f, 0.8f, 0, 2.6f, 4.5f, 1.2f, 0, 0.2f), L(-4.5f, 0.6f, 4.5f, 1.4f, 7, 0.5f) }));
+        Add(Trinket("bottlecap", "Bottle cap", new[] { "bottle cap", "bottlecap", "cap" }, 5, 2, 0xFDD835, new[] { R(-2.5f, 0, 2.5f, 1.8f, 0), L(-2.5f, 1.8f, 2.5f, 1.8f, 1, 0.6f) }));
+        Add(Trinket("coin", "Shiny coin", new[] { "coin", "shiny coin", "penny", "gold coin" }, 5, 5, 0xF2C14E, new[] { E(0, 2.5f, 2.5f, 2.5f, 0), E(0, 2.5f, 1.5f, 1.5f, 2) }));
+        Add(Trinket("gem", "Gem", new[] { "gem", "jewel", "crystal", "diamond", "ruby" }, 5, 5, 0x26C6DA, new[] { P(0, -2.5f, 3, 0, 5, 2.5f, 3, 0, 0), L(-2.5f, 3, 2.5f, 3, 2, 0.5f) }));
+
+        // ---------------- garden ----------------
+        Add(new ItemDef
+        {
+            Key = "seedpatch", Name = "Seed patch", Words = new[] { "seed", "seeds", "plant a seed", "garden", "flower bed", "seed patch" }, W = 18, H = 4, Color = M.Hex(0x6D4C41),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), E(-3, 2.6f, 1, 0.6f, 1), E(2.5f, 2.8f, 1, 0.6f, 1) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "sprout", Name = "Sprout", Words = new[] { "sprout", "seedling" }, W = 18, H = 10, Color = M.Hex(0x6D4C41),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), L(0, 2, 0, 8, 18, 1.2f), E(-2.2f, 8.2f, 2.2f, 1.1f, 18), E(2.2f, 8.2f, 2.2f, 1.1f, 18) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "bud", Name = "Budding plant", Words = new[] { "bud", "young plant", "plant" }, W = 18, H = 20, Color = M.Hex(0x6D4C41),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), L(0, 2, 0, 17, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 12, 3.5f, 1.4f, 18), E(0, 18.5f, 1.8f, 2.6f, 10) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "tulip", Name = "Tulip", Words = new[] { "tulip", "flower", "flowers", "rose", "daisy" }, W = 18, H = 26, Color = M.Hex(0xE53935),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 19, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 13, 3.5f, 1.4f, 18), P(0, -3.5f, 19, 3.5f, 19, 4, 25, 1.5f, 23, 0, 26, -1.5f, 23, -4, 25) }, Verbs = new[] { Verb.Tend }, Mass = 1, Likes = new[] { Thing.Sitting },
+        });
+        Add(new ItemDef
+        {
+            Key = "sunflower", Name = "Sunflower", Words = new[] { "sunflower", "sunflowers" }, W = 22, H = 40, Color = M.Hex(0xFDD835),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 33, 10, 2), E(-4.5f, 14, 4.5f, 1.8f, 18), E(4.5f, 21, 4.5f, 1.8f, 18), E(0, 34, 8, 8, 0), E(0, 34, 4, 4, 13) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "tomatoplant", Name = "Tomato plant", Words = new[] { "tomato plant", "tomato", "tomatoes", "vegetable", "veggie patch" }, W = 22, H = 26, Color = M.Hex(0xE53935),
+            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 24, 10, 1.6f), L(0, 12, -6, 18, 10, 1.2f), L(0, 15, 6, 21, 10, 1.2f), E(-5, 9, 4, 2, 18), E(5, 14, 4, 2, 18), E(-6, 16, 2.2f, 2.2f, 0), E(6, 19, 2.2f, 2.2f, 0), E(2, 25, 2.2f, 2.2f, 0) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+        });
+
+        // ---------------- seasonal ----------------
+        Add(new ItemDef
+        {
+            Key = "pumpkin", Name = "Jack-o'-lantern", Words = new[] { "pumpkin", "jack o lantern", "jack-o'-lantern", "jackolantern" }, W = 18, H = 15, Color = M.Hex(0xFB8C00),
+            Shapes = new[] { E(-4.5f, 7, 5, 7, 0), E(4.5f, 7, 5, 7, 0), E(0, 7, 6, 7.5f, 0), L(0, 14, 1, 17, 10, 1.6f), P(11, -5, 9, -2, 9, -3.5f, 11), P(11, 2, 9, 5, 9, 3.5f, 11), P(11, -5, 4, 5, 4, 3, 2, 0, 3.4f, -3, 2) }, Mass = 1.5f,
+        });
+        Add(new ItemDef
+        {
+            Key = "xmastree", Name = "Christmas tree", Words = new[] { "christmas tree", "xmas tree", "tree", "fir tree", "pine tree" }, W = 34, H = 52, Color = M.Hex(0x2E7D32),
+            Shapes = new[] { R(-3, 0, 3, 7, 4), P(0, -17, 7, 17, 7, 0, 26), P(0, -14, 19, 14, 19, 0, 38), P(0, -10, 30, 10, 30, 0, 48), P(15, 0, 52.5f, 1.4f, 48.5f, -1.4f, 48.5f), E(-8, 12, 1.8f, 1.8f, 9), E(6, 15, 1.8f, 1.8f, 16), E(-4, 25, 1.8f, 1.8f, 11), E(5, 32, 1.8f, 1.8f, 9), E(-3, 38, 1.6f, 1.6f, 16) },
+            Mass = 3,
         });
 
         // ---------------- pet care ----------------

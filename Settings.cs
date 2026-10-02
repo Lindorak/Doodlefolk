@@ -33,6 +33,7 @@ sealed class SavedFigure
     public Dictionary<string, int[]> Record { get; set; } = new();
     public List<Gift> Gifts { get; set; } = new();
     public string Hobby { get; set; } = "";
+    public List<string> Collection { get; set; } = new();
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -48,6 +49,11 @@ sealed class SavedItem
     public float Tilt { get; set; }
     /// <summary>Whose home it is (a figure's name), if anyone's.</summary>
     public string? Owner { get; set; }
+    public float Fill { get; set; } = 1;
+    public int Dirt { get; set; }
+    public float Growth { get; set; }
+    public string PlantKind { get; set; } = "";
+    public string? Planter { get; set; }
 }
 
 sealed class SavedClub

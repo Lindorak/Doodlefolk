@@ -119,7 +119,9 @@ sealed partial class App
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
     List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites && !i.Temporary)
         .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI),
-                                     Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name }).ToList();
+                                     Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name,
+                                     Fill = MathF.Round(i.Fill, 3), Dirt = i.Dirt, Growth = MathF.Round(i.Growth, 3), PlantKind = i.PlantKind,
+                                     Planter = _w.Figures.FirstOrDefault(f => f.Id == i.PlanterId)?.Name }).ToList();
 
     void RestoreItems(List<SavedItem> items)
     {
@@ -129,6 +131,8 @@ sealed partial class App
                 {
                     it.RestAngle = it.Angle = Math.Clamp(s.Tilt, -90, 90) * MathF.PI / 180;
                     if (s.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == s.Owner) is { } owner) { it.OwnerId = owner.Id; it.OwnerName = owner.Name; it.OwnerColour = owner.Color; }
+                    it.Fill = Math.Clamp(s.Fill, 0, 1); it.Dirt = Math.Max(0, s.Dirt); it.Growth = s.Growth; it.PlantKind = s.PlantKind;
+                    if (s.Planter != null && _w.Figures.FirstOrDefault(f => f.Name == s.Planter) is { } planter) it.PlanterId = planter.Id;
                 }
     }
 }

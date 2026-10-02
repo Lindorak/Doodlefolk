@@ -414,6 +414,11 @@ sealed class Item
                 if (Dirt >= 3) Smell(r, t, 3);
                 break;
             case "puddle": Smell(r, t, 1); break;
+            case "seedpatch" or "sprout" or "bud" or "tulip" or "sunflower" or "tomatoplant":
+                // Dry soil goes pale; freshly watered soil glistens.
+                if (Fill < 0.25f) r.Oval(Local(0, 1.6f), 8.5f * sc, 1.8f * sc, new Color4(0.85f, 0.75f, 0.55f, 0.45f * (1 - Fill * 4)));
+                else if (Fill > 0.8f) r.Disc(Local(-3, 2.5f), 0.7f * sc, new Color4(0.7f, 0.85f, 1, 0.8f));
+                break;
             case "poop": Smell(r, t, 5); break;
         }
     }
@@ -438,6 +443,11 @@ sealed class Item
     /// <summary>Bowls: how full (1 full … 0 empty). Litter boxes and pee pads: how dirty (uses since cleaned).</summary>
     public float Fill = 1;
     public int Dirt;
+    /// <summary>Plants: how far through this stage (0..1), what it'll become, and who planted it.</summary>
+    public float Growth;
+    public string PlantKind = "";
+    public int PlanterId;
+    public bool IsPlant => Def.Verbs.Contains(Verb.Tend);
     public bool IsMess => Def.Key is "puddle" or "poop" or "dropping";
 
     void DrawFire(Renderer r, double time)

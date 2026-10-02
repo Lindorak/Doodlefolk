@@ -37,6 +37,7 @@ sealed partial class World
     /// <summary>A game with you in progress (hide-and-seek, tag, catch).</summary>
     public UserGame? Game;
     public Tournament? Tourney;
+    public readonly Seasons Seasons = new();
     /// <summary>A figure has your cursor on a rope (see App.Lasso); how long the cursor has been left alone.</summary>
     public Figure? CursorLasso;
     public float CursorStill;

@@ -99,6 +99,13 @@ sealed partial class App
             foreach (var p in _w.Pets) if (Vector2.Distance(p.Pos, it.Pos) < 400 * s) p.Stress = MathF.Max(0, p.Stress - 0.03f);
             return true;
         }
+        if (it.IsPlant && it.Fill < 0.6f)
+        {
+            it.Fill = 1;
+            World.Play(Sfx.Splat, it.Pos, 0.25f, 1.6f);
+            _w.Fx.Spark(it.Pos + new Vector2(0, -6 * s), s * 0.6f, _w.Rng, 0.4f, new Color4(0.5f, 0.75f, 1, 1));
+            return true;
+        }
         switch (it.Def.Key)
         {
             case "foodbowl" when it.Fill < 0.6f:

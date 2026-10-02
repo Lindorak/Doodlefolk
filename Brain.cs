@@ -112,6 +112,7 @@ sealed partial class Brain
         Trophies = o.Trophies; ChampionOn = o.ChampionOn;
         foreach (var (k, v) in o.Record) Record[k] = v;
         Gifts.AddRange(o.Gifts);
+        Collection.AddRange(o.Collection);
         _hobby = o._hobby;
         _datingSince = o._datingSince - o._t0 + _t0;
     }
@@ -719,6 +720,7 @@ sealed partial class Brain
         ClubOptions(w, opts);
         PetCareOptions(w, opts);
         LassoOptions(w, opts);
+        GardenOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

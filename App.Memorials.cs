@@ -16,6 +16,7 @@ sealed class Memorial
     public string Partner { get; set; } = "";
     public List<string> Friends { get; set; } = new();
     public List<string> Children { get; set; } = new();
+    public List<string> Parents { get; set; } = new();
     public List<string> Diary { get; set; } = new();
     public int GhostVisits { get; set; }
 }
@@ -42,7 +43,7 @@ sealed partial class App
         var m = new Memorial
         {
             Name = f.Name, Colour = Settings.Hex(f.Color), Hat = f.Look.Hat, Died = DateTime.Now, Age = age, Cause = cause,
-            Partner = b.Sweetheart(_w)?.Name ?? "", Friends = friends, Children = kids, Epitaph = Epitaph(f),
+            Partner = b.Sweetheart(_w)?.Name ?? "", Friends = friends, Children = kids, Epitaph = Epitaph(f), Parents = b.ParentNames.ToList(),
             Diary = b.Diary.Where(d => d.Mood is "★" or "♥").TakeLast(3).Concat(b.Diary.TakeLast(1)).Distinct().Select(d => $"{d.At:d MMM}: {d.Text}").ToList(),
         };
         _settings.Memorials.Add(m);

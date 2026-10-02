@@ -140,6 +140,11 @@ sealed partial class App
             _questText = NewQuest(Fig(0), QuestKind.Thing);
             if (_settings.Quests.LastOrDefault() is { } q && ItemCatalog.Find(q.Target) is { } d) SpawnItem(d);
         });
+        At(163, "history", () =>
+        {
+            string saved = ExportHistory();
+            Check("the town's history is kept and exports", _settings.History.Count > 0 && saved.StartsWith("Saved") && Directory.GetFiles(AppPaths.PicturesDir, "*history*.html").Length > 0, $"{_settings.History.Count} events; {saved}");
+        });
         At(162, "request granted", () => Check("a request is granted when you do it", _settings.Quests.LastOrDefault()?.Done == true, _questText));
         At(158, "album saved", () =>
         {

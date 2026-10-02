@@ -41,6 +41,7 @@ sealed partial class App
         if (rng.NextDouble() < 0.5) tastes.FavoriteColour = b.Tastes.FavoriteColour;
         nf.Tastes = tastes;
         nf.Brain.ParentIds.Add(a.Id); nf.Brain.ParentIds.Add(b.Id);
+        nf.Brain.ParentNames.Add(a.Name); nf.Brain.ParentNames.Add(b.Name);
         nf.Brain.Grown = 0;
         nf.Brain.AdultSize = adult;
         _w.Figures.Add(nf);

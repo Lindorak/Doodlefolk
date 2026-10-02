@@ -66,6 +66,7 @@ static class Stickers
         new("helper", "🙏", "Wish granted", "Do something a figure asked for"),
         new("memorial", "🕯", "Remembered", "Say goodbye to someone"),
         new("toybox", "🧸", "Mad scientist", "Play with the toybox (moon gravity, a giant ball…)"),
+        new("history", "📜", "Historian", "Export the family tree or the town's history"),
         new("prank", "🤡", "Gotcha!", "Someone pulls a prank (prank mode)"),
         new("meme", "😂", "Meme lord", "Someone hangs up a meme (prank mode)"),
         new("goodfriend", "💛", "Good friend", "Grant ten requests"),
@@ -102,9 +103,11 @@ sealed partial class World
         NewsLog.Add(new NewsItem { When = now, Kind = kind, Text = text, Weight = weight, Who = who.Select(f => f.Name).ToList() });
         if (NewsLog.Count > 400) NewsLog.RemoveRange(0, NewsLog.Count - 400);
         Log($"news [{kind}] {text}");
+        OnNews?.Invoke(kind, text, weight, who);
         if (weight >= 3) OnMilestone?.Invoke(kind, text, weight, who);
     }
 
     /// <summary>A big moment (news of weight 3 and up): the app takes an album photo.</summary>
     public Action<string, string, int, Figure[]>? OnMilestone;
+    public Action<string, string, int, Figure[]>? OnNews;
 }

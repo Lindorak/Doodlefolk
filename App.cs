@@ -112,6 +112,7 @@ sealed partial class App : ApplicationContext
         _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
         _w.RareSeen = RareSeen;
         _w.OnMilestone = OnMilestone;
+        _w.OnNews = OnNewsForHistory;
         _w.FishCaught = OnFishCaught;
         _w.NoteFor = NoteText;
         _w.PrankLeft = PrankLeft;
@@ -975,7 +976,7 @@ sealed partial class App : ApplicationContext
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
             Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
             Born = f.Brain.Born,
-            Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList(),
+            Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).Union(f.Brain.ParentNames).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
@@ -1012,7 +1013,10 @@ sealed partial class App : ApplicationContext
             foreach (var (rn, rec) in s.Record)
                 if (made.FirstOrDefault(m => m.f.Name == rn).f is { } ro && rec.Length == 2) f.Brain.Record[ro.Id] = (rec[0], rec[1]);
             foreach (var pn in s.Parents)
+            {
+                if (!f.Brain.ParentNames.Contains(pn)) f.Brain.ParentNames.Add(pn);
                 if (made.FirstOrDefault(m => m.f.Name == pn).f is { } par) f.Brain.ParentIds.Add(par.Id);
+            }
         }
         RestoreItems(_settings.Items);
         RestoreClubs();

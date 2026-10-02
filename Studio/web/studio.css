@@ -494,3 +494,11 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .mem-head .dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--ink); display: inline-block; }
 .mem-epitaph { font-style: italic; margin: 6px 0; }
 .mem-diary { margin: 6px 0 0 16px; padding: 0; font-size: 12.5px; color: var(--pencil, inherit); }
+
+/* Town history */
+.tree-box { overflow: auto; border: 1.5px solid var(--faint); border-radius: 12px; max-height: 520px; background: #fbf8ef; }
+.tree-box svg { display: block; }
+.history h3 { margin: 14px 0 4px; }
+.hist { padding: 2px 0; }
+.hist.w4, .hist.w5 { font-weight: 600; }
+.big-only .hist.w2, .big-only .hist.w3 { display: none; }

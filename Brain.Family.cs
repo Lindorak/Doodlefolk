@@ -90,6 +90,8 @@ sealed partial class Brain
     // ---------------- families ----------------
 
     public readonly List<int> ParentIds = new();
+    /// <summary>Their parents' names, kept even after the parents are gone (for the family tree).</summary>
+    public readonly List<string> ParentNames = new();
     /// <summary>0 a newborn … 1 grown up. Babies grow over about four hours of play.</summary>
     public float Grown = 1;
     public float AdultSize = 1;

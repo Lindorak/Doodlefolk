@@ -36,6 +36,7 @@ function receive(m) {
     case "toast": toast(m.text); break;
     case "pop": buildPop(m.kind, m.id); break;
     case "said": popSaid(m); break;
+    case "history": HISTORY = m; if (route.page === "history" && current) { current.sig = null; onState(); } break;
     case "album": ALBUM = m; if (route.page === "album" && current) { current.sig = null; onState(); } break;
   }
 }
@@ -303,7 +304,7 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { focus: "Focus", cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", album: "Photo album", stickers: "Sticker book", settings: "Settings" };
+  const names = { focus: "Focus", cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", album: "Photo album", history: "Town history", stickers: "Sticker book", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
@@ -1127,6 +1128,117 @@ PAGES.stickers = {
   },
 };
 
+// ---------------- Town history ----------------
+
+let HISTORY = null, historyAsked = -1;
+
+/** The family tree as an SVG: generations top to bottom, couples side by side joined by a heart, children hanging
+ *  from the middle of their parents; the remembered in grey with a candle. */
+function familyTreeSvg(people) {
+  const by = new Map(people.map(p => [p.name, p]));
+  const gen = new Map();
+  const g = (p, seen = new Set()) => {
+    if (gen.has(p.name)) return gen.get(p.name);
+    if (seen.has(p.name)) return 0;
+    seen.add(p.name);
+    const ps = (p.parents || []).map(n => by.get(n)).filter(Boolean);
+    const v = ps.length ? Math.max(...ps.map(q => g(q, seen))) + 1 : 0;
+    gen.set(p.name, v);
+    return v;
+  };
+  people.forEach(p => g(p));
+  // Partners share a generation (the later one).
+  for (const p of people) if (p.partner && by.has(p.partner)) { const m = Math.max(gen.get(p.name), gen.get(p.partner)); gen.set(p.name, m); gen.set(p.partner, m); }
+  const rows = [];
+  for (const p of people) (rows[gen.get(p.name)] ||= []).push(p);
+  // Order each row: by parents' position, couples together.
+  const x = new Map();
+  const W = 150, H = 130, PAD = 40;
+  rows.forEach((row, r) => {
+    if (!row) return;
+    const key = p => { const ps = (p.parents || []).filter(n => x.has(n)); return ps.length ? ps.reduce((a, n) => a + x.get(n), 0) / ps.length : 1e6 + people.indexOf(p); };
+    row.sort((a, b) => key(a) - key(b));
+    const ordered = [];
+    for (const p of row) {
+      if (ordered.includes(p)) continue;
+      ordered.push(p);
+      const q = p.partner && by.get(p.partner);
+      if (q && row.includes(q) && !ordered.includes(q)) ordered.push(q);
+    }
+    ordered.forEach((p, i) => x.set(p.name, PAD + i * W + W / 2));
+    rows[r] = ordered;
+  });
+  const width = Math.max(320, ...rows.filter(Boolean).map(r => r.length * W + PAD * 2));
+  const height = rows.length * H + PAD * 2;
+  const y = p => PAD + gen.get(p.name) * H + 30;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  let out = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Segoe Print, Comic Sans MS, cursive">`;
+  out += `<rect width="100%" height="100%" fill="#fbf8ef"/>`;
+  // Couples.
+  const drawn = new Set();
+  for (const p of people) {
+    const q = p.partner && by.get(p.partner);
+    if (!q || drawn.has(q.name)) continue;
+    drawn.add(p.name);
+    out += `<line x1="${x.get(p.name)}" y1="${y(p)}" x2="${x.get(q.name)}" y2="${y(q)}" stroke="#e57373" stroke-width="2" stroke-dasharray="5 4"/>`;
+    out += `<text x="${(x.get(p.name) + x.get(q.name)) / 2}" y="${y(p) + 5}" text-anchor="middle" font-size="16" fill="#e53935">♥</text>`;
+  }
+  // Children from their parents' middle.
+  for (const c of people) {
+    const ps = (c.parents || []).map(n => by.get(n)).filter(Boolean);
+    if (!ps.length) continue;
+    const px = ps.reduce((a, p) => a + x.get(p.name), 0) / ps.length, py = Math.max(...ps.map(y)) + 64, cy = y(c) - 22;
+    out += `<path d="M${px} ${py} V${(py + cy) / 2} H${x.get(c.name)} V${cy}" fill="none" stroke="#8a8478" stroke-width="1.6"/>`;
+  }
+  for (const p of people) {
+    const cx = x.get(p.name), cy = y(p);
+    out += `<g opacity="${p.alive ? 1 : 0.55}"><circle cx="${cx}" cy="${cy - 6}" r="9" fill="${p.alive ? esc(p.colour) : "#b0b0b0"}" stroke="#262420" stroke-width="1.6"/>`;
+    out += `<line x1="${cx}" y1="${cy + 3}" x2="${cx}" y2="${cy + 18}" stroke="#262420" stroke-width="1.6"/>`;
+    out += `<text x="${cx}" y="${cy + 40}" text-anchor="middle" font-size="15" fill="#262420">${p.alive ? "" : "🕯 "}${esc(p.name)}</text>`;
+    out += `<text x="${cx}" y="${cy + 57}" text-anchor="middle" font-size="11" fill="#8a8478">${p.alive ? (p.age ? `${p.age}` : "") : `${p.age}${p.died ? ` · ${p.died}` : ""}`}</text></g>`;
+  }
+  return out + "</svg>";
+}
+
+PAGES.history = {
+  sig: () => (HISTORY ? HISTORY.events.length + "|" + HISTORY.family.length : "none") + "|" + (S.historyCount || 0),
+  build(root) {
+    if (historyAsked !== (S.historyCount || 0)) { historyAsked = S.historyCount || 0; send({ t: "history", op: "get" }); }
+    const H = HISTORY;
+    add(root, h("h1", null, "Town history"),
+      h("p", { class: "sub" }, H && H.since ? `Everything notable since ${H.since}, kept for good. The family tree shows everyone, and everyone remembered.` : "Everything notable that happens is kept here for good, with the family tree."));
+    if (!H) { add(root, h("p", { class: "hint" }, "Opening the archive…")); return; }
+    const svg = familyTreeSvg(H.family);
+    const box = h("div", { class: "tree-box" });
+    box.innerHTML = svg;
+    const savePng = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.width * 2; c.height = img.height * 2;
+        const g = c.getContext("2d"); g.scale(2, 2); g.drawImage(img, 0, 0);
+        send({ t: "history", op: "tree", kind: "png", data: c.toDataURL("image/png") });
+      };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    };
+    add(root, h("h2", null, "Family tree"),
+      H.family.some(p => (p.parents || []).length || p.partner) ? null : h("p", { class: "hint" }, "No families yet: sweethearts who've been together a while can have a little one (with Babies on)."),
+      box,
+      h("div", { class: "row" },
+        h("button", { class: "btn small", onclick: savePng }, "Save as a picture"),
+        h("button", { class: "btn small", onclick: () => send({ t: "history", op: "tree", kind: "svg", data: svg }) }, "Save as SVG"),
+        h("button", { class: "btn small", onclick: () => send({ t: "history", op: "page" }) }, "Save the whole history as a web page")));
+    const big = h("label", { class: "check" }, h("input", { type: "checkbox", onchange: e => list.classList.toggle("big-only", e.target.checked) }), h("span", null, "Only the big moments"));
+    const list = h("div", { class: "history" });
+    let month = "";
+    for (const e of H.events) {
+      if (e.month !== month) { month = e.month; list.append(h("h3", null, month)); }
+      list.append(h("div", { class: "hist w" + Math.min(5, e.weight) }, h("span", { class: "hint" }, e.when + "  "), e.text));
+    }
+    add(root, h("h2", null, "What happened"), big, H.events.length ? list : h("p", { class: "hint" }, "Nothing yet. Give it time."));
+  },
+};
+
 // ---------------- Photo album ----------------
 
 let ALBUM = null, albumAsked = -1;
@@ -1934,6 +2046,19 @@ const Mock = {
     }
     if (m.t === "setting") this.state.settings[m.key] = m.v;
     if (m.t === "fight") this.state.fight[m.key] = m.v;
+    if (m.t === "history") setTimeout(() => receive({ t: "history", since: "1 October 2026", family: [
+      { name: "Mo", colour: "#E53935", alive: true, age: 34, parents: [], partner: "Bea", died: "" },
+      { name: "Bea", colour: "#1E88E5", alive: true, age: 33, parents: ["Old Rex"], partner: "Mo", died: "" },
+      { name: "Old Rex", colour: "#43A047", alive: false, age: 88, parents: [], partner: "", died: "2026" },
+      { name: "Pip", colour: "#8E24AA", alive: true, age: 6, parents: ["Mo", "Bea"], partner: "", died: "" },
+      { name: "Juni", colour: "#FB8C00", alive: true, age: 4, parents: ["Mo", "Bea"], partner: "", died: "" },
+      { name: "Lou", colour: "#FDD835", alive: true, age: 25, parents: [], partner: "", died: "" },
+    ], events: [
+      { when: "2 Oct 2026, 13:00", month: "October 2026", kind: "baby", text: "It's a baby! Juni, to Mo and Bea", weight: 5 },
+      { when: "1 Oct 2026, 20:00", month: "October 2026", kind: "town", text: "Lou wins the race!", weight: 4 },
+      { when: "28 Sep 2026, 10:00", month: "September 2026", kind: "romance", text: "Mo and Bea are dating!", weight: 4 },
+      { when: "27 Sep 2026, 09:00", month: "September 2026", kind: "town", text: "A new treehouse is finished, built by Lou", weight: 3 },
+    ] }), 50);
     if (m.t === "album") setTimeout(() => receive({ t: "album", auto: true, items: [
       { file: "sample.png", when: "2 Oct 2026, 13:24", month: "October 2026", kind: "romance", caption: "Mo and Bea are dating!", who: ["Mo", "Bea"], starred: true },
       { file: "sample.png", when: "1 Oct 2026, 20:10", month: "October 2026", kind: "town", caption: "Rex wins the race!", who: ["Rex"], starred: false },

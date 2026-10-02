@@ -43,6 +43,10 @@ sealed partial class App
     {
         _w.NewsLog.AddRange(_settings.News);
         _w.OnSticker = Sticker;
+        // The history starts with whatever the newspaper still remembers.
+        if (_settings.History.Count == 0)
+            _settings.History.AddRange(_settings.News.Where(n => n.Weight >= 2 && n.Kind != "app").OrderBy(n => n.When)
+                .Select(n => new HistoryEvent { When = n.When, Kind = n.Kind, Text = n.Text, Who = n.Who.ToList(), Weight = n.Weight }));
     }
 
     // ---------------- stickers ----------------

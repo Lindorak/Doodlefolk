@@ -166,6 +166,7 @@ sealed partial class App
         albumCount = Album.Count,
         quests = QuestState(),
         memorials = MemorialState(),
+        historyCount = _settings.History.Count + _settings.Memorials.Count * 1000 + _w.Figures.Count * 100000,
         toybox = ToyboxState(),
         memes = MemeState(),
         props = _w.Props.Select(p => new { id = p.Id, kind = p.Kind.ToString(), name = Prop.KindName(p.Kind), size = p.SizeMul, bounce = p.Bounce, hex = Settings.Hex(p.Color), held = p.Holder?.Name }),
@@ -454,6 +455,14 @@ sealed partial class App
                     if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
                     break;
                 }
+                case "history":
+                    switch (Str(m, "op"))
+                    {
+                        case "tree": PostAll(new { t = "toast", text = ExportTree(Str(m, "kind"), Str(m, "data")) }); break;
+                        case "page": PostAll(new { t = "toast", text = ExportHistory() }); break;
+                    }
+                    PostAll(HistoryMessage());
+                    break;
                 case "meme":
                     switch (Str(m, "op"))
                     {

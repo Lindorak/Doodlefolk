@@ -108,6 +108,7 @@ sealed partial class Brain
         _places.AddRange(o._places);
         Memories.AddRange(o.Memories);
         ParentIds.AddRange(o.ParentIds);
+        ParentNames.AddRange(o.ParentNames);
         Grown = o.Grown; AdultSize = o.AdultSize; LastBaby = o.LastBaby;
         Trophies = o.Trophies; ChampionOn = o.ChampionOn;
         foreach (var (k, v) in o.Record) Record[k] = v;

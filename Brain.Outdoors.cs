@@ -7,6 +7,7 @@ namespace StickFight;
 /// days send them to the campfire.</summary>
 sealed partial class Brain
 {
+    public Item? WaterItem => f.Swimming ? _water : null;
     float _vehicleCd = 40, _swimCd = 60, _fishCd = 60;
     Item? _vehicle, _water;
     float _swerveT, _rideDir = 1, _swimDir = 1, _swimPause, _biteAt, _biteEnd;

@@ -53,7 +53,7 @@ sealed partial class App
         });
     }
 
-    static (WeatherKind kind, string words) WeatherFromCode(int code) => code switch
+    internal static (WeatherKind kind, string words) WeatherFromCode(int code) => code switch
     {
         0 => (WeatherKind.Clear, "clear skies"),
         1 or 2 => (WeatherKind.Clear, "partly cloudy"),

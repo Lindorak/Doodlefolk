@@ -75,10 +75,15 @@ sealed partial class World
     }
 
     /// <summary>Debug event log (only with --debug): %TEMP%\stickfight_events.log.</summary>
+    /// <summary>Where the debug log goes (the self-test keeps its own).</summary>
+    public static string LogFile = Path.Combine(Path.GetTempPath(), "stickfight_events.log");
+
+    public static bool LogAlways;
+
     public static void Log(string msg)
     {
-        if (!Debug) return;
-        try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "stickfight_events.log"), $"{DateTime.Now:HH:mm:ss.fff} {msg}\n"); }
+        if (!Debug && !LogAlways) return;
+        try { File.AppendAllText(LogFile, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n"); }
         catch (IOException) { }
     }
 

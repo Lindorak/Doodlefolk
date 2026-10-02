@@ -5,6 +5,30 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        AppPaths.Configure(args);
+        // The self-test runs alongside your StickFight, with its own data, and reports by exit code.
+        if (args.Contains("--selftest"))
+        {
+            if (!args.Contains("--data"))
+            {
+                AppPaths.DataDir = Path.Combine(Path.GetTempPath(), "StickFight-selftest");
+                AppPaths.PicturesDir = Path.Combine(AppPaths.DataDir, "pictures");
+            }
+            // Start from nothing every time, but only ever wipe a folder the self-test made itself.
+            string marker = Path.Combine(AppPaths.DataDir, ".stickfight-selftest");
+            if (Directory.Exists(AppPaths.DataDir) && Directory.EnumerateFileSystemEntries(AppPaths.DataDir).Any())
+            {
+                if (!File.Exists(marker)) { Environment.Exit(2); return; }
+                try { Directory.Delete(AppPaths.DataDir, true); } catch { }
+            }
+            Directory.CreateDirectory(AppPaths.DataDir);
+            File.WriteAllText(marker, "Made by StickFight --selftest; safe to delete.");
+            ApplicationConfiguration.Initialize();
+            using var test = new App(args);
+            Application.Run(test);
+            Environment.Exit(test.SelfTestExitCode);
+            return;
+        }
         using var mutex = new Mutex(true, "StickFight.SingleInstance", out bool first);
         // Started by an install or an update: wait for the old copy to finish closing.
         if (!first && args.Contains("--wait"))

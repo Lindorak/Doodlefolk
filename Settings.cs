@@ -220,8 +220,7 @@ sealed class Settings
     public List<SavedPet> Pets { get; set; } = new();
 
     public static string FilePath => PathOnDisk;
-    static string PathOnDisk => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "StickFight", "settings.json");
+    static string PathOnDisk => System.IO.Path.Combine(AppPaths.DataDir, "settings.json");
 
     public static Settings Load()
     {

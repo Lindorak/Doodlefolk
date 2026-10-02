@@ -44,7 +44,7 @@ sealed partial class App
         var area = new RectangleF(x0, y0, x1 - x0, y1 - y0);
         float zoom = MathF.Min(1, 960 / area.Width);
         int w = Math.Max(16, (int)(area.Width * zoom)), h = Math.Max(16, (int)(area.Height * zoom));
-        string dir = folder ?? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "StickFight");
+        string dir = folder ?? AppPaths.PicturesDir;
         Directory.CreateDirectory(dir);
         double now = _clock.Elapsed.TotalSeconds;
         var rec = new Recording

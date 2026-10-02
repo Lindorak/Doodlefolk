@@ -271,7 +271,7 @@ sealed partial class App
         var snap = new Bitmap(shot.Width, shot.Height, PixelFormat.Format32bppArgb);
         using (var g = Graphics.FromImage(snap)) g.CopyFromScreen(shot.Left, shot.Top, 0, 0, shot.Size, CopyPixelOperation.SourceCopy);
         string who = names.Count switch { 0 => "the desktop", 1 => names[0], _ => string.Join(", ", names.Take(names.Count - 1)) + " & " + names[^1] };
-        string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "StickFight");
+        string dir = AppPaths.PicturesDir;
         string file = Path.Combine(dir, $"StickFight {DateTime.Now:yyyy-MM-dd HH.mm.ss}.png");
         // Framing and saving (PNG encoding is slow for big shots) happen off the main thread.
         _ = Task.Run(() =>

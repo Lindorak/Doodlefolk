@@ -73,7 +73,7 @@ sealed partial class App
         catch (Exception e) { World.Log("downloads watch: " + e.Message); _downloads = null; }
     }
 
-    static string KindOf(string ext) => ext switch
+    internal static string KindOf(string ext) => ext switch
     {
         ".jpg" or ".jpeg" or ".png" or ".gif" or ".webp" or ".heic" or ".bmp" or ".svg" => "a picture",
         ".mp4" or ".mov" or ".mkv" or ".webm" or ".avi" => "a video",
@@ -162,7 +162,7 @@ sealed partial class App
         if (_settings.Reminders.RemoveAll(r => r.Done && (DateTime.Now - r.When).TotalDays > 1) > 0 || due.Count > 0) _settings.Save();
     }
 
-    static DateTime NextAfter(DateTime from, Func<DateTime, DateTime> step)
+    internal static DateTime NextAfter(DateTime from, Func<DateTime, DateTime> step)
     {
         var d = step(from);
         while (d <= DateTime.Now) d = step(d);

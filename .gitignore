@@ -6,3 +6,5 @@ dist/
 *.log
 .vs/
 Studio/web/mock-*.json
+tools/ci-history.log
+ci-output/

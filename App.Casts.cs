@@ -21,7 +21,7 @@ sealed partial class App
 {
     static string CastDir => Path.Combine(Path.GetDirectoryName(Settings.FilePath)!, "casts");
 
-    static string CastFile(string name)
+    internal static string CastFile(string name)
     {
         var safe = string.Concat(name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c)).Trim();
         return Path.Combine(CastDir, (safe.Length == 0 ? "cast" : safe) + ".json");

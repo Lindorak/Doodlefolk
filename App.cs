@@ -16,7 +16,7 @@ sealed partial class App : ApplicationContext
     readonly Overlay _overlay;
     readonly Renderer _r;
     readonly NotifyIcon _tray;
-    readonly Stopwatch _clock = Stopwatch.StartNew();
+    readonly SimClock _clock = new();
     readonly bool _debug;
     readonly Settings _settings = Settings.Load();
     int _refresh = 60;
@@ -46,7 +46,9 @@ sealed partial class App : ApplicationContext
     public App(string[] args)
     {
         _debug = args.Contains("--debug");
+        _selfTest = args.Contains("--selftest");
         World.Debug = _debug;
+        if (_selfTest) SelfTestPrepare();
         var boot = System.Diagnostics.Stopwatch.StartNew();
         var marks = new List<string>();
         void Mark(string what) { marks.Add($"{what} {boot.ElapsedMilliseconds}"); }
@@ -60,7 +62,7 @@ sealed partial class App : ApplicationContext
 
         var vs = _w.Env.Virtual;
         _overlay = new Overlay(vs);
-        _overlay.Show();
+        if (!_selfTest) _overlay.Show();
         Mark("overlay");
         _r = new Renderer(_overlay.Handle, vs);
         Mark("renderer");
@@ -72,6 +74,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseDown += OnMouseDown;
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
+        if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.SessionEnding += (_, _) => { if (_settings.RememberCast) SaveCast(); };
         Application.Idle += OnIdle;
@@ -184,6 +187,9 @@ sealed partial class App : ApplicationContext
             }
             catch (Exception ex)
             {
+                _frameErrors++;
+                if (_errorTexts.Count < 50) _errorTexts.Add(ex.GetType().Name + ": " + ex.Message);
+                RecordProblem(ex);
                 File.AppendAllText(_logPath, $"{DateTime.Now:O} {ex}\n");
                 Thread.Sleep(100);
             }
@@ -205,7 +211,7 @@ sealed partial class App : ApplicationContext
             _nextFrameAt = Math.Max(_nextFrameAt + _frameInterval, now - _frameInterval);
         }
         float rawDt = (float)(now - _last);
-        float dt = MathF.Min(rawDt, 0.05f);
+        float dt = MathF.Min(rawDt, 0.05f * (float)_clock.Scale);
         _last = now;
         _maxDtAcc = MathF.Max(_maxDtAcc, rawDt);
         if (_fps > 0 && rawDt > 1.6f / _fps) _hitchAcc++;
@@ -225,7 +231,7 @@ sealed partial class App : ApplicationContext
         _w.Env.Refresh(_overlay.Handle);
         _tRefresh += Stopwatch.GetElapsedTime(tr0).TotalMilliseconds;
 
-        if (_paused || _w.Env.FullscreenActive || QuietHours())
+        if (!_selfTest && (_paused || _w.Env.FullscreenActive || QuietHours()))
         {
             if (now > _reminderTick) { _reminderTick = now + 5; ReminderTick(hidden: true); }
             EndPress();
@@ -282,7 +288,8 @@ sealed partial class App : ApplicationContext
 
         _acc += dt;
         int n = (int)(_acc / World.Dt);
-        if (n > 8) { n = 8; _acc = 0; } else _acc -= n * World.Dt;
+        int maxTicks = (int)(8 * _clock.Scale);
+        if (n > maxTicks) { n = maxTicks; _acc = 0; } else _acc -= n * World.Dt;
         if (World.Calm) _w.HitStop = 0;
         if (_w.HitStop > 0)
         {
@@ -344,13 +351,17 @@ sealed partial class App : ApplicationContext
 
         _frames++;
         if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _msSim = _tSim / _frames; _msDraw = _r.DrawMs / _frames; _regionsPerFrame = _r.Regions / (float)_frames; _r.DrawMs = 0; _r.Regions = 0; _tRefresh = _tRender = _tSim = 0; _frames = 0; _fpsT = now; }
-        if (_debug && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
+        if (_debug && !_selfTest && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
+        if (_selfTest) SelfTestFrame(now);
     }
 
     readonly HashSet<string> _logged = new();
 
     void LogOnce(Exception ex)
     {
+        _frameErrors++;
+        if (_errorTexts.Count < 50) _errorTexts.Add(ex.GetType().Name + ": " + ex.Message);
+        RecordProblem(ex);
         string key = ex.GetType().Name + ex.StackTrace?.Split('\n').FirstOrDefault();
         if (_logged.Add(key)) File.AppendAllText(_logPath, $"{DateTime.Now:O} {ex}\n");
     }

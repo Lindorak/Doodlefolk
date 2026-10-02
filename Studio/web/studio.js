@@ -358,45 +358,53 @@ PAGES.cast = {
   },
 };
 
+/** The upcoming events (next month) in a calendar file, as reminders: [{text, when}], and how many repeating events
+ *  had a pattern too unusual to follow. Pure, so the tests can run it. */
+function parseIcs(raw, now = new Date()) {
+  const text = String(raw).replace(/\r?\n[ \t]/g, "");
+  const events = [];
+  const horizon = now.getTime() + 31 * 86400000;
+  const pad = n => String(n).padStart(2, "0");
+  const local = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  let skipped = 0;
+  for (const block of text.split("BEGIN:VEVENT").slice(1)) {
+    const body = block.split("END:VEVENT")[0];
+    const rawSummary = (body.match(/^SUMMARY[^:]*:(.*)$/m) || [])[1];
+    // DTSTART;TZID="…":20261002T140000 (parameters may be quoted and contain colons), or ;VALUE=DATE:20261002 for all-day.
+    const start = body.match(/^DTSTART((?:;[^:;"]*(?:"[^"]*")?)*):(\d{8})(T(\d{6})(Z?))?/m);
+    if (!rawSummary || !start) continue;
+    const summary = rawSummary.replace(/\\([\\;,nN])/g, (_, c) => /n/i.test(c) ? " " : c).trim().slice(0, 100);
+    const d = start[2], allDay = !start[3], t = start[4] || "090000", utc = start[5] === "Z";
+    let when = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}${utc ? "Z" : ""}`);
+    if (isNaN(when)) continue;
+    // Simple repeats (daily / weekly / monthly / yearly, with an interval): the next one from now.
+    const rule = (body.match(/^RRULE:(.*)$/m) || [])[1];
+    if (rule) {
+      const freq = (rule.match(/FREQ=(\w+)/) || [])[1], every = +((rule.match(/INTERVAL=(\d+)/) || [])[1] || 1);
+      const until = (rule.match(/UNTIL=(\d{8})/) || [])[1];
+      const step = { DAILY: dt => dt.setDate(dt.getDate() + every), WEEKLY: dt => dt.setDate(dt.getDate() + 7 * every),
+                     MONTHLY: dt => dt.setMonth(dt.getMonth() + every), YEARLY: dt => dt.setFullYear(dt.getFullYear() + every) }[freq];
+      if (!step) { skipped++; continue; }
+      for (let i = 0; i < 5000 && when < now; i++) step(when);
+      if (until && local(when).replace(/-/g, "").slice(0, 8) > until) continue;
+    }
+    // (An all-day event still counts until the day is over.)
+    if ((allDay ? when.getTime() + 15 * 3600000 : when.getTime()) < now.getTime() || when.getTime() > horizon) continue;
+    // Ten minutes before (or straight away, if it's sooner than that); all-day events in the morning.
+    let remindAt = allDay ? when : new Date(Math.max(when.getTime() - 10 * 60000, now.getTime() + 60000));
+    if (allDay && remindAt < now) remindAt = new Date(now.getTime() + 60000);
+    events.push({ text: allDay ? `${summary} (today)` : `${summary} at ${pad(when.getHours())}:${pad(when.getMinutes())}`, when: local(remindAt) });
+  }
+  return { events, skipped };
+}
+
 /** Read a calendar (.ics) file here in the page and send the next month's events as reminders. */
 function importIcs(input) {
   const file = input.files && input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    const text = String(reader.result).replace(/\r?\n[ \t]/g, "");
-    const events = [];
-    const now = new Date(), horizon = now.getTime() + 31 * 86400000;
-    const pad = n => String(n).padStart(2, "0");
-    const local = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    let skipped = 0;
-    for (const block of text.split("BEGIN:VEVENT").slice(1)) {
-      const body = block.split("END:VEVENT")[0];
-      const rawSummary = (body.match(/^SUMMARY[^:]*:(.*)$/m) || [])[1];
-      // DTSTART;TZID="…":20261002T140000 (parameters may be quoted and contain colons), or ;VALUE=DATE:20261002 for all-day.
-      const start = body.match(/^DTSTART((?:;[^:;"]*(?:"[^"]*")?)*):(\d{8})(T(\d{6})(Z?))?/m);
-      if (!rawSummary || !start) continue;
-      const summary = rawSummary.replace(/\\([\\;,nN])/g, (_, c) => /n/i.test(c) ? " " : c).trim().slice(0, 100);
-      const d = start[2], allDay = !start[3], t = start[4] || "090000", utc = start[5] === "Z";
-      let when = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}${utc ? "Z" : ""}`);
-      if (isNaN(when)) continue;
-      // Simple repeats (daily / weekly / monthly / yearly, with an interval): the next one from now.
-      const rule = (body.match(/^RRULE:(.*)$/m) || [])[1];
-      if (rule) {
-        const freq = (rule.match(/FREQ=(\w+)/) || [])[1], every = +((rule.match(/INTERVAL=(\d+)/) || [])[1] || 1);
-        const until = (rule.match(/UNTIL=(\d{8})/) || [])[1];
-        const step = { DAILY: dt => dt.setDate(dt.getDate() + every), WEEKLY: dt => dt.setDate(dt.getDate() + 7 * every),
-                       MONTHLY: dt => dt.setMonth(dt.getMonth() + every), YEARLY: dt => dt.setFullYear(dt.getFullYear() + every) }[freq];
-        if (!step) { skipped++; continue; }
-        for (let i = 0; i < 5000 && when < now; i++) step(when);
-        if (until && local(when).replace(/-/g, "").slice(0, 8) > until) continue;
-      }
-      if (when < now || when.getTime() > horizon) continue;
-      // Ten minutes before (or straight away, if it's sooner than that); all-day events in the morning.
-      let remindAt = allDay ? when : new Date(Math.max(when.getTime() - 10 * 60000, now.getTime() + 60000));
-      if (allDay && remindAt < now) remindAt = new Date(now.getTime() + 60000);
-      events.push({ text: allDay ? `${summary} (today)` : `${summary} at ${pad(when.getHours())}:${pad(when.getMinutes())}`, when: local(remindAt) });
-    }
+    const { events, skipped } = parseIcs(reader.result);
     if (skipped) toast(`${skipped} repeating event${skipped > 1 ? "s" : ""} with an unusual pattern skipped.`);
     send({ t: "reminder", op: "import", items: events.slice(0, 100) });
     input.value = "";
@@ -1355,6 +1363,8 @@ PAGES.settings = {
     const updBtn = h("button", { class: "btn small primary", onclick: () => send({ t: "applyUpdate" }) }, "Update now");
     const installBtn = h("button", { class: "btn small", title: "Copies StickFight to your programs folder and adds it to the Start menu and Installed apps (no admin rights needed). Your figures stay as they are.", onclick: () => send({ t: "install" }) }, "Install StickFight");
     const modsLine = h("p", { class: "hint" });
+    const probList = h("div", { class: "thoughts" });
+    let probSig = null;
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1415,6 +1425,13 @@ PAGES.settings = {
       modsLine,
       h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "openMods" }) }, "Open the mods folder"),
         h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight/blob/main/docs/MODDING.md") }, "Modding guide")),
+      h("h2", null, "Problems"),
+      h("p", { class: "sub" }, "If something goes wrong behind the scenes, StickFight carries on and notes it here. Copy the details into a GitHub issue to help fix it (they contain no personal information: just what went wrong and where in the code)."),
+      probList,
+      h("div", { class: "row" },
+        h("button", { class: "btn small", onclick: () => send({ t: "problems", op: "copy" }) }, "Copy details"),
+        h("button", { class: "btn small", onclick: () => send({ t: "problems", op: "report" }) }, "Report on GitHub"),
+        h("button", { class: "btn small", onclick: () => send({ t: "problems", op: "clear" }) }, "Clear")),
       h("h2", null, "Updates & installing"),
       updLine,
       h("div", { class: "row" }, updBtn, h("button", { class: "btn small", onclick: () => send({ t: "checkUpdate" }) }, "Check now"), installBtn),
@@ -1445,6 +1462,12 @@ PAGES.settings = {
       updLine.textContent = `Version ${st().version || ""}${st().installed ? " (installed)" : ""}. ${st().updateStatus || ""}`;
       updBtn.style.display = st().updateReady ? "" : "none";
       installBtn.style.display = st().installed ? "none" : "";
+      const probs = st().problems || [];
+      const ps = JSON.stringify(probs);
+      if (ps !== probSig) {
+        probSig = ps;
+        probList.replaceChildren(...(probs.length ? probs.map(p => h("div", { class: "hint" }, `${p.at} · ${p.kind}: ${p.message}${p.where ? ` (${p.where.replace(/^at /, "").replace(/ in .*$/, "")})` : ""}`)) : [h("p", { class: "hint" }, "No problems. 🎉")]));
+      }
       const md = st().mods || { loaded: [], errors: [] };
       modsLine.textContent = (md.loaded.length ? `Loaded: ${md.loaded.join(", ")} (${md.items} objects, ${md.hats} hats, ${md.jokes} jokes).` : "No mods yet.") + (md.errors.length ? ` Problems: ${md.errors.join("; ")}` : "");
       const rs = JSON.stringify(st().reminders || []);

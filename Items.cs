@@ -683,9 +683,11 @@ static class ItemCatalog
         string noun = string.Join(' ', words);
         if (noun.Length == 0) return (null, size, colour, noun);
         var def = Find(noun) ?? (noun.EndsWith("es") ? Find(noun[..^2]) : null) ?? (noun.EndsWith('s') ? Find(noun[..^1]) : null)
-                  ?? Find(words[^1]);   // "comfy old couch" → couch
+                  ?? Singular(words[^1]);   // "comfy old couches" → couch
         return (def, Math.Clamp(size, 0.3f, 3.5f), colour, noun);
     }
+
+    static ItemDef? Singular(string w) => Find(w) ?? (w.EndsWith("es") ? Find(w[..^2]) : null) ?? (w.EndsWith('s') ? Find(w[..^1]) : null);
 
     public static ItemDef? Find(string noun)
     {

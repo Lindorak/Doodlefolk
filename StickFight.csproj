@@ -1,12 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- WebView2 brings a newer WindowsBase than WinForms references; harmless, and it buries real warnings. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**;publish/**;dist/**</DefaultItemExcludes>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <RootNamespace>StickFight</RootNamespace>
     <AssemblyName>StickFight</AssemblyName>
@@ -35,4 +38,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Studio\web\**\*" Exclude="Studio\web\mock-*" LogicalName="studio/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="StickFight.Tests" />
+  </ItemGroup>
+
 </Project>

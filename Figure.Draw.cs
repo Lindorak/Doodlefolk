@@ -27,19 +27,21 @@ sealed partial class Figure
         Color4 near = new(baseColor.R, baseColor.G, baseColor.B, fade);
         Color4 far = new(baseColor.R * 0.72f, baseColor.G * 0.72f, baseColor.B * 0.72f, fade);
         Color4 outline = new(0, 0, 0, Outline.A * fade);
-        float w = LineW * (1 + Fat * 0.45f), ow = w + 1.6f * S;
+        float w = LineW, ow = 1.6f * S;
+        float headR = HeadR * (1 + Fat * 0.08f);
+        void Bone(int a, int b, Color4 c, bool shade, float extra = 0) { var (wa, wb) = BoneW(a, b, w); Seg(r, Jt[a], Jt[b], wa + extra, wb + extra, c, shade); }
 
         DrawTrails(r, near);
         DrawLookBack(r, fade);
-        foreach (var (a, b) in Bones) r.Line(Jt[a], Jt[b], outline, ow);
-        r.Disc(Jt[J.Head], HeadR + 0.8f * S, outline);
+        foreach (var (a, b) in Bones) if (!(a == J.Neck && b == J.Pelvis) || Fat <= 0.02f) Bone(a, b, outline, false, ow);
+        r.Disc(Jt[J.Head], headR + 0.8f * S, outline);
 
-        r.Line(Jt[J.Neck], Jt[J.ElbowF], far, w); r.Line(Jt[J.ElbowF], Jt[J.HandF], far, w);
+        Bone(J.Neck, J.ElbowF, far, false); Bone(J.ElbowF, J.HandF, far, false);
         DrawGear(r, J.ElbowF, J.HandF, 0.75f);
-        r.Line(Jt[J.Pelvis], Jt[J.KneeF], far, w); r.Line(Jt[J.KneeF], Jt[J.FootF], far, w);
-        r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], near, w);
-        DrawBelly(r, near, outline);
-        r.ShadedDisc(Jt[J.Head], HeadR, near);
+        Bone(J.Pelvis, J.KneeF, far, false); Bone(J.KneeF, J.FootF, far, false);
+        DrawTorso(r, near, outline, w);
+        DrawFullFace(r, near, outline);
+        r.ShadedDisc(Jt[J.Head], headR, near);
         if (Blush > 0.04f && !(Action == Act.SitBack && FrontView))
         {
             // Rosy cheeks on the side of the face it's looking toward.
@@ -48,9 +50,10 @@ sealed partial class Figure
             r.Oval(cheek, HeadR * 0.3f, HeadR * 0.2f, pink);
             r.Oval(cheek - new Vector2(Facing * HeadR * 0.62f, 0), HeadR * 0.22f, HeadR * 0.16f, pink.A(0.6f));
         }
-        r.ShadedLine(Jt[J.Pelvis], Jt[J.KneeN], near, w); r.ShadedLine(Jt[J.KneeN], Jt[J.FootN], near, w);
-        r.ShadedLine(Jt[J.Neck], Jt[J.ElbowN], near, w); r.ShadedLine(Jt[J.ElbowN], Jt[J.HandN], near, w);
+        Bone(J.Pelvis, J.KneeN, near, true); Bone(J.KneeN, J.FootN, near, true);
+        Bone(J.Neck, J.ElbowN, near, true); Bone(J.ElbowN, J.HandN, near, true);
         DrawFace(r, fade);
+        DrawSweat(r);
         DrawLookBody(r, fade);
         DrawLookFront(r, fade);
         DrawGear(r, J.ElbowN, J.HandN, 1);

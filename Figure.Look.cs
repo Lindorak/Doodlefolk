@@ -115,14 +115,21 @@ sealed partial class Figure
             if (look.Top != "tank")
             {
                 float k = look.Top == "hoodie" ? 1 : 0.55f;
-                r.Line(neck, Vector2.Lerp(neck, Jt[J.ElbowF], k), dark, LineW * 1.7f);
+                r.Line(neck, Vector2.Lerp(neck, Jt[J.ElbowF], k), dark, LineW * 1.7f * (1 + Fat * 1.4f));
                 if (look.Top == "hoodie") r.Line(Jt[J.ElbowF], Vector2.Lerp(Jt[J.ElbowF], Jt[J.HandF], 0.85f), dark, LineW * 1.7f);
             }
-            r.Line(neck + dn * 1.2f * S, pel + dn * 1.5f * S, c, w);
+            if (_torsoN > 0)
+            {
+                // A shirt stretched over a fuller body: the torso shape, in the shirt's colour (a tank leaves the shoulders).
+                var shirt = _torso.AsSpan(0, _torsoN);
+                r.FillPolygon(shirt, c);
+                r.Line(_torso[TorsoSteps], _torso[TorsoSteps + 1], M.Shade(c, 0.75f), 1.2f * S);   // hem
+            }
+            else r.Line(neck + dn * 1.2f * S, pel + dn * 1.5f * S, c, w);
             if (look.Top != "tank")
             {
                 float k = look.Top == "hoodie" ? 1 : 0.55f;
-                r.Line(neck, Vector2.Lerp(neck, Jt[J.ElbowN], k), c, LineW * 1.7f);
+                r.Line(neck, Vector2.Lerp(neck, Jt[J.ElbowN], k), c, LineW * 1.7f * (1 + Fat * 1.4f));
                 if (look.Top == "hoodie") r.Line(Jt[J.ElbowN], Vector2.Lerp(Jt[J.ElbowN], Jt[J.HandN], 0.85f), c, LineW * 1.7f);
             }
         }

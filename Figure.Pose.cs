@@ -274,6 +274,7 @@ sealed partial class Figure
         UpdateHoldPoint(neck, handN, handF, dt);
         TurnBlend(dt);
         ApplyFlip();
+        WeightPose(dt);
     }
 
     Vector2 SwatDir()

@@ -84,6 +84,36 @@ sealed class Renderer : IDisposable
         _ctx.Target = _bitmap;
     }
 
+    /// <summary>Debug: draw something into an offscreen picture and save it as a PNG (nothing appears on screen).</summary>
+    public void Snapshot(System.Drawing.RectangleF area, Action<System.Drawing.RectangleF> draw, string path, Color4 background, float zoom = 1)
+    {
+        uint w = (uint)Math.Max(1, area.Width * zoom), h = (uint)Math.Max(1, area.Height * zoom);
+        var fmt = new Vortice.DCommon.PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied);
+        using var target = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI((int)w, (int)h), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.Target));
+        using var cpu = _ctx.CreateBitmap(new Vortice.Mathematics.SizeI((int)w, (int)h), IntPtr.Zero, 0, new BitmapProperties1(fmt, 96, 96, BitmapOptions.CpuRead | BitmapOptions.CannotDraw));
+        var old = _ctx.Target;
+        _ctx.Target = target;
+        _ctx.BeginDraw();
+        _ctx.Clear(background);
+        _ctx.Transform = Matrix3x2.CreateTranslation(-area.X, -area.Y) * Matrix3x2.CreateScale(zoom);
+        draw(area);
+        _ctx.Transform = Matrix3x2.Identity;
+        _ctx.EndDraw();
+        _ctx.Target = old;
+        cpu.CopyFromBitmap(target);
+        var map = cpu.Map(MapOptions.Read);
+        try
+        {
+            using var bmp = new System.Drawing.Bitmap((int)w, (int)h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            var data = bmp.LockBits(new Rectangle(0, 0, (int)w, (int)h), System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            for (int y = 0; y < h; y++)
+                unsafe { Buffer.MemoryCopy((byte*)map.Bits + y * map.Pitch, (byte*)data.Scan0 + y * data.Stride, data.Stride, w * 4); }
+            bmp.UnlockBits(data);
+            bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+        }
+        finally { cpu.Unmap(); }
+    }
+
     public void Resize(Rectangle bounds)
     {
         if (bounds == _bounds) return;

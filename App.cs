@@ -1159,6 +1159,27 @@ sealed partial class App : ApplicationContext
                     break;
                 case "pets": foreach (var px in _w.Pets) World.Log($"pet {px.Name} {px.Kind} @{px.Pos.X:0},{px.Pos.Y:0} age={px.Age:F2} {px.Activity} | {px.Mood} | H{px.Hunger:F2} T{px.Thirst:F2} B{px.Bladder:F2}/{px.Bowel:F2} E{px.Energy:F2} A{px.Attention:F2} F{px.Boredom:F2} S{px.Stress:F2} W{px.Weight:F2} St{px.Stamina:F2} choice={px.LastChoice}"); break;
                 case "petmode": SetPetMode(p[1] == "on"); break;
+                case "snap":
+                {
+                    // Debug: offscreen picture of everyone (or one figure) on paper, saved to %TEMP%\stickfight_snap.png.
+                    var who = p.Length > 1 ? _w.Figures.Where(x => x.Name == p[1]).ToList() : _w.Figures.ToList();
+                    float snapS = _w.Scale;
+                    var snapArea = new RectangleF(0, 0, Math.Max(1, who.Count) * 120 * snapS, 190 * snapS);
+                    _r.Snapshot(snapArea, _ =>
+                    {
+                        _clip = new RectangleF(-1e6f, -1e6f, 2e6f, 2e6f);
+                        for (int i = 0; i < who.Count; i++)
+                        {
+                            var fx = who[i];
+                            Vector2 shift = new Vector2(60 * snapS + i * 120 * snapS, 170 * snapS) - fx.Base;
+                            var saved = fx.Jt.ToArray();
+                            for (int j = 0; j < fx.Jt.Length; j++) fx.Jt[j] += shift;
+                            fx.Draw(_r);
+                            Array.Copy(saved, fx.Jt, saved.Length);
+                        }
+                    }, Path.Combine(Path.GetTempPath(), "stickfight_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), 3);
+                    break;
+                }
                 case "weight": if (_w.Figures.FirstOrDefault(x => x.Name == p[1]) is { } wtF) wtF.Weight = Math.Clamp(float.Parse(p[2], inv), 0, 1); break;
                 case "weather": if (Enum.TryParse<WeatherKind>(p[1], true, out var wk)) _w.Weather.Start(wk, _clock.Elapsed.TotalSeconds, _w.Rng, _w); break;
                 case "say":

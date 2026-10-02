@@ -14,7 +14,7 @@ sealed partial class Figure
     public float TurnScale { get; private set; } = 1;
 
     /// <summary>Landing hard squashes the body for a moment.</summary>
-    public void Squash(float impact) => _squash = MathF.Max(_squash, M.Clamp01(impact / (2200 * S)) * 0.14f);
+    public void Squash(float impact) { _squash = MathF.Max(_squash, M.Clamp01(impact / (2200 * S)) * 0.14f); Jiggle(impact); }
 
     /// <summary>How much longer (+) or shorter (-) the torso is right now: stretched rising fast, squashed after a landing.</summary>
     float StretchNow() => (!Grounded && Mode == Mode.Control ? M.Clamp01(-Vel.Y / (1800 * S)) * 0.07f : 0) - _squash;
@@ -22,6 +22,7 @@ sealed partial class Figure
     void TickFace(float dt)
     {
         _squash = MathF.Max(0, _squash - dt * 0.9f);
+        TickBody(dt);
         if (_time > _blinkAt + 0.13f) _blinkAt = _time + _rng.Range(1.8f, 5.5f);
     }
 
@@ -40,22 +41,6 @@ sealed partial class Figure
         TurnScale = s;
         float px = Jt[J.Pelvis].X;
         for (int i = 0; i < J.Count; i++) Jt[i].X = px + (Jt[i].X - px) * s;
-    }
-
-    /// <summary>Chubbier figures get a round belly over the torso (bigger the heavier).</summary>
-    void DrawBelly(Renderer r, Color4 body, Color4 outline)
-    {
-        if (World.WeightOn && Weight > 0.3f)
-        {
-            float k = (Weight - 0.3f) / 0.7f;
-            Vector2 n = Jt[J.Neck], p = Jt[J.Pelvis];
-            Vector2 c = Vector2.Lerp(n, p, 0.64f);
-            Vector2 side = FrontView ? Vector2.Zero : new Vector2(Facing * (1.5f + k * 4.5f) * S, 0);
-            float rx = (2.6f + k * 8.5f) * S * (FrontView ? 1.15f : 1), ry = (3 + k * 7.5f) * S;
-            r.Oval(c + side, rx + 0.9f * S, ry + 0.9f * S, outline);
-            r.Oval(c + side, rx, ry, body);
-            if (Gfx.Q.Shading) r.Oval(c + side - new Vector2(rx * 0.25f, ry * 0.3f), rx * 0.45f, ry * 0.35f, new Color4(1, 1, 1, 0.15f * body.A));
-        }
     }
 
     /// <summary>A faint silhouette on the window behind (drop shadows).</summary>

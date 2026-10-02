@@ -80,6 +80,7 @@ sealed partial class App : ApplicationContext
         InitScreen();
         _w.MakeProp = kind => SpawnProp(kind);
         _w.MakeBaby = MakeBaby;
+        InitSocial();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
@@ -210,6 +211,8 @@ sealed partial class App : ApplicationContext
         EventsFrame(now);
         GameFrame(now);
         TourneyFrame(now);
+        _w.UpdateClubs(now);
+        TidyTemporary();
         FamilyFrame(now);
         _w.Babies = _settings.Babies;
         PhotoFrame(now);
@@ -445,7 +448,7 @@ sealed partial class App : ApplicationContext
             p.PassTarget = null;
         }
         if (_pressFig == null) return;
-        if (_dragging) _pressFig.Release(_w.CursorVel);
+        if (_dragging) { _pressFig.Release(_w.CursorVel); if (_w.CursorVel.Length() > 4000 * _w.Scale) _w.Sticker("yeet"); }
         else _pressFig.Brain.OnPoked(_w);
         _pressFig = null;
         _dragging = false;
@@ -479,6 +482,7 @@ sealed partial class App : ApplicationContext
         if (OfferRect() is RectangleF ofr) _regNow.Add(ToRect(ofr));
         if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
         if (TourneyRect() is RectangleF tr) _regNow.Add(ToRect(tr));
+        if (StickerRect() is RectangleF sr) _regNow.Add(ToRect(sr));
         if (_w.Weather.Active) _regNow.Add(_r.Bounds);
 
         // Flip model with two buffers: this buffer last held frame N-2, the screen shows N-1.
@@ -556,6 +560,7 @@ sealed partial class App : ApplicationContext
         DrawWish();
         DrawTourney();
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
+        DrawStickerToast();
         DrawGameCurtain();
         DrawFlash();
     }
@@ -676,6 +681,7 @@ sealed partial class App : ApplicationContext
         var (cname, color) = Palette.All[ci];
         var nf = SpawnFigure(color, UniqueName(cname), traits ?? Personality.Random(_w.Rng), 1);
         nf?.Brain.DiaryBorn();
+        if (nf != null) { _w.Sticker("hello"); if (_w.Figures.Count >= 8) _w.Sticker("fullhouse"); }
         return nf;
     }
 
@@ -773,6 +779,8 @@ sealed partial class App : ApplicationContext
         f.Brain.LastBaby = s.LastBaby;
         f.Brain.Trophies = s.Trophies;
         f.Brain.ChampionOn = s.ChampionOn;
+        f.Brain.Gifts.AddRange(s.Gifts);
+        if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
         if (s.Attraction is Attraction at) f.Attraction = at;
         if (s.Look != null) f.Look = s.Look.Clone();
         if (s.Fondness is float fond) f.Brain.UserFondness = fond;
@@ -821,8 +829,11 @@ sealed partial class App : ApplicationContext
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn,
+            Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
+            Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(),
         }).ToList();
         _settings.Items = SaveItems();
+        SaveSocial();
         _settings.Pets = _w.Pets.Select(p => new SavedPet { Kind = p.Kind, Name = p.Name, Color = Settings.Hex(p.Color), Size = p.SizeMul, Owner = p.Owner?.Name }).ToList();
         _settings.Props = _w.Props.Select(p => new SavedProp { Kind = p.Kind, Size = p.SizeMul, Bounce = p.Bounce, Color = Settings.Hex(p.Color) }).ToList();
         _settings.Save();
@@ -846,10 +857,13 @@ sealed partial class App : ApplicationContext
             foreach (var (name, l) in s.Love)
                 if (made.FirstOrDefault(m => m.f.Name == name).f is { } o) f.Brain.Love[o.Id] = l;
             if (s.Sweetheart != null && made.FirstOrDefault(m => m.f.Name == s.Sweetheart).f is { } sh) f.Brain.SweetheartId = sh.Id;
+            foreach (var (rn, rec) in s.Record)
+                if (made.FirstOrDefault(m => m.f.Name == rn).f is { } ro && rec.Length == 2) f.Brain.Record[ro.Id] = (rec[0], rec[1]);
             foreach (var pn in s.Parents)
                 if (made.FirstOrDefault(m => m.f.Name == pn).f is { } par) f.Brain.ParentIds.Add(par.Id);
         }
         RestoreItems(_settings.Items);
+        RestoreClubs();
         foreach (var sp in _settings.Pets)
         {
             var pet = SpawnPet(sp.Kind);

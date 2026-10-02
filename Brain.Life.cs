@@ -101,6 +101,7 @@ sealed partial class Brain
         if (_lifeCheck > 0) return;
         _lifeCheck = 5;
         DriftAffinity(5);
+        f.ClubColour = w.ClubOf(f)?.Colour;
         // Holiday dress-up.
         f.HatOverride = w.Celebrations ? w.Holiday switch
         {
@@ -118,6 +119,8 @@ sealed partial class Brain
     /// <summary>A birthday party: party hat, a cake, and friends gathering round to sing.</summary>
     public void ThrowParty(World w)
     {
+        w.Sticker("party");
+        w.News("party", BirthdayToday ? $"Happy birthday, {f.Name}!" : $"{f.Name} threw a party", BirthdayToday ? 3 : 2, f);
         _partyDay = DateTime.Now.DayOfYear;
         f.HatOverride = "party";
         f.Emote(BirthdayToday ? "it's my birthday!" : "party!", 2);
@@ -179,6 +182,7 @@ sealed partial class Brain
             f.Emote(rng.NextDouble() < 0.5 ? "you're back!" : "welcome back!", 1.8f);
             f.LookAt = w.Cursor;
             if (UserFondness > 0.5f && rng.NextDouble() < 0.6) ComeToCursor(w);
+            w.Sticker("welcome");
             Write("back", V($"You were gone for {span}. Missed you!", $"You came back after {span}!! YAY!", $"You left for {span}. Didn't notice. Much.", $"You were away {span}. I waited by the window.", $"You were gone {span}. The desktop felt bigger."), "♥", 1800);
         }
         else if (UserFondness < -0.3f && _g != G.Sleep) { f.Emote(rng.NextDouble() < 0.5 ? "oh. it's you." : "…", 1.4f); }

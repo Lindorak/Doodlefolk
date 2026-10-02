@@ -134,6 +134,8 @@ sealed class Tournament
                 {
                     World.Play(Sfx.TaDa, Champion.Jt[J.Head], 0.6f);
                     foreach (var f in Entrants) f.Brain.TourneyOver(Champion, w);
+                    w.Sticker("champion");
+                    w.News("tournament", $"{Champion.Name} wins the tournament!", 4, Champion);
                 }
                 return;
             }

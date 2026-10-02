@@ -29,6 +29,9 @@ sealed class SavedFigure
     public DateTime? LastBaby { get; set; }
     public int Trophies { get; set; }
     public DateTime? ChampionOn { get; set; }
+    public Dictionary<string, int[]> Record { get; set; } = new();
+    public List<Gift> Gifts { get; set; } = new();
+    public string Hobby { get; set; } = "";
     public Personality Traits { get; set; } = new();
     /// <summary>Feelings toward other saved figures, by name.</summary>
     public Dictionary<string, float> Affinity { get; set; } = new();
@@ -44,6 +47,15 @@ sealed class SavedItem
     public float Tilt { get; set; }
     /// <summary>Whose home it is (a figure's name), if anyone's.</summary>
     public string? Owner { get; set; }
+}
+
+sealed class SavedClub
+{
+    public string Name { get; set; } = "";
+    public string Colour { get; set; } = "";
+    public List<string> Members { get; set; } = new();
+    public string Thing { get; set; } = "";
+    public DateTime Founded { get; set; }
 }
 
 sealed class SavedPet
@@ -97,6 +109,11 @@ sealed class Settings
     public bool Celebrations { get; set; } = true;
     /// <summary>Couples who've been together a long while can have a baby.</summary>
     public bool Babies { get; set; } = true;
+    public int WishesGranted { get; set; }
+    public List<SavedClub> Clubs { get; set; } = new();
+    public List<NewsItem> News { get; set; } = new();
+    /// <summary>Your sticker book: sticker key → when you got it.</summary>
+    public Dictionary<string, DateTime> Stickers { get; set; } = new();
     /// <summary>Figures ask you for things they want (a thought bubble you can click to give it to them).</summary>
     public bool Wishes { get; set; } = true;
     /// <summary>Crushes, dating, jealousy and breakups.</summary>

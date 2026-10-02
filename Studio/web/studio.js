@@ -626,7 +626,7 @@ const SUBPANELS = {
           $("i", theirs).style.width = (k * 100) + "%"; $("i", theirs).style.setProperty("--fill", r2.theirs > 0.15 ? "var(--good)" : r2.theirs < -0.15 ? "var(--bad)" : "var(--meh)");
           $(".n", theirs).textContent = feelWord(r2.theirs).toLowerCase();
           shared.textContent = r2.shared.length ? `They both love ${r2.shared.join(", ").toLowerCase()}. (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match)` : `Not much (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match).`;
-          rel.textContent = `Colour rule: ${relWord(r2.relation)}. Change it in Colours & fights.`;
+          rel.textContent = (r2.rival ? `⚔ Rivals: ${r2.won}–${r2.lost}. ` : r2.won + r2.lost > 0 ? `Head to head: ${r2.won}–${r2.lost}. ` : "") + (r2.club ? "In the same club. " : "") + `Colour rule: ${relWord(r2.relation)}. Change it in Colours & fights.`;
           loveBox.hidden = !r2.attracted && !(r2.love > 0.01);
           setRange(love, r2.love || 0);
           breakup.hidden = !r2.dating;

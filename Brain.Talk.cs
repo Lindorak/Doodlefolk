@@ -23,6 +23,7 @@ sealed partial class Brain
             return Say(V("huh? oh! hi.", "WHA- oh hi!!", "I was sleeping.", "mm? oh… hello", "I was dreaming…"), 0.01f);
         }
         f.SetAction(Act.Talk);
+        w.Sticker("talk");
         string reply = Reply(s, w, out float fond);
         Write("talk", V($"You talked to me. You said \"{Clip(said)}\".", $"YOU TALKED TO ME!! \"{Clip(said)}\"", $"You said \"{Clip(said)}\". Okay then.", $"You said \"{Clip(said)}\" to me. I didn't know what to say.", $"Your words drifted by: \"{Clip(said)}\""), fond < 0 ? "…" : "♥", 120);
         return Say(reply, fond);
@@ -46,6 +47,8 @@ sealed partial class Brain
             if (o != f && !o.Dead && Has(s, Regex.Escape(o.Name.ToLowerInvariant())) && !Has(s, "fight|hit|punch|attack"))
             {
                 if (Sweetheart(w) == o) return $"♥ {o.Name} ♥";
+                if (IsRival(o)) { var rec = Record[o.Id]; return V($"{o.Name}? my rival. {rec.Won}–{rec.Lost}.", $"{o.Name.ToUpperInvariant()}!!! MY RIVAL! it's {rec.Won}–{rec.Lost}!", $"{o.Name}. {rec.Won}–{rec.Lost}. for now.", $"{o.Name} and I… are rivals. {rec.Won}–{rec.Lost}", $"{o.Name}, my eternal rival. {rec.Won}–{rec.Lost}"); }
+                if (w.ClubOf(f) is { } myClub && myClub.Members.Contains(o.Id)) return V($"{o.Name}'s in {myClub.Name} with me!", $"{o.Name}!! {myClub.Name.ToUpperInvariant()}!!", $"{o.Name}. clubmate.", $"{o.Name} is in my club…", $"{o.Name}, fellow of {myClub.Name}");
                 if (Crush(w) == o) { f.Blush = 1; return V($"w-what about {o.Name}?", $"{o.Name}?!?! n-nothing!!", $"{o.Name}? don't care.", $"oh… {o.Name}… um…", $"{o.Name} is… nice."); }
                 float a = AffinityWith(o);
                 return a > 0.55f ? V($"{o.Name} is my best friend!", $"{o.Name} is the BEST!!", $"{o.Name}'s alright.", $"I really like {o.Name}", $"{o.Name} gets me.")
@@ -85,6 +88,12 @@ sealed partial class Brain
             if (f.Mode == Mode.Control && f.Grounded) Go(G.Wave, 1.2f);
             return V("bye!", "BYE!! come back soon!", "later.", "bye bye…", "until next time");
         }
+        if (Has(s, "what did i give you|gifts?|presents?|what have i given you"))
+            return GiftsLine() is { Length: > 0 } gl ? V($"you gave me: {gl}!", $"SO MUCH STUFF! {gl}!!", $"{gl}. not bad.", $"you gave me {gl}… thank you", $"{gl}: gifts I keep") : V("nothing yet!", "NOTHING YET! hint hint", "nothing.", "um… nothing yet", "nothing, so far");
+        if (Has(s, "hobby|hobbies|free time|spare time"))
+            return Hobby == Hobby.None ? V("hanging out!", "EVERYTHING!", "nothing much.", "um… resting?", "simply being") : V($"I love {HobbyName(Hobby)}!", $"{HobbyName(Hobby).ToUpperInvariant()}!!!", $"{HobbyName(Hobby)}. it's fine.", $"{HobbyName(Hobby)}, mostly…", $"{HobbyName(Hobby)}, in quiet hours");
+        if (Has(s, "club|gang|crew|squad"))
+            return w.ClubOf(f) is { } cl ? V($"I'm in {cl.Name}!", $"{cl.Name.ToUpperInvariant()} FOREVER!!", $"{cl.Name}. members only.", $"I'm in {cl.Name}… they're nice to me", $"I belong to {cl.Name}") : V("no club yet!", "I WANT A CLUB!", "clubs are overrated.", "nobody's asked me…", "I walk alone");
         if (Has(s, "thank|thanks|thx|ty")) { fond = 0.02f; return V("you're welcome!", "anytime!!", "sure.", "o-oh, no problem", "of course"); }
         if (Has(s, "how are you|how're you|you ok|are you ok|you alright|how do you feel|how are u|hru|what's up|whats up|how's it going"))
             return HowIFeel(w);

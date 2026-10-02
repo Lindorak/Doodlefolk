@@ -98,10 +98,13 @@ sealed partial class Brain
         ParentIds.AddRange(o.ParentIds);
         Grown = o.Grown; AdultSize = o.AdultSize; LastBaby = o.LastBaby;
         Trophies = o.Trophies; ChampionOn = o.ChampionOn;
+        foreach (var (k, v) in o.Record) Record[k] = v;
+        Gifts.AddRange(o.Gifts);
+        _hobby = o._hobby;
         _datingSince = o._datingSince - o._t0 + _t0;
     }
 
-    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o) + FamilyBond(o);
+    float Baseline(Figure o) => FightSettings.Baseline(RelationTo(o)) + (P.Sociability - 0.5f) * 0.2f + TasteBond(o) + FamilyBond(o) + ClubBond(o);
     public float AffinityWith(Figure o) => Math.Clamp(Baseline(o) + (Affinity.TryGetValue(o.Id, out var a) ? a : 0), -1, 1);
     public float AffinityDelta(Figure o) => Affinity.TryGetValue(o.Id, out var a) ? a : 0;
     public void AddAffinity(Figure o, float d)
@@ -689,6 +692,9 @@ sealed partial class Brain
         PetOptions(w, opts);
         LifeOptions(w, opts);
         HomeOptions(w, opts);
+        RivalOptions(w, opts);
+        CampfireOptions(w, opts);
+        ClubOptions(w, opts);
         ParentOptions(w, opts);
         Decide(opts);
     }

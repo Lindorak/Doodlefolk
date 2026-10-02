@@ -140,6 +140,7 @@ sealed partial class Brain
 
     public void OnThunder(World w)
     {
+        w.Sticker("storm");
         if (f.Mode != Mode.Control || _g == G.Sleep) return;
         if (P.Bravery < 0.45f)
         {
@@ -213,6 +214,8 @@ sealed partial class Brain
             man.OnGround = false;
             f.Emote("☃ ta-da!", 1.5f);
             Cheered(0.3f);
+            w.Sticker("snowman");
+            w.News("snowman", $"{f.Name} built a snowman", 1, f);
             Write("snowman", V("Built a snowman!", "Built the BEST snowman!", "Built a snowman. He's judging me.", "Built a little snowman. I named him.", "Built a snowman. He'll melt. Everything does."), "☃", 1800);
         }
         Go(G.Idle, rng.Range(1, 2));

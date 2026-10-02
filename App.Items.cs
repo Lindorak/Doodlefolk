@@ -72,6 +72,7 @@ sealed partial class App
 
     Pet SpawnPet(PetKind kind)
     {
+        _w.Sticker("pet");
         var pet = new Pet(kind, _w.Scale, _w.Rng);
         var plat = RandomSpawnPlatform(40 * _w.Scale);
         float x = plat != null ? _w.Rng.Range(plat.X1 + 20, MathF.Max(plat.X1 + 21, plat.X2 - 20)) : _w.Env.Virtual.Left + _w.Env.Virtual.Width / 2f;
@@ -126,7 +127,7 @@ sealed partial class App
     }
 
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
-    List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites)
+    List<SavedItem> SaveItems() => _w.Items.Where(i => i.BitesLeft == i.Def.Bites && !i.Temporary)
         .Select(i => new SavedItem { Key = i.Def.Key, Size = i.SizeMul, Color = Settings.Hex(i.Color), Flip = i.Flip, Tilt = MathF.Round(i.RestAngle * 180 / MathF.PI),
                                      Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name }).ToList();
 

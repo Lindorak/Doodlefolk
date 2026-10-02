@@ -235,6 +235,8 @@ sealed partial class App
                 similarity = R(f.Tastes.Similarity(o.Tastes)),
                 love = R(b.LoveFor(o)), theirLove = R(o.Brain.LoveFor(f)), attracted = b.AttractedTo(o), dating = b.Dating(o),
                 shared = f.Tastes.SharedLikes(o.Tastes).Select(Tastes.Name),
+                rival = b.IsRival(o), won = b.Record.GetValueOrDefault(o.Id).Won, lost = b.Record.GetValueOrDefault(o.Id).Lost,
+                club = _w.ClubOf(f) is { } fc && fc.Members.Contains(o.Id),
             }),
         };
     }
@@ -268,6 +270,9 @@ sealed partial class App
         var kids = _w.Figures.Where(o => o.Brain.ParentIds.Contains(f.Id)).Select(o => o.Name).ToList();
         if (kids.Count > 0) bits.Add($"Parent of {string.Join(" & ", kids)}");
         if (b.Baby) bits.Add($"{b.Grown * 100:0}% grown up");
+        if (_w.ClubOf(f) is { } club) bits.Add($"Member of {club.Name}");
+        if (b.Hobby != Hobby.None) bits.Add($"Loves {Brain.HobbyName(b.Hobby)}");
+        if (b.Gifts.Count > 0) bits.Add($"Your gifts: {string.Join(", ", b.Gifts.AsEnumerable().Reverse().Select(g => g.Name.ToLowerInvariant()).Distinct().Take(4))}");
         return string.Join(" · ", bits);
     }
 

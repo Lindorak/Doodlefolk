@@ -186,6 +186,8 @@ sealed partial class Figure
     public string? HatOverride, HatColourOverride;
     /// <summary>Hide-and-seek: crouched behind something (drawn behind it), or blending into the window (faint).</summary>
     public bool HidingBehind;
+    /// <summary>Club colours: worn as a bandana.</summary>
+    public Color4? ClubColour;
     public float Camo;
 
     public Figure(Color4 color, string name, float scale, Personality traits, Random rng, int? id = null)

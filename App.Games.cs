@@ -82,7 +82,7 @@ sealed partial class App
                     ForceFullRedraw();     // the counting curtain covers everything
                     if (g.Count <= 0) foreach (var f in g.Players) if (f.Brain.WillPlay) { f.Emote("ready!", 1); break; }
                 }
-                if (g.Found.Count >= g.Players.Count) { StopGame(); break; }
+                if (g.Found.Count >= g.Players.Count) { _w.Sticker("hideseek"); StopGame(); break; }
                 if (g.T > g.Count + 160) StopGame();       // you gave up: they win
                 break;
             case GameKind.Tag:
@@ -92,6 +92,7 @@ sealed partial class App
                         if (f.Mode == Mode.Control && f.DistanceTo(_w.Cursor, out _) <= 4 * f.S)
                         {
                             g.It = f;
+                            _w.Sticker("tag");
                             g.Grace = 1.5f;
                             f.Brain.Tagged(g);
                             break;
@@ -120,6 +121,7 @@ sealed partial class App
                 // Caught it: straight back to them in a friendly lob.
                 g.Streak++;
                 g.Best = Math.Max(g.Best, g.Streak);
+                if (g.Streak >= 10) _w.Sticker("catch10");
                 g.Quiet = 0;
                 Vector2 to = who.Base - new Vector2(0, who.Height * 0.75f);
                 float t = Math.Clamp(Vector2.Distance(to, b.Pos) / (900 * _w.Scale), 0.55f, 1.3f);
@@ -223,6 +225,7 @@ sealed partial class App
         World.Play(Sfx.Swish, _w.Cursor, 0.4f, 1.6f);
         World.Play(Sfx.Pip, _w.Cursor, 0.3f, 0.6f);
         foreach (var f in _w.Figures) if (f.Mode == Mode.Control && !f.Dead) f.Brain.PhotoTaken();
+        _w.Sticker("photo");
         if (path != null) PostAll(new { t = "toast", text = $"Saved to Pictures\\StickFight\\{Path.GetFileName(path)}" });
     }
 

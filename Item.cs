@@ -462,6 +462,8 @@ sealed class Item
 
     /// <summary>Someone's home: who lives here (0: nobody), shown as a little flag in their colour.</summary>
     public int OwnerId;
+    /// <summary>Put out by a figure for a while (a campfire for the night) or a seasonal decoration: not saved.</summary>
+    public bool Temporary;
     public string OwnerName = "";
     public Color4 OwnerColour;
     public float Scale => _s;

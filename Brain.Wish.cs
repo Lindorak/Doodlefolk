@@ -148,6 +148,7 @@ sealed partial class Brain
         Cheered(0.25f);
         Boredom = MathF.Max(0, Boredom - 0.2f);
         FeelUser(0.06f, $"Gave me the {what.Name.ToLowerInvariant()} I asked for");
+        RememberGift(what.Item?.Key ?? what.Ball?.ToString() ?? what.Name, what.Name);
         if (f.Mode == Mode.Control && f.Grounded && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge) f.SetAction(Act.Cheer);
         _gift = item;
         _giftBall = ball;
@@ -202,7 +203,7 @@ sealed partial class Brain
         w.Fx.Dust(at, S, 10, 0.7f, w.Rng);
         World.Play(Sfx.TaDa, at, 0.4f);
         f.Emote(rng.NextDouble() < 0.6 ? "ta-da!" : "✨", 1.4f);
-        if (_drawingWant != null) DiaryDrew(_drawingWant);
+        if (_drawingWant != null) { DiaryDrew(_drawingWant); World.Current?.Sticker("pencil"); }
         Practice(SkillKind.Drawing, 0.08f);
         Cheered(0.15f);
         Boredom = MathF.Max(0, Boredom - 0.3f);

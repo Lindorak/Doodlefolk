@@ -145,6 +145,7 @@ sealed partial class Brain
             _ => 30,
         };
         Go(G.UseItem, use);
+        UsingGift(it);
         if (_seat >= 0 && _seat < it.Seated.Length) it.Seated[_seat] = f;
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Hide) it.User = f;
         _bounces = 0;
@@ -290,6 +291,7 @@ sealed partial class Brain
             case Verb.Warm:
                 FaceTo(it.Pos.X);
                 f.SetAction(Act.Warm);
+                StoryStep(it, w);
                 Stamina = MathF.Min(1, Stamina + World.Dt * 0.008f);
                 Sadness = MathF.Max(0, Sadness - World.Dt * 0.01f);
                 break;
@@ -301,10 +303,15 @@ sealed partial class Brain
     }
 
     /// <summary>Stop using the object: get up, put things down, free the seat.</summary>
+    /// <summary>What it's using (or heading to use) right now.</summary>
+    public Item? UsingItem => _item;
+
     void LeaveItem()
     {
         var it = _item;
         _item = null;
+        if (_storyTeller == f) foreach (var o in World.Current.Figures) if (o.Brain._storyTeller == f) o.Brain._storyTeller = null;
+        _storyTeller = null;
         if (it == null) return;
         if (_g == G.UseItem && _verb is Verb.Lie or Verb.Hammock && _t > 12) DiaryNapped(it);
         if (_g == G.UseItem && _verb is Verb.Lie or Verb.Hide && _t > 8) NappedOn(it, World.Current);

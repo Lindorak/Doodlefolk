@@ -103,5 +103,8 @@ sealed partial class App
         }
         World.Play(Sfx.TaDa, f.Base, 0.4f);
         f.Brain.WishGranted(wish.What, item, ball);
+        _settings.WishesGranted++;
+        _w.Sticker("wish");
+        if (_settings.WishesGranted >= 10) _w.Sticker("wishes10");
     }
 }

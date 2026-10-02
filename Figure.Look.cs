@@ -161,6 +161,15 @@ sealed partial class Figure
         }
         else if (look.Neck == "scarf")
             r.Line(neck - fwd * 2.2f * S + dn * 0.6f * S, neck + fwd * 2.2f * S + dn * 0.6f * S, A(Hex(look.NeckColour, Color)), 2.4f * S);
+        if (ClubColour is Color4 club && Action != Act.SitBack && look.Neck != "scarf")
+        {
+            // Club bandana: a little triangle knotted at the neck.
+            Vector2 s = neck + dn * 1.1f * S;
+            Vector2 side = FrontView ? new Vector2(1, 0) : fwd;
+            Span<Vector2> band = stackalloc Vector2[] { s - side * 2.9f * S, s + side * 2.9f * S, s + dn * 5.2f * S + side * (FrontView ? 0 : 0.8f) * S };
+            r.FillPolygon(band, A(club));
+            r.Line(s - side * 2.9f * S, s + side * 2.9f * S, A(new Color4(club.R * 0.7f, club.G * 0.7f, club.B * 0.7f, 1)), 1.1f * S);
+        }
     }
 
     /// <summary>On the head (after the head disc): hair, beard, glasses, hat. And shoes on the feet.</summary>

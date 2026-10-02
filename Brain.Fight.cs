@@ -407,6 +407,8 @@ sealed partial class Brain
         f.Emote(spar ? "♪" : P.Aggression > 0.5f ? "ha" : "♪", 1.3f);
         Cheered(0.4f);
         World.Current?.Tourney?.Report(f, o, World.Current);
+        RecordBout(o, true);
+        o.Brain.RecordBout(f, false);
         DiaryFightWon(o, spar);
         Practice(SkillKind.Fighting, spar ? 0.03f : 0.05f);
         AddAffinity(o, spar ? 0.05f : -0.05f);

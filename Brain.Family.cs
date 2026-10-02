@@ -31,6 +31,8 @@ sealed partial class Brain
         it.OwnerName = f.Name;
         it.OwnerColour = f.Color;
         string thing = it.Def.Name.ToLowerInvariant();
+        w.Sticker("home");
+        w.News("home", $"{f.Name} moves into the {thing}", 2, f);
         f.Emote(V("home sweet home!", "MY HOUSE!!!", "mine now.", "a little home…", "a place of my own"), 1.6f);
         Write("home", V($"Moved into the {thing}. Home sweet home.", $"I have a HOUSE! It's the {thing}!!", $"The {thing} is mine now.", $"I made the {thing} my home. It feels safe.", $"The {thing}: my small kingdom."), "♥", 3600);
     }
@@ -129,6 +131,8 @@ sealed partial class Brain
     public void BabyArrived(Figure baby, Figure other)
     {
         LastBaby = DateTime.Now;
+        World.Current?.Sticker("baby");
+        if (f.Id < other.Id) World.Current?.News("baby", $"It's a baby! {baby.Name}, to {f.Name} and {other.Name}", 5, f, other, baby);
         f.Emote(V("♥ a baby!", "A BABY!!! ♥♥♥", "…a baby. huh. ♥", "o-oh… ♥ a baby", "♥ new life"), 2.2f);
         Cheered(0.6f);
         Write("baby:" + baby.Name, V($"{other.Name} and I had a baby! Welcome, {baby.Name}.", $"WE HAD A BABY!!! {baby.Name}!!! ♥", $"{other.Name} and I have a kid now. {baby.Name}. Cute, I guess.", $"A baby… {baby.Name}. I'm so happy I could cry.", $"{baby.Name} came into the world today, with {other.Name} and me."), "♥", 0);

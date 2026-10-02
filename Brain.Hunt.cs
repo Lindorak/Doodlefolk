@@ -14,7 +14,7 @@ sealed partial class Brain
 
     (float, Action)? HuntOption(World w)
     {
-        if (!f.Hunter || World.Calm || Stamina < 0.25f) return null;
+        if (!f.Hunter || World.Calm || World.Focus || Stamina < 0.25f) return null;
         // Keeps trying, but not blindly: every failed chase takes the edge off for a while.
         _huntFails = MathF.Max(0, _huntFails - 0.02f);
         return ((6f + P.Aggression * 4) / (1 + _huntFails), () => BeginHunt(w));

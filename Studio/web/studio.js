@@ -302,13 +302,51 @@ function onState() {
 
 function crumbs() {
   const c = $("#crumbs");
-  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", stickers: "Sticker book", settings: "Settings" };
+  const names = { focus: "Focus", cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Things", pets: "Pets", paper: "The Stick Times", stickers: "Sticker book", settings: "Settings" };
   if (route.page === "figure") {
     const f = fig();
     c.innerHTML = "";
     c.append(h("span", null, "Your cast  ›  "), h("b", null, f ? f.name : ""));
   } else c.textContent = names[route.page] || "";
 }
+
+// ---------------- Focus ----------------
+
+PAGES.focus = {
+  sig: () => JSON.stringify((S.settings.focus || {}).tasks || []),
+  build(root) {
+    const fo = () => S.settings.focus || {};
+    let length = fo().length || 25;
+    const lengths = [15, 25, 45, 60].map(n => { const c = h("button", { class: "chip", onclick: () => { length = n; paint(); } }, `${n} min`); c.n = n; return c; });
+    const timer = h("div", { class: "focus-timer" });
+    const startBtn = h("button", { class: "btn primary", onclick: () => send({ t: "focus", op: fo().on || fo().left < 0 ? "stop" : "start", minutes: length }) });
+    const auto = check("Start the next one after the break", "After each focus block there's a five-minute break (they play); then the next block starts by itself.", () => !!fo().autoNext, v => send({ t: "focus", op: "auto", v }));
+    const stats = h("p", { class: "hint" });
+    const taskIn = h("input", { type: "text", placeholder: "Something to get done…", maxlength: 120, style: { width: "280px" } });
+    const addTask = () => { if (taskIn.value.trim()) { send({ t: "focus", op: "add", text: taskIn.value.trim() }); taskIn.value = ""; } };
+    taskIn.addEventListener("keydown", e => { if (e.key === "Enter") addTask(); });
+    const tasks = (fo().tasks || []);
+    const list = h("div", { class: "thoughts" }, tasks.length ? tasks.map(t => h("div", { class: "row tight" },
+      h("label", { class: "check" }, h("input", { type: "checkbox", checked: t.done || null, onchange: e => send({ t: "focus", op: "tick", id: t.id, v: e.target.checked }) }),
+        h("span", { style: t.done ? { textDecoration: "line-through", opacity: 0.6 } : null }, t.text)),
+      h("button", { class: "btn small", onclick: () => send({ t: "focus", op: "remove", id: t.id }) }, "✕"))) : [h("p", { class: "hint" }, "Nothing on the list. Add what you're working on: they cheer when you tick it off.")]);
+    add(root, h("h1", null, "Focus"),
+      h("p", { class: "sub" }, "Start a focus block and the town settles into quiet work alongside you: no fights, no coming to see you, no chatter. A little timer sits by the clock. When it's done they cheer and everyone earns a few coins."),
+      h("div", { class: "row" }, lengths, startBtn), timer, auto, stats,
+      h("h2", null, "To do"), h("div", { class: "row" }, taskIn, h("button", { class: "btn small", onclick: addTask }, "Add"),
+        tasks.some(t => t.done) ? h("button", { class: "btn small", onclick: () => send({ t: "focus", op: "clearDone" }) }, "Clear the done ones") : null), list);
+    function paint() {
+      const f = fo();
+      lengths.forEach(c => c.classList.toggle("on", c.n === length));
+      const left = Math.abs(f.left || 0), m = Math.floor(left / 60), s = Math.floor(left % 60);
+      timer.textContent = f.on ? `🎯 ${m}:${String(s).padStart(2, "0")} to go` : f.left < 0 ? `☕ Break: ${m}:${String(s).padStart(2, "0")}` : "";
+      startBtn.textContent = f.on || f.left < 0 ? "Stop" : `Start focusing (${length} min)`;
+      stats.textContent = f.sessions ? `${f.sessions} focus session${f.sessions > 1 ? "s" : ""} so far, ${Math.round((f.minutes || 0) / 60 * 10) / 10} hours together.` : "";
+      auto.update();
+    }
+    return paint;
+  },
+};
 
 // ---------------- Cast ----------------
 
@@ -1378,6 +1416,7 @@ PAGES.settings = {
     let workshopSig = null;
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
+    const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1417,6 +1456,8 @@ PAGES.settings = {
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
       staminaC, weightC, petHelpC, breedC, lassoC,
       h("h2", null, "Town"),
+      h("div", { class: "field" }, h("label", null, "Town mood"), h("div", { class: "row tight" }, moodChips)),
+      h("p", { class: "hint" }, "How much drama happens. Cozy: fights are rare, couples forgive more, gentle weather and fewer events. Classic: as it is. Chaos: fights, breakups, storms, pet scraps and town events come thick and fast."),
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
       eventsC, hapBtns, hapLine,
@@ -1468,7 +1509,8 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update();
+      moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";
       if (idle(aiModel)) aiModel.value = st().aiModel || "gpt-5-mini";
       aiLine.textContent = (st().aiHasKey ? (st().aiEnvKey ? "Using the key from the OPENAI_API_KEY environment variable (or the one you saved). " : "A key is saved. ") : "No key yet. ") + (st().aiStatus || "");
@@ -1563,6 +1605,7 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\Doodlefolk", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\Doodlefolk", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
+      h("button", { class: "btn small", title: "25 minutes of quiet work together (Studio → Focus for more)", onclick: () => send({ t: "focus", op: S.settings.focus && S.settings.focus.on ? "stop" : "start", minutes: (S.settings.focus && S.settings.focus.length) || 25 }) }, "🎯 Focus"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,

@@ -83,7 +83,9 @@ sealed partial class Brain
         // Couples last while the love does.
         if (Sweetheart(w) is { } sh)
         {
-            if (LoveFor(sh) < 0.25f || sh.Brain.LoveFor(f) < 0.25f) BreakUp(sh, w);
+            // Cozy towns forgive more before it ends; chaotic ones less.
+            float lastStraw = 0.25f * MathF.Pow(World.Drama, 0.6f);
+            if (LoveFor(sh) < lastStraw || sh.Brain.LoveFor(f) < lastStraw) BreakUp(sh, w);
         }
         else SweetheartId = 0;
     }

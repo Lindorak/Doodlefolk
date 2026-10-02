@@ -192,6 +192,14 @@ sealed class Settings
     /// <summary>Ideas from StickBuddies: dance in time to the beat; gestures instead of words; a nudge to take a break
     /// after a long stretch of games or videos.</summary>
     public bool BeatDance { get; set; } = true;
+    /// <summary>Town mood: cozy, classic or chaos.</summary>
+    public string TownMood { get; set; } = "classic";
+    /// <summary>Focus sessions: start the next one by itself after the break; how many so far; your to-dos.</summary>
+    public bool FocusAutoNext { get; set; }
+    public int FocusSessions { get; set; }
+    public int FocusMinutes { get; set; }
+    public int FocusLength { get; set; } = 25;
+    public List<FocusTask> FocusTasks { get; set; } = new();
     /// <summary>Learned: how busy you usually are at each hour of the day (0..1).</summary>
     public float[] BusyByHour { get; set; } = new float[24];
     public bool GesturesOnly { get; set; }

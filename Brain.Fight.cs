@@ -30,7 +30,7 @@ sealed partial class Brain
 
     (float, Action)? FightOption(World w)
     {
-        if (World.Calm || !Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50 || Baby) return null;
+        if (World.Calm || World.Focus || !Rules.Enabled || Stamina < 0.25f || Rules.Frequency <= 0 || f.HP < 50 || Baby) return null;
         Figure? best = null;
         float bestScore = 0;
         bool bestSpar = false;
@@ -65,7 +65,7 @@ sealed partial class Brain
         if (best == null) return null;
         var foe = best;
         bool sp = bestSpar;
-        return (bestScore * Rules.Frequency * Stamina * Taste(sp ? Thing.Sparring : Thing.Fighting), () => Engage(foe, sp, w));
+        return (bestScore * Rules.Frequency * Stamina * Taste(sp ? Thing.Sparring : Thing.Fighting) * (sp ? MathF.Sqrt(World.Drama) : World.Drama), () => Engage(foe, sp, w));
     }
 
     void Engage(Figure o, bool spar, World w)

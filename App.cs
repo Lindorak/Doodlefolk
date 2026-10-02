@@ -277,6 +277,7 @@ sealed partial class App : ApplicationContext
         DesktopFrame(now);
         WelcomeFrame(now);
         BreakFrame(now);
+        FocusFrame(now);
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
         PowerFrame(now);
@@ -563,6 +564,7 @@ sealed partial class App : ApplicationContext
         if (WishRect() is RectangleF wr) _regNow.Add(ToRect(wr));
         if (TourneyRect() is RectangleF tr) _regNow.Add(ToRect(tr));
         if (StickerRect() is RectangleF sr) _regNow.Add(ToRect(sr));
+        if (FocusRect() is RectangleF fr) _regNow.Add(ToRect(fr));
         if (SprayRect() is RectangleF spr) _regNow.Add(ToRect(spr));
         if (LeashRect() is RectangleF lr) _regNow.Add(ToRect(lr));
         if (LassoRect() is RectangleF lsr) _regNow.Add(ToRect(lsr));
@@ -652,6 +654,7 @@ sealed partial class App : ApplicationContext
         if (_w.Weather.Active) _w.Weather.DrawSky(_r, _w.Env, _w.Scale);
         _w.Seasons.DrawAir(_r, _w.Scale, _clock.Elapsed.TotalSeconds);
         DrawStickerToast();
+        if (FocusRect() is RectangleF fr2 && Dirty(fr2)) DrawFocusCard();
         DrawSprayTool();
         DrawGameCurtain();
         DrawFlash();
@@ -1294,6 +1297,7 @@ sealed partial class App : ApplicationContext
                     else if (p.Length > 1 && p[1] == "dry") _ = ApplyUpdate(true).ContinueWith(t => World.Log("update: " + t.Result));
                     else if (p.Length > 1 && p[1] == "apply") _ = ApplyUpdate().ContinueWith(t => World.Log("update: " + t.Result));
                     break;
+                case "focus": World.Log("focus: " + (p.Length > 1 && p[1] == "stop" ? StopFocus() : StartFocus(p.Length > 1 ? int.Parse(p[1]) : 25))); break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;

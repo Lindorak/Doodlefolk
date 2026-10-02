@@ -175,7 +175,8 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
+                tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
             modFiles = Directory.Exists(Mods.Dir) ? Directory.GetFiles(Mods.Dir, "*.json").Select(Path.GetFileName) : Enumerable.Empty<string?>(), beatDance = _settings.BeatDance, gesturesOnly = _settings.GesturesOnly, breakNudges = _settings.BreakNudges, breakMinutes = _settings.BreakMinutes, tourDone = _settings.TourDone, problems = ProblemsJson(), aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
             installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
             mods = new { loaded = Mods.Loaded, errors = Mods.Errors, items = Mods.ItemCount, hats = Mods.HatCount, jokes = Mods.Jokes.Count, dir = Mods.Dir }, noticeFrustration = _settings.NoticeFrustration, reminders = _settings.Reminders.Where(r => !r.Done).OrderBy(r => r.When).Select(r => new { id = r.Id, text = r.Text, when = r.When.ToString("ddd d MMM, HH:mm"), repeat = r.Repeat }), colourBlind = _settings.ColourBlind, pauseSchedule = _settings.PauseSchedule, pauseFrom = _settings.PauseFrom, pauseTo = _settings.PauseTo, pauseDays = _settings.PauseDays, weatherPlace = _settings.WeatherPlace, weatherStatus = RealWeatherStatus, tempC = _w.TempC, happening = _w.Happening?.Title, sky = _w.Weather.Kind.ToString(),
@@ -418,6 +419,26 @@ sealed partial class App
                     string preview = Path.Combine(Path.GetTempPath(), "doodlefolk-workshop-preview.png");
                     try { using var bmp = new Bitmap(AppIcon.ToBitmap(), 256, 256); bmp.Save(preview, System.Drawing.Imaging.ImageFormat.Png); } catch { }
                     PostAll(new { t = "toast", text = SteamHub.Publish(file, Str(m, "title"), Str(m, "description"), preview, msg => _overlay.BeginInvoke(() => PostAll(new { t = "toast", text = msg }))) });
+                    break;
+                }
+                case "focus":
+                {
+                    string fr = "";
+                    switch (Str(m, "op"))
+                    {
+                        case "start": _settings.FocusLength = Math.Clamp((int)Num(m, "minutes"), 1, 120); fr = StartFocus(_settings.FocusLength); break;
+                        case "stop": fr = StopFocus(); break;
+                        case "auto": _settings.FocusAutoNext = m.GetProperty("v").GetBoolean(); break;
+                        case "add":
+                            string tt = Str(m, "text").Trim();
+                            if (tt.Length is > 0 and <= 120) _settings.FocusTasks.Add(new FocusTask { Id = _settings.FocusTasks.Count == 0 ? 1 : _settings.FocusTasks.Max(t => t.Id) + 1, Text = tt });
+                            break;
+                        case "tick": fr = TickTask(m.GetProperty("id").GetInt32(), m.GetProperty("v").GetBoolean()); break;
+                        case "remove": _settings.FocusTasks.RemoveAll(t => t.Id == m.GetProperty("id").GetInt32()); break;
+                        case "clearDone": _settings.FocusTasks.RemoveAll(t => t.Done); break;
+                    }
+                    _settings.Save();
+                    if (fr.Length > 0) PostAll(new { t = "toast", text = fr });
                     break;
                 }
                 case "openMods":
@@ -706,6 +727,7 @@ sealed partial class App
             case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
             case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
             case "beatDance": _settings.BeatDance = v.GetBoolean(); break;
+            case "townMood": _settings.TownMood = v.GetString() is "cozy" or "chaos" ? v.GetString()! : "classic"; break;
             case "gesturesOnly": _settings.GesturesOnly = World.Gestures = v.GetBoolean(); break;
             case "breakNudges": _settings.BreakNudges = v.GetBoolean(); break;
             case "breakMinutes": _settings.BreakMinutes = Math.Clamp(v.GetInt32(), 15, 240); break;

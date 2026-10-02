@@ -21,6 +21,7 @@ sealed partial class App
     readonly Dictionary<int, (string act, double since)> _stuck = new();
     readonly HashSet<string> _warned = new();
     float _castFigures;
+    int _focusCoins;
 
     const double TestSpeed = 6;
 
@@ -142,6 +143,9 @@ sealed partial class App
         });
         At(590, "reminder fired", () => Check("reminder fires", _settings.Reminders.All(r => r.Done)));
         At(592, "calm", () => { _settings.Calm = true; World.Calm = true; foreach (var f in _w.Figures) if (f.Brain.InFight) f.Brain.CalmDown(); });
+        At(594, "focus", () => { StartFocus(1); _focusCoins = _w.Figures.Sum(f => f.Brain.Coins); });
+        At(605, "focus quiet", () => Check("a focus session keeps the town calm", World.Focus && !_w.Figures.Any(f => f.Brain.InFight)));
+        At(657, "focus done", () => Check("a focus session ends with a cheer and coins", !World.Focus && _w.Figures.Sum(f => f.Brain.Coins) > _focusCoins, $"{_settings.FocusSessions} sessions"));
         At(618, "habits", () => Check("figures learn habits from experience", _w.Figures.Any(f => f.Brain.Learned.Count > 0), string.Join(", ", _w.Figures.SelectMany(f => f.Brain.Learned.Keys).Distinct().Take(8))));
         At(620, "calm holds", () => { Check("no fights in calm mode", !_w.Figures.Any(f => f.Brain.InFight)); _settings.Calm = World.Calm = false; });
         At(625, "everything at once", () =>

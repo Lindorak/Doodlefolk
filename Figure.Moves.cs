@@ -25,6 +25,8 @@ sealed partial class Figure
 
     public void Emote(string text, float dur = 1.4f, Color4? ink = null)
     {
+        // While you focus: no words (a reminder, a tick or the timer still get through).
+        if (World.Focus && System.Text.RegularExpressions.Regex.IsMatch(text, "[A-Za-z]") && !text.StartsWith("⏰") && !text.StartsWith("✓") && !text.Contains("focus done")) return;
         if (World.Gestures)
         {
             var (symbol, g) = ToGesture(text);

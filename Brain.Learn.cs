@@ -28,6 +28,28 @@ sealed partial class Brain
     /// <summary>How much the learned habit tilts this option's score.</summary>
     float LearnedTilt(string label) => Learned.TryGetValue(ActivityKey(label), out var v) ? 1 + v * LearnInfluence : 1;
 
+    static readonly string[] QuietKinds = { "read", "sit in", "sit on", "nap on", "go to", "water", "build the", "go fishing", "watch the", "draw", "warm up", "tend", "pick up" };
+    static readonly string[] LoudKinds = { "play a", "start a", "hang out", "go see", "ride the", "dance", "throw", "chase", "hunt", "go for", "ask", "fight", "spar", "grab", "bounce" };
+
+    /// <summary>While you focus, the town keeps to quiet things.</summary>
+    static float FocusTilt(string label)
+    {
+        if (!World.Focus) return 1;
+        string k = ActivityKey(label);
+        if (QuietKinds.Any(q => k.StartsWith(q))) return 2.5f;
+        if (LoudKinds.Any(q => k.StartsWith(q))) return 0.08f;
+        return 0.6f;
+    }
+
+    /// <summary>A focus session ended: a cheer, and a line in the diary.</summary>
+    public void FocusCheer(World w, int minutes)
+    {
+        if (f.Brain.Asleep || f.Mode != Mode.Control) return;
+        f.Emote(V("focus done! ✓", "WE DID IT!! ✓", "done. good work.", "you did so well… ✓", "the work is done ✓"), 2.2f);
+        if (f.Grounded) Go(G.Cheer, 1.2f);
+        Write("focus", V($"We focused together for {minutes} minutes. Got 3 coins.", $"FOCUS TIME DONE! {minutes} minutes! +3 coins!", $"Kept quiet for {minutes} minutes while you worked.", $"I was very quiet for {minutes} minutes so you could work…", $"{minutes} minutes of quiet work, shared."), "★", 600);
+    }
+
     /// <summary>A new decision: first, learn from how the last one turned out.</summary>
     void LearnFromLast(string nextLabel)
     {

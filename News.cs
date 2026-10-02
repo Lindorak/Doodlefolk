@@ -57,6 +57,7 @@ static class Stickers
         new("litter", "🐣", "Growing family", "A litter is born"),
         new("trick", "🎪", "Show-off", "Teach a pet a trick"),
         new("dressup", "🎀", "Dress-up", "Put clothes on a pet"),
+        new("focus", "🎯", "In the zone", "Finish a focus session"),
         new("built", "🔨", "Master builder", "A fort or treehouse gets built"),
         new("shopping", "🪙", "Retail therapy", "A figure buys something with coins it earned"),
         new("dream", "💭", "Sweet dreams", "Catch a figure dreaming"),

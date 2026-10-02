@@ -60,7 +60,7 @@ sealed class Weather
         int m = DateTime.Now.Month;
         double snow = m is 12 or 1 or 2 ? 0.65 : m is 11 or 3 ? 0.25 : 0;
         if (rng.NextDouble() < snow) return WeatherKind.Snow;
-        return rng.NextDouble() < 0.3 && !World.Calm ? WeatherKind.Storm : WeatherKind.Rain;
+        return rng.NextDouble() < 0.3 * World.Drama && !World.Calm ? WeatherKind.Storm : WeatherKind.Rain;
     }
 
     public void Step(World w, float dt, double now, string mode)

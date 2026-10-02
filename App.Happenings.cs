@@ -46,7 +46,7 @@ sealed partial class App
         if (h == null)
         {
             if (!_settings.Events || PetMode || now < _happeningAt || _w.Tourney != null || _w.Game != null) return;
-            _happeningAt = now + _w.Rng.Range(2400, 6000);
+            _happeningAt = now + _w.Rng.Range(2400, 6000) / MathF.Max(0.5f, World.Drama);
             if (_w.Figures.Count(f => f.Mode == Mode.Control) < 3) return;
             StartHappening(new[] { "festival", "talent", "race" }[_w.Rng.Next(3)]);
             return;

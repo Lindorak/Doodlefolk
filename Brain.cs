@@ -266,7 +266,7 @@ sealed partial class Brain
 
         bool calm = f.Grounded && !f.JumpPending && _g is G.Idle or G.Walk or G.SitEdge or G.SitFloor or G.Watch or G.Sleep;
         bool errand = _g == G.Walk && _purpose != WalkPurpose.Wander;
-        if (calm && ReactToCursor(w, cur, dist, cspeed, near, errand)) return;
+        if (calm && !World.Focus && ReactToCursor(w, cur, dist, cspeed, near, errand)) return;
         _awayT = near ? 0 : _awayT + dt;
         if (calm && _g != G.Sleep && IncomingPass(w)) return;
 

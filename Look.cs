@@ -72,7 +72,19 @@ sealed class Look
         new("headband", "Headband", new[] { R(-1.02f, 0.32f, 1.02f, 0.62f, 0) }, new[] { P(0, -0.95f, 0.5f, -1.75f, 0.15f, -1.65f, -0.05f, -0.95f, 0.38f), P(0, -0.95f, 0.45f, -1.55f, -0.35f, -1.4f, -0.45f, -0.9f, 0.35f) }),
         new("bow", "Bow", new[] { P(0, 0.1f, 1.0f, -0.55f, 1.45f, -0.65f, 0.75f), P(0, 0.1f, 1.0f, 0.75f, 1.45f, 0.85f, 0.75f), E(0.1f, 1.0f, 0.16f, 0.16f, 1) }),
         new("halo", "Halo", new[] { Ring(0, 1.55f, 0.75f, 15, 0.16f) }),
+        // Rare: only from gift crates.
+        new("flowercrown", "Flower crown", new[] { C(10, 0.12f, -1.0f, 0.75f, -0.5f, 0.95f, 0, 1.0f, 0.5f, 0.95f, 1.0f, 0.75f), E(-0.8f, 0.85f, 0.2f, 0.2f, 14), E(-0.3f, 1.0f, 0.22f, 0.22f, 11), E(0.2f, 1.02f, 0.22f, 0.22f, 0), E(0.7f, 0.88f, 0.2f, 0.2f, 14), E(-0.3f, 1.0f, 0.07f, 0.07f, 12), E(0.2f, 1.02f, 0.07f, 0.07f, 11) }),
+        new("antlers", "Antlers", new[] { C(4, 0.13f, -0.45f, 0.85f, -0.7f, 1.6f, -1.15f, 2.0f), C(4, 0.11f, -0.62f, 1.35f, -0.25f, 1.75f), C(4, 0.13f, 0.45f, 0.85f, 0.7f, 1.6f, 1.15f, 2.0f), C(4, 0.11f, 0.62f, 1.35f, 0.25f, 1.75f) }),
+        new("propeller", "Propeller cap", new[] { Dome(0, 0.15f, 1.08f, 1.0f, 0, 180, 0), P(1, 0.25f, 0.12f, 1.7f, 0.05f, 1.65f, 0.25f, 0.3f, 0.32f), L(0, 1.15f, 0, 1.5f, 6, 0.1f), P(9, 0, 1.5f, -0.75f, 1.62f, -0.75f, 1.45f), P(16, 0, 1.5f, 0.75f, 1.62f, 0.75f, 1.45f) }),
+        new("pirate", "Pirate hat", new[] { P(8, -1.5f, 0.7f, -0.9f, 1.55f, 0, 1.25f, 0.9f, 1.55f, 1.5f, 0.7f), L(-1.3f, 0.78f, 1.3f, 0.78f, 15, 0.1f), E(0, 1.15f, 0.2f, 0.17f, 7), L(-0.12f, 1.0f, 0.12f, 1.0f, 7, 0.07f) }),
+        new("jester", "Jester hat", new[] { Dome(0, 0.2f, 1.1f, 0.9f, 0, 180, 0), P(9, -0.2f, 1.0f, -1.6f, 1.8f, -1.3f, 0.7f), P(16, 0.2f, 1.0f, 1.6f, 1.8f, 1.3f, 0.7f), E(-1.6f, 1.8f, 0.18f, 0.18f, 11), E(1.6f, 1.8f, 0.18f, 0.18f, 11), R(-1.1f, 0.2f, 1.1f, 0.42f, 11) }),
+        new("catears", "Cat ears", new[] { P(0, -0.85f, 0.6f, -0.55f, 1.45f, -0.15f, 0.85f), P(0, 0.85f, 0.6f, 0.55f, 1.45f, 0.15f, 0.85f), P(14, -0.68f, 0.78f, -0.55f, 1.2f, -0.35f, 0.9f), P(14, 0.68f, 0.78f, 0.55f, 1.2f, 0.35f, 0.9f) }),
+        new("bunnyears", "Bunny ears", new[] { O(-0.6f, 0.7f, -0.2f, 2.2f, 0.2f, 7), O(0.2f, 0.7f, 0.6f, 2.2f, 0.2f, 7), O(-0.5f, 0.85f, -0.3f, 2.0f, 0.1f, 14), O(0.3f, 0.85f, 0.5f, 2.0f, 0.1f, 14) }),
+        new("graduation", "Graduation cap", new[] { R(-0.7f, 0.6f, 0.7f, 1.0f, 8), P(8, -1.4f, 1.15f, 0, 1.45f, 1.4f, 1.15f, 0, 0.9f), L(0, 1.18f, 0.95f, 0.65f, 11, 0.08f), E(0.95f, 0.55f, 0.1f, 0.14f, 11) }),
     };
+
+    /// <summary>Hats that only come in gift crates (locked until one turns up).</summary>
+    public static readonly string[] RareHats = { "flowercrown", "antlers", "propeller", "pirate", "jester", "catears", "bunnyears", "graduation" };
 
     public static readonly LookPart[] Hairs =
     {

@@ -416,6 +416,38 @@ static class ItemCatalog
             Mass = 1,
         });
 
+        // ---------------- keepsakes from visitors ----------------
+        Add(new ItemDef
+        {
+            Key = "giftcrate", Name = "Gift crate", Words = new[] { "gift crate", "crate", "present", "gift box", "mystery box" }, W = 22, H = 18, Color = M.Hex(0xE53935),
+            Shapes = new[] { R(-11, 0, 11, 15, 3), R(-12, 14, 12, 18, 4), R(-2, 0, 2, 18, 0), L(-11, 7, 11, 7, 4, 0.8f), P(0, 0, 18, -6, 23, -2, 18), P(0, 0, 18, 6, 23, 2, 18) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "portrait", Name = "Portrait", Words = new[] { "portrait", "painting", "picture frame" }, W = 22, H = 28, Color = M.Hex(0xA0703C),
+            Shapes = new[] { L(-8, 0, -4, 10, 4, 1.4f), L(8, 0, 4, 10, 4, 1.4f), R(-11, 8, 11, 28, 0), R(-9, 10, 9, 26, 21), E(0, 21, 2.2f, 2.2f, 8), L(0, 19, 0, 14, 8, 0.8f), L(0, 14, -2, 11, 8, 0.8f), L(0, 14, 2, 11, 8, 0.8f), L(0, 17, -2.5f, 15, 8, 0.8f), L(0, 17, 2.5f, 15, 8, 0.8f) },
+            Mass = 1, Likes = new[] { Thing.Reading },
+        });
+        Add(new ItemDef
+        {
+            Key = "pennant", Name = "Knight's pennant", Words = new[] { "pennant", "banner", "flag pole" }, W = 18, H = 40, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { E(0, 1, 5, 1.2f, 6), L(0, 0, 0, 40, 5, 1.4f), P(0, 0, 38, 16, 33, 0, 28), E(0, 40.5f, 1.2f, 1.2f, 15), P(15, 4, 31, 8, 33, 4, 35) },
+            Mass = 1,
+        });
+        Add(new ItemDef
+        {
+            Key = "lute", Name = "Bard's lute", Words = new[] { "lute", "guitar", "mandolin" }, W = 12, H = 26, Color = M.Hex(0xC68642),
+            Shapes = new[] { E(0, 6, 5.5f, 6, 0), E(0, 6, 1.6f, 1.6f, 8), R(-1, 11, 1, 24, 13), R(-1.8f, 23, 1.8f, 26, 13), L(-0.5f, 2, -0.5f, 24, 21, 0.3f), L(0.5f, 2, 0.5f, 24, 21, 0.3f) },
+            Verbs = new[] { Verb.Collect }, Carry = true, Mass = 0.5f, Likes = new[] { Thing.Dancing },
+        });
+        Add(new ItemDef
+        {
+            Key = "map", Name = "Explorer's map", Words = new[] { "map", "treasure map" }, W = 14, H = 10, Color = M.Hex(0xEFE6D2),
+            Shapes = new[] { P(0, -7, 0, 7, 0, 6, 10, -6, 10), C(9, 0.5f, -4, 3, -1, 5, 2, 4, 4, 7), L(3, 6, 5, 8, 9, 0.6f), L(5, 6, 3, 8, 9, 0.6f) },
+            Verbs = new[] { Verb.Collect }, Carry = true, Mass = 0.2f, Likes = new[] { Thing.Exploring },
+        });
+
         // ---------------- pet care ----------------
         Add(new ItemDef
         {

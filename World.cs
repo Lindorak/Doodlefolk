@@ -30,6 +30,11 @@ sealed partial class World
     /// <summary>Hooks for the brain to bring things into the world (a ball for a game, rackets).</summary>
     public Func<PropKind, Prop>? MakeProp;
     public Func<string, Item?>? MakeItem;
+    /// <summary>Gift crates: delivered by the mail carrier, opened by whoever gets there first.</summary>
+    public Action<Item>? CrateDelivered;
+    public Func<Item, Figure?, string>? OpenCrate;
+    /// <summary>A rare coat turned up (for the Doodledex).</summary>
+    public Action<string>? RareSeen;
     public readonly Fx Fx = new();
     public readonly Random Rng = new();
     public FightSettings Fight = new();

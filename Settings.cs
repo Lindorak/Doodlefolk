@@ -101,6 +101,7 @@ sealed class SavedPet
     public bool? Female { get; set; }
     public string Wear { get; set; } = "";
     public string WearColour { get; set; } = "";
+    public string Rare { get; set; } = "";
     public float Pregnant { get; set; }
     public string Mother { get; set; } = "";
     public DateTime? LastLitter { get; set; }
@@ -194,6 +195,11 @@ sealed class Settings
     public bool BeatDance { get; set; } = true;
     /// <summary>Town mood: cozy, classic or chaos.</summary>
     public string TownMood { get; set; } = "classic";
+    /// <summary>Visitors drop by; gift crates waiting for the mail carrier; rare hats found; the Doodledex.</summary>
+    public bool Visitors { get; set; } = true;
+    public int CratesWaiting { get; set; }
+    public List<string> UnlockedHats { get; set; } = new();
+    public Dictionary<string, DexEntry> Dex { get; set; } = new();
     /// <summary>Focus sessions: start the next one by itself after the break; how many so far; your to-dos.</summary>
     public bool FocusAutoNext { get; set; }
     public int FocusSessions { get; set; }

@@ -890,7 +890,8 @@ const SUBPANELS = {
     const HAIR = ["#2B1D16", "#3B2A20", "#6D4C2F", "#A86B32", "#D9B262", "#E8D9A8", "#B33A1F", "#9E9E9E", "#F2F2F2", "#5C6BC0", "#EC407A", "#43A047"];
     const body = slot => LP.body.filter(b => b.slot === slot);
     const SLOTS = [
-      ["hat", "Hat", LP.hat, "hatColour", CLOTH], ["hair", "Hair", LP.hair, "hairColour", HAIR], ["beard", "Facial hair", LP.beard, null, null],
+      ["hat", "Hat", LP.hat.filter(p => !(INIT.lookParts.rareHats || []).includes(p.key) || (S.settings.unlockedHats || []).includes(p.key) || f.look.hat === p.key)
+        .map(p => (INIT.lookParts.rareHats || []).includes(p.key) ? { ...p, name: "★ " + p.name } : p), "hatColour", CLOTH], ["hair", "Hair", LP.hair, "hairColour", HAIR], ["beard", "Facial hair", LP.beard, null, null],
       ["glasses", "Glasses", LP.glasses, null, null], ["top", "Top", body("top"), "topColour", CLOTH], ["neck", "Neck", body("neck"), "neckColour", CLOTH],
       ["waist", "Waist", body("waist"), "waistColour", CLOTH], ["back", "Back", body("back"), "backColour", CLOTH], ["shoes", "Shoes", LP.shoes, "shoeColour", CLOTH],
     ];
@@ -1068,14 +1069,28 @@ PAGES.paper = {
 // ---------------- Sticker book ----------------
 
 PAGES.stickers = {
-  sig: () => (S.stickers || []).filter(s => s.got).length + "",
+  sig: () => (S.stickers || []).filter(s => s.got).length + "|" + JSON.stringify(S.settings.dex || {}),
   build(root) {
     const all = S.stickers || [], got = all.filter(s => s.got).length;
+    const dex = S.settings.dex || { visitors: [], hats: [], pets: [] };
     add(root, h("h1", null, "Sticker book"), h("p", { class: "sub" }, `${got} of ${all.length} collected. Stickers come from things you do, and things you see happen.`));
     const grid = h("div", { class: "stickers" });
     for (const s of all)
       grid.append(h("div", { class: "sticker" + (s.got ? " got" : "") }, h("div", { class: "art" }, s.got ? s.art : "?"), h("div", { class: "st-title" }, s.got ? s.title : "???"), h("div", { class: "hint" }, s.got ? `Got it ${s.got}` : s.hint)));
     add(root, grid);
+    const met = dex.visitors.filter(v => v.met).length, found = dex.hats.filter(x => x.found).length, coats = dex.pets.filter(x => x.seen).length;
+    add(root, h("h2", null, "Doodledex"),
+      h("p", { class: "sub" }, `Who's dropped by, rare hats from gift crates (the mail carrier brings one every couple of hours you spend together), and rare animal coats (about one in forty). ${met + found + coats} of ${dex.visitors.length + dex.hats.length + dex.pets.length} found.`),
+      h("h3", null, "Visitors"),
+      h("div", { class: "stickers" }, dex.visitors.map(v => h("div", { class: "sticker" + (v.met ? " got" : "") },
+        h("div", { class: "art" }, v.met ? "🧳" : "?"), h("div", { class: "st-title" }, v.met ? `${v.name}, ${v.title}` : "???"),
+        h("div", { class: "hint" }, v.met ? `${v.blurb} Met ${v.met}× (first ${v.first}).` : v.blurb)))),
+      h("h3", null, "Rare hats"),
+      h("div", { class: "stickers" }, dex.hats.map(x => h("div", { class: "sticker" + (x.found ? " got" : "") },
+        h("div", { class: "art" }, x.found ? "🎩" : "🎁"), h("div", { class: "st-title" }, x.found ? x.name : "???"), h("div", { class: "hint" }, x.found ? "Yours to wear (Look tab)." : "In a gift crate somewhere.")))),
+      h("h3", null, "Rare coats"),
+      h("div", { class: "stickers" }, dex.pets.map(x => h("div", { class: "sticker" + (x.seen ? " got" : "") },
+        h("div", { class: "art" }, x.seen ? { golden: "✨", rainbow: "🌈", starry: "🌌", silver: "🥈" }[x.coat] : "?"), h("div", { class: "st-title" }, x.seen ? x.coat[0].toUpperCase() + x.coat.slice(1) : "???"), h("div", { class: "hint" }, x.seen ? "Spotted!" : "Keep adopting…")))));
   },
 };
 
@@ -1417,6 +1432,7 @@ PAGES.settings = {
     const probList = h("div", { class: "thoughts" });
     let probSig = null;
     const moodChips = [["cozy", "☕ Cozy"], ["classic", "📖 Classic"], ["chaos", "🌪 Chaos"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("townMood", k); } }, l); c.key = k; return c; });
+    const visitC = check("Visitors", "Now and then someone from elsewhere drops by for a few minutes (a bard, the mail carrier with a gift crate, a knight, an artist…) and leaves something behind.", () => st().visitors !== false, v => setS("visitors", v));
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
@@ -1460,7 +1476,7 @@ PAGES.settings = {
       h("p", { class: "hint" }, "How much drama happens. Cozy: fights are rare, couples forgive more, gentle weather and fewer events. Classic: as it is. Chaos: fights, breakups, storms, pet scraps and town events come thick and fast."),
       jobsC,
       h("div", { class: "field" }, h("label", null, "Growing old"), h("div", { class: "row" }, paceChips)),
-      eventsC, hapBtns, hapLine,
+      eventsC, hapBtns, hapLine, visitC,
       h("p", { class: "hint" }, "With ageing on, figures count their years (time away counts too, up to a month at a time): kids go to school, and at 62 they become elders who go grey, slow down, use a cane and retire."),
       h("h2", null, "Reminders & your desktop"),
       h("p", { class: "sub" }, "Set a reminder and, when it's due, a figure brings it over to your cursor. You can also bring in events from a calendar file (.ics, exported from Outlook or Google Calendar): you'll be reminded 10 minutes before each one in the next month (times are read as this PC's local time unless the file says UTC). Everything stays on this PC."),
@@ -1509,7 +1525,7 @@ PAGES.settings = {
       checks.forEach(c => c.update());
       screen.forEach(c => c.update());
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update();
+      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update();
       moodChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().townMood || "classic")); }); eventsC.update(); dlC.update(); frC.update(); voiceC.update(); startC.update(); updC.update(); aiC.update();
       aiBox.style.display = st().aiChat ? "" : "none";
       if (idle(aiModel)) aiModel.value = st().aiModel || "gpt-5-mini";

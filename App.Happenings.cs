@@ -95,7 +95,7 @@ sealed partial class App
         float width = MathF.Min(ground.X2 - ground.X1 - 60 * s, kind == "race" ? 1500 * s : 900 * s);
         float mid = Math.Clamp(_w.Figures.Where(f => f.Mode == Mode.Control).Select(f => f.Base.X).DefaultIfEmpty((ground.X1 + ground.X2) / 2).Average(), ground.X1 + width / 2 + 30 * s, ground.X2 - width / 2 - 30 * s);
         h.Left = mid - width / 2; h.Right = mid + width / 2;
-        var people = _w.Figures.Where(f => f.Mode == Mode.Control && !f.Hunter && !f.Brain.InFight).OrderBy(_ => _w.Rng.Next()).ToList();
+        var people = _w.Figures.Where(f => f.Mode == Mode.Control && !f.Hunter && !f.Brain.InFight && f.Visitor == VisitorKind.None).OrderBy(_ => _w.Rng.Next()).ToList();
         if (people.Count < 2) return "not enough figures";
         Item? Put(string key, float x)
         {

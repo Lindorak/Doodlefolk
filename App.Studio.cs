@@ -120,7 +120,7 @@ sealed partial class App
             fixedColours = ItemDef.Fixed.Select(c => Settings.Hex(c)),
             lookParts = new
             {
-                hat = LookJson(Look.Hats), hair = LookJson(Look.Hairs), beard = LookJson(Look.Beards), glasses = LookJson(Look.GlassesParts), shoes = LookJson(Look.ShoeParts),
+                hat = LookJson(Look.Hats), rareHats = Look.RareHats, hair = LookJson(Look.Hairs), beard = LookJson(Look.Beards), glasses = LookJson(Look.GlassesParts), shoes = LookJson(Look.ShoeParts),
                 body = Look.BodyParts.Select(b => new { slot = b.Slot, key = b.Key, name = b.Name }),
             },
             catalog = ItemCatalog.All.Select(d => new
@@ -175,7 +175,13 @@ sealed partial class App
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
-            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
+            petMode = _settings.PetMode, petCare = _settings.PetCare, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, visitors = _settings.Visitors, unlockedHats = _settings.UnlockedHats, cratesWaiting = _settings.CratesWaiting,
+            dex = new
+            {
+                visitors = Visitors.Select(v => new { kind = v.kind.ToString(), name = v.name, title = v.title, blurb = v.blurb, met = _settings.Dex.TryGetValue("visitor:" + v.kind, out var d) ? d.Count : 0, first = _settings.Dex.TryGetValue("visitor:" + v.kind, out var d2) ? d2.First.ToString("d MMM yyyy") : "" }),
+                hats = Look.RareHats.Select(h => new { key = h, name = Look.Find(Look.Hats, h)?.Name ?? h, found = _settings.UnlockedHats.Contains(h) }),
+                pets = Pet.RareCoats.Select(c => new { coat = c, seen = _settings.Dex.ContainsKey("pet:" + c) }),
+            }, focus = new { on = Focusing, left = World.FocusLeft, sessions = _settings.FocusSessions, minutes = _settings.FocusMinutes, length = _settings.FocusLength, autoNext = _settings.FocusAutoNext,
                 tasks = _settings.FocusTasks.Select(t => new { id = t.Id, text = t.Text, done = t.Done }) }, townMood = _settings.TownMood, steam = new { ready = SteamHub.Ready, status = SteamHub.Status, publishing = SteamHub.Publishing },
             modFiles = Directory.Exists(Mods.Dir) ? Directory.GetFiles(Mods.Dir, "*.json").Select(Path.GetFileName) : Enumerable.Empty<string?>(), beatDance = _settings.BeatDance, gesturesOnly = _settings.GesturesOnly, breakNudges = _settings.BreakNudges, breakMinutes = _settings.BreakMinutes, tourDone = _settings.TourDone, problems = ProblemsJson(), aiChat = _settings.AiChat, aiHasKey = AiKey() != null, aiEnvKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") is { Length: > 20 }, aiModel = _settings.AiModel, aiStatus = AiStatus, startWithWindows = _settings.StartWithWindows, checkUpdates = _settings.CheckUpdates, batterySaver = _settings.BatterySaver, lite = _lite,
             installed = IsInstalled, version = VersionText, updateStatus = UpdateStatus, updateReady = _update != null,
@@ -727,6 +733,7 @@ sealed partial class App
             case "noticeDownloads": _settings.NoticeDownloads = v.GetBoolean(); break;
             case "voiceInput": _settings.VoiceInput = v.GetBoolean(); break;
             case "beatDance": _settings.BeatDance = v.GetBoolean(); break;
+            case "visitors": _settings.Visitors = v.GetBoolean(); break;
             case "townMood": _settings.TownMood = v.GetString() is "cozy" or "chaos" ? v.GetString()! : "classic"; break;
             case "gesturesOnly": _settings.GesturesOnly = World.Gestures = v.GetBoolean(); break;
             case "breakNudges": _settings.BreakNudges = v.GetBoolean(); break;

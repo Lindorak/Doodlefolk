@@ -64,6 +64,7 @@ sealed partial class App
     {
         if (!quiet) _w.Sticker("pet");
         var pet = new Pet(kind, _w.Scale, _w.Rng);
+        if (!quiet && _w.Rng.NextDouble() < 0.025) { pet.GiveRareCoat(Pet.RareCoats[_w.Rng.Next(Pet.RareCoats.Length)]); RareSeen(pet.Rare); }
         // Names are how pets know each other in the save file: no two alike.
         for (int i = 0; i < 12 && _w.Pets.Any(o => o.Name == pet.Name); i++) pet.Name = pet.RandomName();
         string[] numerals = { "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X" };

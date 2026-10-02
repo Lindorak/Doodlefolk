@@ -129,6 +129,7 @@ sealed partial class Pet
     public void Step(World w, float dt)
     {
         var env = w.Env;
+        if (Rare.Length > 0) RareCoatStep(w, dt);
         _tail += dt;
         _soundCd -= dt;
         if (Flying || (Kind == PetKind.Parrot && (Held || OnCursor))) _flap += dt * (Flying ? 22 : 3);

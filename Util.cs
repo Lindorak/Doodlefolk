@@ -5,6 +5,16 @@ namespace Doodlefolk;
 
 static class M
 {
+    /// <summary>A colour from hue, saturation and value (all 0..1).</summary>
+    public static Color4 Hsv(float h, float s, float v)
+    {
+        h = (h % 1 + 1) % 1 * 6;
+        int i = (int)h;
+        float f = h - i, p = v * (1 - s), q = v * (1 - s * f), t = v * (1 - s * (1 - f));
+        var (r, g, b) = i switch { 0 => (v, t, p), 1 => (q, v, p), 2 => (p, v, t), 3 => (p, q, v), 4 => (t, p, v), _ => (v, p, q) };
+        return new Color4(r, g, b, 1);
+    }
+
     /// <summary>Clamp that tolerates lo &gt; hi (e.g. a margin wider than a narrow platform): returns the middle.</summary>
     public static float ClampIn(float v, float lo, float hi) => lo <= hi ? Math.Clamp(v, lo, hi) : (lo + hi) * 0.5f;
 

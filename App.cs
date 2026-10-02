@@ -106,6 +106,9 @@ sealed partial class App : ApplicationContext
         _w.MakePet = k => SpawnPet(k, quiet: true);
         InitSocial();
         _w.MakeItem = key => ItemCatalog.Find(key) is { } d ? SpawnItem(d) : null;
+        _w.OpenCrate = (crate, opener) => OpenCrate(crate, opener);
+        _w.RareSeen = RareSeen;
+        _w.CrateDelivered = _ => { _settings.CratesWaiting = Math.Max(0, _settings.CratesWaiting - 1); };
         int si = Array.IndexOf(args, "--spawn");
         if (si >= 0 && si + 1 < args.Length && int.TryParse(args[si + 1], out int count))
             for (int i = 0; i < count; i++) Spawn(null);
@@ -278,6 +281,8 @@ sealed partial class App : ApplicationContext
         WelcomeFrame(now);
         BreakFrame(now);
         FocusFrame(now);
+        VisitorFrame(now);
+        VisitorsLeave();
         SteamHub.Frame(now, _w.Figures.Count, _w.Pets.Count);
         RecordFrame(now);
         PowerFrame(now);
@@ -923,7 +928,7 @@ sealed partial class App : ApplicationContext
 
     void SaveCastInner()
     {
-        _settings.Figures = _w.Figures.Select(f => new SavedFigure
+        _settings.Figures = _w.Figures.Where(f => f.Visitor == VisitorKind.None).Select(f => new SavedFigure
         {
             Name = f.Name,
             Color = Settings.Hex(f.Color),
@@ -1298,6 +1303,8 @@ sealed partial class App : ApplicationContext
                     else if (p.Length > 1 && p[1] == "apply") _ = ApplyUpdate().ContinueWith(t => World.Log("update: " + t.Result));
                     break;
                 case "focus": World.Log("focus: " + (p.Length > 1 && p[1] == "stop" ? StopFocus() : StartFocus(p.Length > 1 ? int.Parse(p[1]) : 25))); break;
+                case "rarepet": { var rp = SpawnPet(Enum.TryParse<PetKind>(p.Length > 2 ? p[2] : "Cat", true, out var rk) ? rk : PetKind.Cat, quiet: true); rp.GiveRareCoat(p.Length > 1 ? p[1] : "golden"); RareSeen(rp.Rare); break; }
+                case "visit": World.Log("visit: " + (Enum.TryParse<VisitorKind>(p.Length > 1 ? p[1] : "", true, out var vk) ? Visit(vk) : "kinds: " + string.Join(", ", Enum.GetNames<VisitorKind>().Skip(1)))); break;
                 case "save":
                     try { SaveCast(); World.Log("save: ok"); } catch (Exception e) { World.Log("save failed: " + e); }
                     break;
@@ -1308,6 +1315,22 @@ sealed partial class App : ApplicationContext
                     float sw = float.Parse(p[2], inv), sh = float.Parse(p[3], inv);
                     var ar2 = new RectangleF(sf2.Base.X - sw / 2, sf2.Base.Y - sh + 12, sw, sh);
                     _r.Snapshot(ar2, a => DrawScene(a), Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), p.Length > 4 ? float.Parse(p[4], inv) : 1);
+                    break;
+                }
+                case "snappet":
+                {
+                    // snappet <name or kind> [zoom]: one animal, close up, on paper.
+                    var sp = _w.Pets.FirstOrDefault(x => x.Name.Equals(p[1], StringComparison.OrdinalIgnoreCase) || x.Kind.ToString().Equals(p[1], StringComparison.OrdinalIgnoreCase));
+                    if (sp == null) break;
+                    float pz = _w.Scale, z = p.Length > 2 ? float.Parse(p[2], inv) : 6;
+                    _r.Snapshot(new RectangleF(0, 0, 60 * pz, 44 * pz), _ =>
+                    {
+                        _clip = new RectangleF(-1e6f, -1e6f, 2e6f, 2e6f);
+                        var saved = sp.Pos;
+                        sp.Pos = new Vector2(30 * pz, 38 * pz);
+                        sp.Draw(_r);
+                        sp.Pos = saved;
+                    }, Path.Combine(Path.GetTempPath(), "doodlefolk_snap.png"), new Color4(0.96f, 0.95f, 0.92f, 1), z);
                     break;
                 }
                 case "snaparea":

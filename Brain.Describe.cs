@@ -74,6 +74,7 @@ sealed partial class Brain
                 G.Fish => f.Bite ? "Fishing: a bite!" : _caught > 0 ? $"Fishing ({_caught} caught)" : "Fishing",
                 G.Happening => HapRole switch { "racer" => "Racing!", "fan" => "Cheering on the racers", "act" => "In the talent show", "audience" => "Watching the talent show", _ => "At the festival" },
                 G.Boost => _boostIsJumper ? $"Getting a leg-up from {_boostPartner?.Name}" : $"Giving {_boostPartner?.Name} a leg-up",
+                G.Visit => _visitStep == 9 ? "Saying goodbye" : _visit switch { VisitorKind.Bard => "Playing a tune (visiting)", VisitorKind.MailCarrier => "Delivering the mail", VisitorKind.Knight => "Saluting everyone (visiting)", VisitorKind.Artist => "Painting a portrait", VisitorKind.Ghost => "Haunting, gently", VisitorKind.Explorer => "Telling tall tales", VisitorKind.Chef => "Cooking a feast", _ => "Planting flowers" },
                 G.Lasso => _ropedCursor ? "Lassoing your cursor!" : _roped != null ? $"Lassoing {_roped.Name}" : "Twirling a lasso",
                 G.Tourney => World.Current?.Tourney is { } tn ? tn.InBout(f) ? $"In the tournament: vs {tn.Opponent(f)?.Name}" : tn.Phase == "done" && tn.Champion == f ? "Tournament champion!" : tn.Next.Contains(f) || tn.Round.Contains(f) ? "In the tournament, waiting" : "Watching the tournament" : "Tournament",
                 G.Party => _partyFor == f ? "Having a birthday party" : _partyFor != null ? $"At {_partyFor.Name}'s party" : "Partying",

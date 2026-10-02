@@ -204,8 +204,27 @@ sealed partial class Pet
             r.Line(n, n + new Vector2(f * hr * 0.6f, hr * 0.12f), wc, 0.6f * s);
         }
         DrawOutfit(r, hip, chest, bodyThick, head, hr, f);
-        if (Leashed || Owner != null) r.Line(head + new Vector2(-f * hr * 0.55f, hr * 0.55f), head + new Vector2(f * hr * 0.2f, hr * 0.85f), new Color4(0.85f, 0.2f, 0.2f, 0.95f), 1.8f * s);   // collar
+        if (Leashed || Owner != null) DrawCollar(r, head, hr, chest, bodyThick, ink, s);
         if (Wet > 0.2f && ((int)(_t * 4) % 3 == 0)) r.Disc(P(0, -H * 0.1f + (_t * 30 % 6) * s), 1 * s, new Color4(0.55f, 0.75f, 1, 0.8f * Wet));
+    }
+
+    /// <summary>The collar: a band round the neck, where the head meets the body, with a little tag hanging from it.</summary>
+    void DrawCollar(Renderer r, Vector2 head, float hr, Vector2 chest, float bodyThick, Color4 ink, float s)
+    {
+        Vector2 d = chest - head;
+        if (d.LengthSquared() < 1e-3f) d = new Vector2(0, 1);
+        d = Vector2.Normalize(d);
+        Vector2 across = new(-d.Y, d.X);
+        Vector2 neck = head + d * hr * 0.88f;
+        float half = MathF.Min(hr * 0.62f, bodyThick * 0.62f + 1 * s);
+        var red = Lit(new Color4(0.86f, 0.2f, 0.2f, 1));
+        r.Line(neck - across * half, neck + across * half, ink, 3.2f * s);
+        r.Line(neck - across * (half - 0.6f * s), neck + across * (half - 0.6f * s), red, 2.0f * s);
+        // The tag hangs straight down from the lower side of the band.
+        Vector2 low = across.Y >= 0 ? neck + across * half * 0.35f : neck - across * half * 0.35f;
+        Vector2 tag = low + new Vector2(0, 1.9f * s);
+        r.Disc(tag, 1.35f * s, ink);
+        r.Disc(tag, 0.95f * s, Lit(new Color4(0.95f, 0.78f, 0.25f, 1)));
     }
 
     static void EarsCat(Renderer r, Vector2 head, float hr, float f, Color4 ink, float up)

@@ -14,6 +14,32 @@ sealed partial class Pet
     public Temperament Temper;
     public bool Female;
     public string Wear = "", WearColour = "#E53935";
+    /// <summary>A rare coat (about one animal in forty): golden, rainbow (it shifts through the colours), starry or
+    /// silver. Kittens and puppies can inherit it.</summary>
+    public string Rare = "";
+    public static readonly string[] RareCoats = { "golden", "rainbow", "starry", "silver" };
+
+    public void GiveRareCoat(string coat)
+    {
+        Rare = coat;
+        switch (coat)
+        {
+            case "golden": Color = M.Hex(0xF2C14E); Accent = M.Hex(0xFFF3C4); break;
+            case "starry": Color = M.Hex(0x283593); Accent = M.Hex(0xE8EAF6); break;
+            case "silver": Color = M.Hex(0xC9CED6); Accent = M.Hex(0xF4F6F8); break;
+        }
+    }
+
+    /// <summary>Rainbow coats shift; golden ones glint now and then.</summary>
+    void RareCoatStep(World w, float dt)
+    {
+        if (Rare == "rainbow")
+        {
+            float h = (float)((World.Now * 0.08 + Id * 0.13) % 1);
+            Color = M.Hsv(h, 0.55f, 0.95f);
+        }
+        else if (Rare == "golden" && _rng.NextDouble() < dt * 0.3) w.Fx.Spark(Pos + new Vector2(_rng.Range(-8, 8), -_rng.Range(4, 14)) * _s, _s * 0.5f, _rng, 0.5f);
+    }
     /// <summary>Expecting: seconds until the young arrive (0: not expecting).</summary>
     public float Pregnant;
     public int MotherId, FatherId;
@@ -78,6 +104,9 @@ sealed partial class Pet
             baby.Color = _rng.NextDouble() < 0.4 || dad == null ? Color : _rng.NextDouble() < 0.6 ? dad.Color : Color4.Lerp(Color, dad.Color, 0.5f);
             baby.Accent = dad != null && _rng.NextDouble() < 0.5 ? dad.Accent : Accent;
             baby.Temper = _rng.NextDouble() < 0.2 ? (Temperament)_rng.Next(7) : _rng.NextDouble() < 0.5 || dad == null ? Temper : dad.Temper;
+            // Rare coats run in families.
+            string inherited = Rare.Length > 0 && _rng.NextDouble() < 0.4 ? Rare : dad != null && dad.Rare.Length > 0 && _rng.NextDouble() < 0.4 ? dad.Rare : _rng.NextDouble() < 0.025 ? RareCoats[_rng.Next(RareCoats.Length)] : "";
+            if (inherited.Length > 0) { baby.GiveRareCoat(inherited); w.RareSeen?.Invoke(inherited); }
             baby.MotherId = Id; baby.MotherName = Name; baby.FatherId = dad?.Id ?? 0;
             baby.Pos = Pos + new Vector2((i - n / 2f) * 10 * _s, -4 * _s);
             baby.ResetTraining();

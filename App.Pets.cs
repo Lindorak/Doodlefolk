@@ -270,7 +270,7 @@ sealed partial class App
         Log = p.CareLog.TakeLast(40).Select(l => new SavedLog { When = l.When, Text = l.Text }).ToList(),
         Sprays = p.Sprays, Treats = p.TreatsGiven,
         Health = p.Health, Clean = p.Clean, Sick = p.Sick.ToString(),
-        Temper = p.Temper.ToString(), Female = p.Female, Wear = p.Wear, WearColour = p.WearColour, Pregnant = p.Pregnant, Mother = p.MotherName, LastLitter = p.LastLitter,
+        Temper = p.Temper.ToString(), Female = p.Female, Wear = p.Wear, WearColour = p.WearColour, Rare = p.Rare, Pregnant = p.Pregnant, Mother = p.MotherName, LastLitter = p.LastLitter,
     }).ToList();
 
     void RestorePets()
@@ -300,6 +300,7 @@ sealed partial class App
             if (Enum.TryParse<Temperament>(sp.Temper, out var tm)) pet.Temper = tm;
             if (sp.Female is bool fem) pet.Female = fem;
             pet.Wear = sp.Wear; if (sp.WearColour.Length == 7) pet.WearColour = sp.WearColour;
+            if (Pet.RareCoats.Contains(sp.Rare)) pet.GiveRareCoat(sp.Rare);
             pet.Pregnant = sp.Pregnant; pet.MotherName = sp.Mother; pet.LastLitter = sp.LastLitter;
             if (sp.Owner != null && _w.Figures.FirstOrDefault(f => f.Name == sp.Owner) is { } owner) { pet.Owner = owner; pet.Bond[owner.Id] = 0.5f; }
             pet.TimeAway(away);

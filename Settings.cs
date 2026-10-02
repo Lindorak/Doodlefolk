@@ -35,6 +35,8 @@ sealed class Settings
     public int FpsCap { get; set; } = 60;
     /// <summary>Bring back the same figures and balls next launch.</summary>
     public bool RememberCast { get; set; } = true;
+    /// <summary>Studio look: "auto" (follow Windows), "paper" or "chalk".</summary>
+    public string Theme { get; set; } = "auto";
     public FightSettings Fight { get; set; } = new();
     public List<SavedFigure> Figures { get; set; } = new();
     /// <summary>The user's own saved figures (name, colour, size, personality, gear) to spawn any time.</summary>

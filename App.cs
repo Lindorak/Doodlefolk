@@ -10,7 +10,7 @@ namespace StickFight;
 
 /// <summary>Owns the overlay, renderer, tray icon and the frame loop (runs whenever the UI thread is idle,
 /// paced by vsync through Present).</summary>
-sealed class App : ApplicationContext
+sealed partial class App : ApplicationContext
 {
     readonly World _w = new();
     readonly Overlay _overlay;
@@ -24,7 +24,8 @@ sealed class App : ApplicationContext
     bool _fineTimer;
     readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "stickfight.log");
     double _last, _acc, _nextTopmost, _nextDump, _fpsT;
-    int _frames, _fps;
+    int _frames, _fps, _hitches, _hitchAcc;
+    float _maxDt, _maxDtAcc;
     double _tRefresh, _tRender, _msRefresh, _msRender;
     bool _paused, _showPlatforms, _hiddenCleared, _displayChanged, _disposed;
     readonly List<Rectangle> _regNow = new(), _regPrev = new(), _regPrev2 = new(), _regAll = new();
@@ -96,31 +97,6 @@ sealed class App : ApplicationContext
         }
     }
 
-    ToolStripMenuItem BuildFpsMenu()
-    {
-        var root = new ToolStripMenuItem("Frame rate");
-        var opts = new List<(string label, int value)> { ($"Match monitor ({_refresh} Hz)", Settings.MatchMonitor) };
-        int half = _refresh / 2;
-        var caps = new SortedSet<int> { 30, 60, 90, 120, 144, 165, 240 };
-        if (half >= 30) caps.Add(half);
-        foreach (int n in caps)
-            if (n < _refresh) opts.Add((n == half && _refresh % 2 == 0 && n is not (30 or 60 or 90 or 120) ? $"{n} fps (half refresh)" : $"{n} fps", n));
-        opts.Add(("Unlimited (uses more CPU)", Settings.Unlimited));
-        foreach (var (label, value) in opts)
-        {
-            var item = new ToolStripMenuItem(label) { Checked = _settings.FpsCap == value, Tag = value };
-            item.Click += (_, _) =>
-            {
-                _settings.FpsCap = value;
-                _settings.Save();
-                ApplyFps();
-                foreach (ToolStripMenuItem i in root.DropDownItems) i.Checked = (int)i.Tag! == value;
-            };
-            root.DropDownItems.Add(item);
-        }
-        return root;
-    }
-
     [System.Runtime.InteropServices.DllImport("winmm.dll")] static extern uint timeBeginPeriod(uint ms);
     [System.Runtime.InteropServices.DllImport("winmm.dll")] static extern uint timeEndPeriod(uint ms);
 
@@ -170,8 +146,12 @@ sealed class App : ApplicationContext
             }
             _nextFrameAt = Math.Max(_nextFrameAt + _frameInterval, now - _frameInterval);
         }
-        float dt = (float)Math.Min(now - _last, 0.05);
+        float rawDt = (float)(now - _last);
+        float dt = MathF.Min(rawDt, 0.05f);
         _last = now;
+        _maxDtAcc = MathF.Max(_maxDtAcc, rawDt);
+        if (_fps > 0 && rawDt > 1.6f / _fps) _hitchAcc++;
+        PushStudio(now);
 
         if (_displayChanged)
         {
@@ -236,11 +216,21 @@ sealed class App : ApplicationContext
         ShoveCursor();
 
         long tr1 = Stopwatch.GetTimestamp();
-        if (!Render()) Thread.Sleep(15);
+        float alpha = _w.HitStop > 0 ? 1 : (float)Math.Clamp(_acc / World.Dt, 0, 1);
+        foreach (var f in _w.Figures) if (f != _pressFig || !_dragging) f.BeginInterp(alpha);
+        foreach (var p in _w.Props) if (p != _pressProp) p.BeginInterp(alpha);
+        bool drew;
+        try { drew = Render(); }
+        finally
+        {
+            foreach (var f in _w.Figures) f.EndInterp();
+            foreach (var p in _w.Props) p.EndInterp();
+        }
+        if (!drew) Thread.Sleep(15);
         _tRender += Stopwatch.GetElapsedTime(tr1).TotalMilliseconds;
 
         _frames++;
-        if (now - _fpsT >= 1) { _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _tRefresh = _tRender = 0; _frames = 0; _fpsT = now; }
+        if (now - _fpsT >= 1) { _maxDt = _maxDtAcc; _hitches = _hitchAcc; _maxDtAcc = 0; _hitchAcc = 0; _fps = _frames; _msRefresh = _tRefresh / _frames; _msRender = _tRender / _frames; _tRefresh = _tRender = 0; _frames = 0; _fpsT = now; }
         if (_debug && now > _nextDump) { _nextDump = now + 0.05; Dump(); RunCommands(); }
     }
 
@@ -325,7 +315,7 @@ sealed class App : ApplicationContext
                 _pressProp = prop;
                 _prevCursor = _w.Cursor;
             }
-            else if (e.Button == MouseButtons.Right) ShowPropMenu(prop);
+            else if (e.Button == MouseButtons.Right) OpenStudio("toys", prop.Id);
             return;
         }
         var (fig, joint) = HitTest(_w.Cursor);
@@ -338,7 +328,7 @@ sealed class App : ApplicationContext
             _pressTime = _clock.Elapsed.TotalSeconds;
             _dragging = false;
         }
-        else if (e.Button == MouseButtons.Right) ShowFigureMenu(fig);
+        else if (e.Button == MouseButtons.Right) OpenStudio("figure", fig.Id);
     }
 
     void EndPress()
@@ -523,11 +513,6 @@ sealed class App : ApplicationContext
         return name;
     }
 
-    void OpenFightEditor() => new FightEditor(_w, _settings.Save).Show();
-
-    void OpenEditor(Figure f) =>
-        new FigureEditor(f, _w, ResizeFigure, (fig, name) => fig.Name = UniqueName(name, fig), SaveToLibrary, _settings.Library).Show();
-
     /// <summary>Save (or update, by name) a figure's look and personality in the user's library.</summary>
     void SaveToLibrary(Figure f)
     {
@@ -567,34 +552,6 @@ sealed class App : ApplicationContext
         if (s.Trust is float trust) f.Brain.CursorTrust = Math.Clamp(trust, 0, 1);
     }
 
-    void ShowFigureMenu(Figure f)
-    {
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(new ToolStripLabel($"{f.Name}: {f.Traits.Describe()}") { ForeColor = System.Drawing.Color.DimGray });
-        menu.Items.Add(new ToolStripLabel(MoodLine(f)) { ForeColor = System.Drawing.Color.DimGray });
-        menu.Items.Add("Edit…", null, (_, _) => OpenEditor(f));
-        var colour = new ToolStripMenuItem("Colour");
-        foreach (var (name, c) in Palette.All)
-            colour.DropDownItems.Add(new ToolStripMenuItem(name, Swatch(c), (_, _) => { f.Color = c; f.Name = UniqueName(name, f); }));
-        menu.Items.Add(colour);
-        menu.Items.Add("Remove", null, (_, _) => _w.RemoveFigure(f));
-        menu.Closed += (_, _) => _overlay.BeginInvoke(() => menu.Dispose());
-        menu.Show(Cursor.Position);
-    }
-
-    static string MoodLine(Figure f)
-    {
-        var b = f.Brain;
-        var bits = new List<string>();
-        if (b.Asleep) bits.Add("asleep");
-        else if (b.Stamina < 0.3f) bits.Add("tired");
-        if (b.Annoyance > 0.5f) bits.Add("grumpy");
-        if (b.Boredom > 0.7f) bits.Add("bored");
-        if (b.Loneliness > 0.7f) bits.Add("lonely");
-        if (b.CursorTrust < 0.25f) bits.Add("wary of you");
-        return "Mood: " + (bits.Count == 0 ? "content" : string.Join(", ", bits));
-    }
-
     // ---------------- props ----------------
 
     Prop SpawnProp(PropKind kind)
@@ -607,24 +564,6 @@ sealed class App : ApplicationContext
         p.Vel = new Vector2(_w.Rng.Range(-150, 150) * _w.Scale, 0);
         _w.Props.Add(p);
         return p;
-    }
-
-    void ShowPropMenu(Prop p)
-    {
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(new ToolStripLabel(Prop.KindName(p.Kind)) { ForeColor = System.Drawing.Color.DimGray });
-        menu.Items.Add("Edit…", null, (_, _) => new PropEditor(p, _w).Show());
-        var size = new ToolStripMenuItem("Size");
-        foreach (var (label, mul) in new[] { ("Tiny", 0.5f), ("Small", 0.75f), ("Normal", 1f), ("Big", 1.6f), ("Huge", 2.5f), ("Giant", 4f) })
-            size.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => p.SizeMul = mul) { Checked = MathF.Abs(p.SizeMul - mul) < 0.01f });
-        menu.Items.Add(size);
-        var bounce = new ToolStripMenuItem("Bounciness");
-        foreach (var (label, b) in new[] { ("Dead", 0.15f), ("Low", 0.45f), ("Normal", 0.68f), ("Super", 0.9f) })
-            bounce.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => p.Bounce = b) { Checked = MathF.Abs(p.Bounce - b) < 0.01f });
-        menu.Items.Add(bounce);
-        menu.Items.Add("Remove", null, (_, _) => _w.RemoveProp(p));
-        menu.Closed += (_, _) => _overlay.BeginInvoke(() => menu.Dispose());
-        menu.Show(Cursor.Position);
     }
 
     // ---------------- saving the cast ----------------
@@ -675,100 +614,17 @@ sealed class App : ApplicationContext
 
     NotifyIcon BuildTray()
     {
-        var menu = new ContextMenuStrip();
-        var spawn = new ToolStripMenuItem("Spawn figure");
-        spawn.DropDownItems.Add("Random", null, (_, _) => Spawn(null));
-        var presets = new ToolStripMenuItem("With personality");
-        foreach (var (name, blurb, traits) in Personality.Presets)
-            presets.DropDownItems.Add(new ToolStripMenuItem($"{name} — {blurb}", null, (_, _) => Spawn(null, traits.Clone())));
-        spawn.DropDownItems.Add(presets);
-        var library = new ToolStripMenuItem("Your saved figures");
-        library.DropDownOpening += (_, _) =>
+        // No stock Windows menu: left-click opens the Studio, right-click the hand-drawn quick panel.
+        var tray = new NotifyIcon { Icon = AppIcon, Text = "StickFight", Visible = true };
+        tray.MouseUp += (_, e) =>
         {
-            library.DropDownItems.Clear();
-            foreach (var s in _settings.Library.OrderBy(s => s.Name))
-            {
-                var saved = s;
-                var item = new ToolStripMenuItem($"{s.Name} ({s.Traits.Describe()})", Swatch(Settings.ParseHex(s.Color)), (_, _) => SpawnFromLibrary(saved));
-                library.DropDownItems.Add(item);
-            }
-            if (_settings.Library.Count == 0)
-                library.DropDownItems.Add(new ToolStripMenuItem("(none yet: use \"Save to library\" in a figure's editor)") { Enabled = false });
-            else
-            {
-                var remove = new ToolStripMenuItem("Remove from library");
-                foreach (var s in _settings.Library.OrderBy(s => s.Name))
-                {
-                    var saved = s;
-                    remove.DropDownItems.Add(s.Name, null, (_, _) => { _settings.Library.Remove(saved); _settings.Save(); });
-                }
-                library.DropDownItems.Add(new ToolStripSeparator());
-                library.DropDownItems.Add(remove);
-            }
+            if (e.Button == MouseButtons.Left) OpenStudio();
+            else if (e.Button == MouseButtons.Right) ToggleQuick();
         };
-        library.DropDownItems.Add("(loading)");
-        spawn.DropDownItems.Add(library);
-        spawn.DropDownItems.Add(new ToolStripSeparator());
-        for (int i = 0; i < Palette.All.Length; i++)
-        {
-            int ci = i;
-            spawn.DropDownItems.Add(new ToolStripMenuItem(Palette.All[i].Name, Swatch(Palette.All[i].Color), (_, _) => Spawn(ci)));
-        }
-        menu.Items.Add(spawn);
-
-        var props = new ToolStripMenuItem("Add ball");
-        foreach (PropKind k in Enum.GetValues<PropKind>())
-        {
-            var kind = k;
-            props.DropDownItems.Add(Prop.KindName(k), null, (_, _) => SpawnProp(kind));
-        }
-        menu.Items.Add(props);
-
-        var figures = new ToolStripMenuItem("Figures");
-        figures.DropDownOpening += (_, _) =>
-        {
-            figures.DropDownItems.Clear();
-            foreach (var f in _w.Figures)
-            {
-                var fig = f;
-                figures.DropDownItems.Add(new ToolStripMenuItem($"{f.Name} ({f.Traits.Describe()})", Swatch(f.Color), (_, _) => OpenEditor(fig)));
-            }
-            if (_w.Figures.Count == 0) figures.DropDownItems.Add(new ToolStripMenuItem("(none)") { Enabled = false });
-        };
-        figures.DropDownItems.Add("(none)");
-        menu.Items.Add(figures);
-
-        menu.Items.Add("Colours && fights…", null, (_, _) => OpenFightEditor());
-        menu.Items.Add("Remove all figures", null, (_, _) => { EndPress(); foreach (var f in _w.Figures.ToArray()) _w.RemoveFigure(f); });
-        menu.Items.Add("Remove all balls", null, (_, _) => { EndPress(); foreach (var p in _w.Props.ToArray()) _w.RemoveProp(p); });
-        menu.Items.Add(new ToolStripSeparator());
-        var hide = new ToolStripMenuItem("Hide figures") { CheckOnClick = true };
-        hide.CheckedChanged += (_, _) => _paused = hide.Checked;
-        menu.Items.Add(hide);
-        var plats = new ToolStripMenuItem("Show what they see") { CheckOnClick = true, Checked = _showPlatforms };
-        plats.CheckedChanged += (_, _) => _showPlatforms = plats.Checked;
-        menu.Items.Add(plats);
-        var remember = new ToolStripMenuItem("Remember figures between runs") { CheckOnClick = true, Checked = _settings.RememberCast };
-        remember.CheckedChanged += (_, _) => { _settings.RememberCast = remember.Checked; _settings.Save(); };
-        menu.Items.Add(remember);
-        menu.Items.Add(BuildFpsMenu());
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("Exit", null, (_, _) => ExitThread());
-
-        var tray = new NotifyIcon { Icon = MakeIcon(), Text = "StickFight", ContextMenuStrip = menu, Visible = true };
-        tray.DoubleClick += (_, _) => Spawn(null);
         return tray;
     }
-
-    static Bitmap Swatch(Color4 c)
-    {
-        var bmp = new Bitmap(16, 16);
-        using var g = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        using var b = new SolidBrush(Ui.ToGdi(c));
-        g.FillEllipse(b, 2, 2, 12, 12);
-        return bmp;
-    }
+    static Icon? _icon;
+    public static Icon AppIcon => _icon ??= MakeIcon();
 
     static Icon MakeIcon()
     {
@@ -900,14 +756,13 @@ sealed class App : ApplicationContext
                 case "hp":
                     if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } hf && p.Length >= 3) hf.HP = float.Parse(p[2], inv);
                     break;
-                case "edit":
-                    if (_w.Figures.FirstOrDefault(f => f.Name == p[1]) is { } ef) OpenEditor(ef);
+                case "studio":
+                    // studio [page] [figure name]
+                    OpenStudio(p.Length > 1 ? p[1] : null, p.Length > 2 && _w.Figures.FirstOrDefault(f => f.Name == p[2]) is { } sfi ? sfi.Id : 0);
                     break;
-                case "editfights":
-                    OpenFightEditor();
-                    break;
-                case "editball":
-                    if (_w.Props.FirstOrDefault() is { } eb) new PropEditor(eb, _w).Show();
+                case "quick": ToggleQuick(); break;
+                case "studiojs":
+                    _studio?.Eval(line[(line.IndexOf(' ') + 1)..]);
                     break;
                 case "exit":
                     World.Log("exit requested");
@@ -944,6 +799,8 @@ sealed class App : ApplicationContext
             fpsCap = _settings.FpsCap,
             msRefresh = _msRefresh,
             msRender = _msRender,
+            maxFrameMs = _maxDt * 1000,
+            hitches = _hitches,
             windows = _w.Env.WindowCount,
             platforms = _w.Env.Platforms.Select(p => new[] { p.X1, p.X2, p.Y, p.Solid ? 1 : 0 }),
             fullscreen = _w.Env.FullscreenActive,

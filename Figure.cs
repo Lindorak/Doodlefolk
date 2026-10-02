@@ -159,6 +159,28 @@ sealed partial class Figure
         Facing = rng.Next(2) == 0 ? 1 : -1;
     }
 
+    // ---------- render interpolation ----------
+    // The simulation runs at a fixed 120 steps/s; frames are drawn between the last two steps so motion
+    // stays even at any frame rate (otherwise some frames repeat a pose and others skip one).
+    readonly Vector2[] _drawSave = new Vector2[J.Count];
+    bool _interp;
+
+    public void BeginInterp(float a)
+    {
+        Array.Copy(Jt, _drawSave, J.Count);
+        _interp = true;
+        if (a >= 1) return;
+        for (int i = 0; i < J.Count; i++)
+            if (Vector2.DistanceSquared(_jtPrev[i], Jt[i]) < Height * Height) Jt[i] = Vector2.Lerp(_jtPrev[i], Jt[i], a);
+    }
+
+    public void EndInterp()
+    {
+        if (!_interp) return;
+        Array.Copy(_drawSave, Jt, J.Count);
+        _interp = false;
+    }
+
     public void PlaceAt(Platform p, float x)
     {
         Base = new(x, p.Y);
@@ -437,7 +459,7 @@ sealed partial class Figure
             Vector2 cd = env.Delta(_climbHwnd);
             Base += cd;
             ShiftClimb(cd);
-            for (int i = 0; i < J.Count; i++) Jt[i] += cd;
+            for (int i = 0; i < J.Count; i++) { Jt[i] += cd; _jtPrev[i] += cd; }
             return;
         }
         if (!Grounded) return;
@@ -449,7 +471,7 @@ sealed partial class Figure
         {
             Base += d;
             foreach (var f in new[] { _fN, _fF }) { f.Pos += d; f.From += d; f.To += d; }
-            for (int i = 0; i < J.Count; i++) Jt[i] += d;
+            for (int i = 0; i < J.Count; i++) { Jt[i] += d; _jtPrev[i] += d; }
         }
         if (Mode != Mode.Control) return;
         if (prev.Y < -800 * S && v.Y > prev.Y * 0.3f)

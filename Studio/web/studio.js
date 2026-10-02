@@ -1,0 +1,930 @@
+"use strict";
+/* StickFight Studio. The host pushes {t:"init"} once and {t:"state"} a few times a second; edits go back
+   as small messages. Pages are built once per route and then patched live, never rebuilt under the user's
+   fingers (controls the user touched recently aren't overwritten). */
+
+const host = window.chrome && window.chrome.webview;
+const QUICK = document.body.dataset.mode === "quick";
+let INIT = null, S = null;
+let route = { page: "cast", id: 0, sub: "personality", rel: null };
+let current = null;          // { key, sig, update }
+const $ = (q, r = document) => r.querySelector(q);
+
+// ---------------- messaging ----------------
+
+function send(m) { if (host) host.postMessage(m); else Mock.handle(m); }
+const throttles = new Map();
+/** Send at most every `ms` per key, always delivering the last value. */
+function sendSoon(key, m, ms = 70) {
+  let t = throttles.get(key);
+  if (!t) { t = { last: 0, timer: 0, msg: null }; throttles.set(key, t); }
+  t.msg = m;
+  const now = performance.now();
+  if (now - t.last >= ms) { t.last = now; send(m); return; }
+  clearTimeout(t.timer);
+  t.timer = setTimeout(() => { t.last = performance.now(); send(t.msg); }, ms - (now - t.last));
+}
+
+function receive(m) {
+  switch (m.t) {
+    case "init": INIT = m; applyTheme(); break;
+    case "state": S = m; onState(); break;
+    case "go": go(m.page, m.id); break;
+    case "spawned": if (!QUICK) { go("figure", m.id); toast("Fresh off the pencil!"); } break;
+    case "winstate": document.body.classList.toggle("max", !!m.max); break;
+  }
+}
+if (host) host.addEventListener("message", e => receive(e.data));
+
+// ---------------- tiny DOM helpers ----------------
+
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v;
+    else if (k === "style" && typeof v === "object") Object.assign(e.style, v);
+    else if (k === "html") e.innerHTML = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+const NS = "http://www.w3.org/2000/svg";
+function s(tag, attrs, ...kids) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (v == null) continue;
+    if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+/** append() that flattens arrays and skips null/false. */
+function add(parent, ...kids) { parent.append(...kids.flat(Infinity).filter(k => k != null && k !== false)); }
+function touched(input) { input.dataset.t = Date.now(); }
+function idle(input) { return document.activeElement !== input && !(Date.now() - (+input.dataset.t || 0) < 900); }
+function pct(v, lo = 0, hi = 1) { return Math.round((v - lo) / (hi - lo) * 100); }
+function setRange(input, v) { if (idle(input)) { input.value = v; paintRange(input); } }
+function paintRange(input) { input.style.setProperty("--p", pct(+input.value, +input.min, +input.max) + "%"); }
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round((n >> 16 & 255) * k), g = Math.round((n >> 8 & 255) * k), b = Math.round((n & 255) * k);
+  return `rgb(${r},${g},${b})`;
+}
+let toastTimer = 0;
+function toast(text) {
+  const t = $("#toast"); t.textContent = text; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+/** A button that needs a second click to confirm. */
+function armed(label, sure, action, cls = "btn danger") {
+  const b = h("button", { class: cls, onclick: () => {
+    if (b.classList.contains("armed")) { action(); return; }
+    b.classList.add("armed"); b.textContent = sure;
+    setTimeout(() => { b.classList.remove("armed"); b.textContent = label; }, 2500);
+  } }, label);
+  return b;
+}
+function check(label, hint, get, set) {
+  const c = h("div", { class: "check", role: "checkbox", tabindex: 0 },
+    s("svg", { class: "box", viewBox: "0 0 24 24" }, s("rect", { x: 2.5, y: 2.5, width: 19, height: 19, rx: 4 }), s("path", { d: "M6 12.5 L10.5 17 L19 6.5" })),
+    h("div", { class: "lbl" }, label, hint ? h("small", null, hint) : null));
+  const paint = () => c.classList.toggle("on", !!get());
+  c.addEventListener("click", () => { set(!get()); c.classList.toggle("on"); touched(c); });
+  c.update = () => { if (idle(c)) paint(); };
+  paint();
+  return c;
+}
+/** Hand-drawn dropdown (native <select> popups can't be styled). Same API as before: .sel.value, .set(v). */
+let openMenu = null;
+function select(options, value, onchange) {
+  let cur = String(value), menu = null, hover = -1;
+  const label = h("span", { class: "dd-label" });
+  const caret = s("svg", { class: "dd-caret", viewBox: "0 0 12 12" }, s("path", { d: "M2.5 4.5 Q6 8.6 9.5 4.2" }));
+  const btn = h("button", { class: "dd-btn", type: "button" }, label, caret);
+  const wrap = h("span", { class: "select" }, btn);
+  wrap.sel = { get value() { return cur; } };
+  const paint = () => { const o = options.find(o => String(o.value) === cur); label.textContent = o ? o.label : ""; };
+  function close() {
+    if (!menu) return;
+    menu.remove(); menu = null; wrap.classList.remove("open");
+    if (openMenu === close) openMenu = null;
+  }
+  function choose(o) { cur = String(o.value); paint(); touched(btn); close(); btn.focus(); onchange(cur); }
+  function mark(i) {
+    hover = Math.max(0, Math.min(options.length - 1, i));
+    [...menu.children].forEach((c, j) => c.classList.toggle("hover", j === hover));
+    menu.children[hover].scrollIntoView({ block: "nearest" });
+  }
+  function open() {
+    if (openMenu) openMenu();
+    menu = h("div", { class: "dd-menu", role: "listbox" }, options.map((o, i) =>
+      h("div", { class: "dd-item" + (String(o.value) === cur ? " on" : ""), role: "option",
+        onpointerenter: () => mark(i), onpointerdown: e => { e.preventDefault(); choose(o); } }, o.label)));
+    document.body.append(menu);
+    const r = btn.getBoundingClientRect();
+    const below = innerHeight - r.bottom - 12, above = r.top - 12;
+    const up = below < 220 && above > below;
+    menu.style.left = Math.min(r.left, innerWidth - Math.max(r.width, 220) - 8) + "px";
+    menu.style.minWidth = r.width + "px";
+    menu.style.maxHeight = Math.max(140, Math.min(360, up ? above : below)) + "px";
+    if (up) menu.style.bottom = (innerHeight - r.top + 6) + "px"; else menu.style.top = (r.bottom + 6) + "px";
+    wrap.classList.add("open");
+    openMenu = close;
+    hover = options.findIndex(o => String(o.value) === cur);
+    if (hover >= 0) menu.children[hover].scrollIntoView({ block: "nearest" });
+  }
+  btn.addEventListener("click", () => { touched(btn); menu ? close() : open(); });
+  btn.addEventListener("keydown", e => {
+    if (!menu && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); return; }
+    if (!menu) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); mark(hover + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); mark(hover - 1); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (hover >= 0) choose(options[hover]); }
+    else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); close(); }
+  });
+  btn.addEventListener("blur", () => setTimeout(close, 120));
+  wrap.set = v => { if (!menu && idle(btn)) { cur = String(v); paint(); } };
+  paint();
+  return wrap;
+}
+document.addEventListener("pointerdown", e => { if (openMenu && !e.target.closest(".dd-menu, .dd-btn")) openMenu(); });
+document.addEventListener("scroll", () => openMenu && openMenu(), true);
+function range(min, max, step, value, oninput, onchange) {
+  const r = h("input", { type: "range", min, max, step, value });
+  r.addEventListener("input", () => { touched(r); paintRange(r); oninput && oninput(+r.value); });
+  if (onchange) r.addEventListener("change", () => { touched(r); onchange(+r.value); });
+  paintRange(r);
+  return r;
+}
+
+// ---------------- stick figure drawing ----------------
+
+const J = { Head: 0, Neck: 1, Pelvis: 2, ElbowN: 3, HandN: 4, ElbowF: 5, HandF: 6, KneeN: 7, FootN: 8, KneeF: 9, FootF: 10 };
+const STANDING = [[1, -55], [1, -47], [0, -26], [5, -37], [6, -27], [-3, -37], [-4, -27], [3, -13], [5, 0], [-2, -13], [-5, 0]];
+
+/** Build a figure drawing; returns the svg with an .update(pose, hex) method. */
+function figSvg(cls = "fig") {
+  const svg = s("svg", { class: cls, viewBox: "-45 -76 90 84" });
+  svg.append(s("path", { class: "ground", d: "M-36 2.5 Q-10 1.2 12 2.8 T38 2" }));
+  const far = s("g", { "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-width": 3.3 });
+  const near = s("g", { "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-width": 3.3 });
+  const outline = s("g", { "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-width": 4.9, stroke: "rgba(0,0,0,.25)" });
+  const fp = s("path"), np = s("path"), op = s("path"), head = s("circle", { r: 6.5 }), headO = s("circle", { r: 7.3, fill: "rgba(0,0,0,.25)" });
+  far.append(fp); near.append(np); outline.append(op);
+  svg.append(outline, headO, far, near, head);
+  svg.update = (pose, hex) => {
+    pose = pose && pose.length === 11 ? pose : STANDING;
+    // Stand it on the ground line under its pelvis, whatever it's doing.
+    let maxY = -1e9; for (const p of pose) maxY = Math.max(maxY, p[1]);
+    const dx = -pose[J.Pelvis][0], dy = -maxY;
+    const P = i => `${(pose[i][0] + dx).toFixed(1)} ${(pose[i][1] + dy).toFixed(1)}`;
+    const nearD = `M${P(J.Neck)} L${P(J.Pelvis)} M${P(J.Pelvis)} L${P(J.KneeN)} L${P(J.FootN)} M${P(J.Neck)} L${P(J.ElbowN)} L${P(J.HandN)}`;
+    const farD = `M${P(J.Neck)} L${P(J.ElbowF)} L${P(J.HandF)} M${P(J.Pelvis)} L${P(J.KneeF)} L${P(J.FootF)}`;
+    np.setAttribute("d", nearD); fp.setAttribute("d", farD); op.setAttribute("d", nearD + farD);
+    near.setAttribute("stroke", hex); far.setAttribute("stroke", shade(hex, 0.72));
+    const hx = pose[J.Head][0] + dx, hy = pose[J.Head][1] + dy;
+    head.setAttribute("cx", hx); head.setAttribute("cy", hy); head.setAttribute("fill", hex);
+    headO.setAttribute("cx", hx); headO.setAttribute("cy", hy);
+  };
+  return svg;
+}
+
+// ---------------- routing ----------------
+
+const PAGES = {};
+function go(page, id) {
+  route.page = page;
+  if (id != null) route.id = id;
+  if (page === "figure" && id != null) route.rel = null;
+  if (page === "toys" && id) route.toy = id;
+  current = null;
+  onState();
+}
+function fig(id = route.id) { return S && S.figures.find(f => f.id === id); }
+
+function onState() {
+  if (!INIT || !S) return;
+  if (QUICK) { applyTheme(); if (!$("#quick").firstChild) buildQuick(); quickUpdate(); return; }
+  $("#fps").textContent = S.fpsNow ? `${S.fpsNow} fps` : "";
+  applyTheme();
+  if (route.page === "figure" && !fig()) route.page = "cast";
+  const p = PAGES[route.page];
+  const key = route.page + ":" + (route.page === "figure" ? route.id + ":" + route.sub : "");
+  const sig = p.sig ? p.sig() : "";
+  if (!current || current.key !== key || current.sig !== sig) {
+    const root = $("#page");
+    const scroll = current && current.key === key ? root.scrollTop : 0;
+    root.replaceChildren();
+    const update = p.build(root) || (() => {});
+    root.firstElementChild && root.firstElementChild.classList.add("fade-in");
+    root.scrollTop = scroll;
+    current = { key, sig, update };
+    for (const t of document.querySelectorAll(".tab")) t.classList.toggle("on", t.dataset.page === (route.page === "figure" ? "cast" : route.page));
+  }
+  current.update();
+  crumbs();
+}
+
+function crumbs() {
+  const c = $("#crumbs");
+  const names = { cast: "Your cast", library: "Saved figures", fights: "Colours & fights", toys: "Toys", settings: "Settings" };
+  if (route.page === "figure") {
+    const f = fig();
+    c.innerHTML = "";
+    c.append(h("span", null, "Your cast  ›  "), h("b", null, f ? f.name : ""));
+  } else c.textContent = names[route.page] || "";
+}
+
+// ---------------- Cast ----------------
+
+PAGES.cast = {
+  sig: () => S.figures.map(f => f.id).join(","),
+  build(root) {
+    const n = S.figures.length;
+    add(root, h("div", { class: "row" },
+      h("h1", null, "Your cast"),
+      h("span", { class: "spacer" }),
+      n ? armed("Clear them all", "Really? Click again", () => send({ t: "clear", what: "figures" }), "btn small danger") : null));
+    add(root, h("p", { class: "sub" }, n ? `${n} figure${n > 1 ? "s" : ""} living on your desktop. Pick one to see what makes them tick.` : "Nobody here yet. Draw someone!"));
+    const grid = h("div", { class: "grid" });
+    const cards = [];
+    S.figures.forEach((f, i) => {
+      const svg = figSvg();
+      const name = h("span"), act = h("div", { class: "act" }), feels = h("div", { class: "feels" }), likes = h("div", { class: "likes" }), dot = h("span", { class: "dot" });
+      const card = h("div", { class: "card", style: { "--tilt": `${((f.id * 37) % 7 - 3) * 0.35}deg` }, onclick: () => go("figure", f.id) },
+        h("div", { class: "tape" }), h("div", { class: "name" }, dot, name), svg, act, feels, likes);
+      grid.append(card);
+      cards.push({ id: f.id, svg, name, act, feels, likes, dot });
+    });
+    grid.append(newFigureCard());
+    add(root, grid);
+    return () => {
+      for (const c of cards) {
+        const f = fig(c.id); if (!f) continue;
+        c.svg.update(f.pose, f.hex);
+        c.name.textContent = f.name; c.dot.style.background = f.hex;
+        c.act.textContent = f.activity;
+        c.feels.textContent = f.feels;
+        c.likes.textContent = f.tastes.describe;
+      }
+    };
+  },
+};
+
+function newFigureCard() {
+  const preset = select([{ value: -1, label: "Random personality" }, ...INIT.presets.map((p, i) => ({ value: i, label: `${p.name}: ${p.blurb}` }))], -1, () => {});
+  return h("div", { class: "card new" },
+    h("div", { class: "name" }, "Draw someone new"),
+    h("div", { class: "hint" }, "Pick a colour to draw them in:"),
+    h("div", { class: "swatches" }, INIT.palette.map((p, i) =>
+      h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => send({ t: "spawn", color: i, preset: +preset.sel.value }) }))),
+    preset,
+    h("div", { class: "row" },
+      h("button", { class: "btn small primary", onclick: () => send({ t: "spawn", color: -1, preset: +preset.sel.value }) }, "Surprise me"),
+      h("button", { class: "btn small", onclick: () => go("library") }, "From library…")));
+}
+
+// ---------------- Figure ----------------
+
+const SUBS = [["personality", "Personality"], ["likes", "Likes & dislikes"], ["friends", "Friends"], ["moves", "Moves"], ["mood", "Mood"], ["look", "Look"]];
+
+PAGES.figure = {
+  sig: () => {
+    const f = fig();
+    return f ? (route.sub === "friends" ? f.rels.map(r => r.id).join(",") : "") : "";
+  },
+  build(root) {
+    const f = fig();
+    const id = f.id;
+    const big = figSvg();
+    const name = h("input", { type: "text", value: f.name, maxlength: 40, spellcheck: "false" });
+    const commit = () => { touched(name); send({ t: "fig", id, op: "rename", name: name.value }); };
+    name.addEventListener("change", commit);
+    name.addEventListener("keydown", e => { if (e.key === "Enter") name.blur(); });
+    const act = h("div", { class: "act" }), feels = h("div", { class: "hint" });
+    const sws = colourPicker(f.hex, hex => sendSoon("colour" + id, { t: "fig", id, op: "color", hex }));
+    add(root, h("div", { class: "hero" }, big,
+      h("div", { class: "meta" }, name, act, feels, sws,
+        h("div", { class: "row" },
+          h("button", { class: "btn small", onclick: () => { send({ t: "fig", id, op: "save" }); toast(`${fig(id)?.name || "Figure"} saved to your library`); } }, "★ Save to library"),
+          armed("Erase", "Erase them? Click again", () => { send({ t: "fig", id, op: "remove" }); go("cast"); }, "btn small danger")))));
+    const tabs = h("div", { class: "subtabs" }, SUBS.map(([k, label]) =>
+      h("button", { class: "subtab" + (route.sub === k ? " on" : ""), onclick: () => { route.sub = k; current = null; onState(); } }, label)));
+    add(root, tabs);
+    const panel = h("div", { class: "panel" });
+    add(root, panel);
+    const sub = SUBPANELS[route.sub](panel, f);
+    return () => {
+      const f = fig(id); if (!f) return;
+      big.update(f.pose, f.hex);
+      if (idle(name)) name.value = f.name;
+      act.textContent = f.activity;
+      feels.textContent = `${f.feels} · ${f.describe}`;
+      sws.set(f.hex);
+      sub && sub(f);
+    };
+  },
+};
+
+function colourPicker(hex, pick) {
+  let cur = hex;
+  const custom = h("input", { type: "color", value: hex });
+  custom.addEventListener("input", () => { touched(custom); cur = custom.value; pick(custom.value); paint(); });
+  const buttons = INIT.palette.map(p => h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => { cur = p.hex; pick(p.hex); paint(); } }));
+  const wrap = h("div", { class: "swatches" }, buttons, h("span", { class: "sw custom", title: "Any colour…" }, custom));
+  function paint() { buttons.forEach((b, i) => b.classList.toggle("on", INIT.palette[i].hex.toLowerCase() === cur.toLowerCase())); }
+  wrap.set = v => { if (idle(custom)) { cur = v; custom.value = v.toLowerCase(); paint(); } };
+  paint();
+  return wrap;
+}
+
+const TRAITS = [
+  ["energy", "Energy", "Lazy ↔ hyper"], ["curiosity", "Curiosity", "Stays put ↔ explores everything"],
+  ["bravery", "Bravery", "Jumpy ↔ fearless"], ["playfulness", "Playfulness", "Serious ↔ goofy"],
+  ["aggression", "Aggression", "Gentle ↔ picks fights"], ["sociability", "Sociability", "Loner ↔ social butterfly"],
+];
+
+const SUBPANELS = {
+  personality(panel, f) {
+    const id = f.id;
+    const local = { ...f.traits };
+    let dragging = -1;
+    const R = 100;
+    const ang = i => -Math.PI / 2 + i * Math.PI * 2 / 6;
+    const pt = (i, v) => [Math.cos(ang(i)) * R * v, Math.sin(ang(i)) * R * v];
+    const svg = s("svg", { class: "radar", viewBox: "-160 -140 320 290" });
+    for (const k of [0.25, 0.5, 0.75, 1]) svg.append(s("polygon", { class: "web", points: [0, 1, 2, 3, 4, 5].map(i => pt(i, k).join(",")).join(" ") }));
+    for (let i = 0; i < 6; i++) {
+      const [x, y] = pt(i, 1);
+      svg.append(s("line", { class: "axis", x1: 0, y1: 0, x2: x, y2: y }));
+      const [lx, ly] = pt(i, 1.24);
+      svg.append(s("text", { x: lx, y: ly + 5, "text-anchor": "middle" }, TRAITS[i][1]));
+    }
+    const shape = s("polygon", { class: "shape" });
+    svg.append(shape);
+    const pts = TRAITS.map((t, i) => {
+      const c = s("circle", { class: "pt", r: 7 });
+      c.addEventListener("pointerdown", e => { dragging = i; c.classList.add("drag"); svg.setPointerCapture(e.pointerId); e.preventDefault(); });
+      svg.append(c);
+      return c;
+    });
+    const vals = TRAITS.map(() => s("text", { class: "v", "text-anchor": "middle" }));
+    vals.forEach(v => svg.append(v));
+    svg.addEventListener("pointermove", e => {
+      if (dragging < 0) return;
+      const m = svg.getScreenCTM().inverse();
+      const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m);
+      const a = ang(dragging), v = Math.max(0, Math.min(1, (p.x * Math.cos(a) + p.y * Math.sin(a)) / R));
+      local[TRAITS[dragging][0]] = Math.round(v * 100) / 100;
+      touchedT = Date.now();
+      draw();
+      sendSoon("trait" + dragging, { t: "fig", id, op: "trait", key: TRAITS[dragging][0], v: local[TRAITS[dragging][0]] });
+    });
+    const stop = () => { if (dragging >= 0) pts[dragging].classList.remove("drag"); dragging = -1; };
+    svg.addEventListener("pointerup", stop); svg.addEventListener("pointercancel", stop);
+    let touchedT = 0;
+    function draw(hex) {
+      if (hex) { shape.setAttribute("fill", hex + "55"); }
+      shape.setAttribute("points", TRAITS.map((t, i) => pt(i, local[t[0]]).join(",")).join(" "));
+      TRAITS.forEach((t, i) => {
+        const [x, y] = pt(i, local[t[0]]);
+        pts[i].setAttribute("cx", x); pts[i].setAttribute("cy", y);
+        const [vx, vy] = pt(i, Math.max(local[t[0]], 0.12) + 0.13);
+        vals[i].setAttribute("x", vx); vals[i].setAttribute("y", vy + 4);
+        vals[i].textContent = Math.round(local[t[0]] * 100);
+      });
+    }
+    draw(f.hex);
+    const sliders = TRAITS.map(([k, label, tip]) => {
+      const val = h("span", { class: "val" });
+      const r = range(0, 1, 0.01, f.traits[k], v => { local[k] = v; touchedT = Date.now(); draw(); val.textContent = Math.round(v * 100); sendSoon("trait-" + k, { t: "fig", id, op: "trait", key: k, v }); });
+      return { k, r, val, el: h("div", { class: "field" }, h("label", { title: tip }, label), r, val) };
+    });
+    const presets = h("div", { class: "row" }, INIT.presets.map((p, i) => h("button", { class: "chip", title: p.blurb, onclick: () => send({ t: "fig", id, op: "preset", v: i }) }, p.name)),
+      h("button", { class: "chip", onclick: () => send({ t: "fig", id, op: "dice" }), title: "Roll a random personality" }, "🎲 Dice"));
+    const blurb = h("p", { class: "sub" });
+    add(panel, h("div", { class: "split" }, svg, h("div", null,
+      h("h2", { style: { marginTop: 0 } }, "Who they are"), blurb, sliders.map(x => x.el),
+      h("h3", null, "Start from a type"), presets)));
+    return f => {
+      blurb.textContent = f.describe + ".";
+      if (dragging < 0 && Date.now() - touchedT > 900) { Object.assign(local, f.traits); draw(f.hex); }
+      for (const x of sliders) { setRange(x.r, f.traits[x.k]); x.val.textContent = Math.round((idle(x.r) ? f.traits[x.k] : +x.r.value) * 100); }
+      shape.setAttribute("fill", f.hex + "55");
+    };
+  },
+
+  likes(panel, f) {
+    const id = f.id;
+    const LEVELS = [[-1, -2, "Hates"], [-0.55, -1, "Dislikes"], [0, 0, "Doesn't mind"], [0.55, 1, "Likes"], [1, 2, "Loves"]];
+    const bucket = v => v < -0.7 ? -2 : v < -0.2 ? -1 : v <= 0.2 ? 0 : v <= 0.7 ? 1 : 2;
+    const rows = [];
+    const table = h("div", { class: "likes-table" });
+    let group = null;
+    for (const th of INIT.things) {
+      if (th.group !== group) { group = th.group; table.append(h("h3", null, group)); }
+      const faces = LEVELS.map(([v, b, label]) => {
+        const btn = h("button", { class: `face f${b}`, title: label, onclick: () => { touched(btn); send({ t: "fig", id, op: "taste", key: th.key, v }); faces.forEach(x => x.classList.toggle("on", x === btn)); } }, faceSvg(b));
+        btn.b = b;
+        return btn;
+      });
+      table.append(h("div", { class: "thing" }, th.name), h("div", { class: "faces" }, faces));
+      rows.push({ key: th.key, faces });
+    }
+    const fav = swatchRow(name => send({ t: "fig", id, op: "fav", v: name }));
+    const hate = swatchRow(name => send({ t: "fig", id, op: "hate", v: name }));
+    const summary = h("p", { class: "sub" });
+    add(panel, h("div", { class: "split" },
+      h("div", null, h("h2", { style: { marginTop: 0 } }, "Their taste"), summary,
+        h("h3", null, "Favourite colour"), fav, h("h3", null, "Least favourite colour"), hate,
+        h("p", { class: "hint", style: { marginTop: "14px" } }, "Figures who share likes become friends faster, chat about their favourite things, and seek each other out. Colours they like or dislike colour first impressions."),
+        h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "rollTastes" }) }, "🎲 Re-roll their likes")),
+      table));
+    return f => {
+      summary.textContent = f.tastes.describe;
+      fav.set(f.tastes.fav); hate.set(f.tastes.hate);
+      for (const r of rows) {
+        if (!r.faces.every(idle)) continue;
+        const b = bucket(f.tastes.opinions[r.key] || 0);
+        r.faces.forEach(x => x.classList.toggle("on", x.b === b));
+      }
+    };
+  },
+
+  friends(panel, f) {
+    const id = f.id;
+    const W = 230, H = 200;
+    const svg = s("svg", { class: "webview", viewBox: `${-W} ${-H} ${W * 2} ${H * 2}` });
+    const others = [{ id: "you", name: "You" }, ...f.rels.map(r => ({ id: r.id, name: r.name }))];
+    const pos = {};
+    others.forEach((o, i) => {
+      const a = -Math.PI / 2 + i * Math.PI * 2 / others.length;
+      pos[o.id] = [Math.cos(a) * 168, Math.sin(a) * 140];
+    });
+    const edges = {}, labels = {}, nodes = {};
+    for (const o of others) {
+      const [x, y] = pos[o.id];
+      edges[o.id] = s("path", { class: "edge", d: `M0 0 Q${x * 0.5 + y * 0.08} ${y * 0.5 - x * 0.08} ${x} ${y}` });
+      svg.append(edges[o.id]);
+    }
+    const centre = s("g", { class: "node" }, s("circle", { class: "bg", r: 34 }));
+    const centreFig = figMini(); centre.append(centreFig);
+    svg.append(centre);
+    for (const o of others) {
+      const [x, y] = pos[o.id];
+      const g = s("g", { class: "node", transform: `translate(${x} ${y})`, onclick: () => { route.rel = o.id; drawCard(); paintSel(); } },
+        s("circle", { class: "bg", r: 26 }));
+      if (o.id === "you") g.append(s("path", { d: "M-6 -12 L-6 8 L-1 3 L3 11 L6 9.5 L2 2 L9 2 Z", fill: "var(--ink)", stroke: "none" }));
+      else { const d = s("circle", { r: 9, cy: -4 }); g.append(d); g.dot = d; }
+      g.append(s("text", { y: 44 }, o.name));
+      nodes[o.id] = g;
+      labels[o.id] = s("text", { class: "lbl", x: x * 0.5 + y * 0.06, y: y * 0.5 - x * 0.06 - 6 });
+      svg.append(g, labels[o.id]);
+    }
+    const card = h("div", { class: "relcard" });
+    add(panel, h("div", { class: "split wide" }, svg, h("div", null, card,
+      h("p", { class: "hint", style: { marginTop: "12px" } }, "Lines show how they feel: green is fond, red is dislike, thicker is stronger. Feelings change as they play, chat, fight and get thrown around, and they're remembered between runs."))));
+    if (route.rel == null) route.rel = "you";
+    function paintSel() { for (const k in nodes) nodes[k].classList.toggle("sel", String(k) === String(route.rel)); }
+    let cardUpdate = () => {};
+    function drawCard() {
+      card.replaceChildren();
+      const f = fig(id); if (!f) return;
+      if (route.rel === "you") {
+        const fond = range(-1, 1, 0.01, f.fond, v => sendSoon("fond", { t: "fig", id, op: "fond", v }));
+        const trust = range(0, 1, 0.01, f.trust, v => sendSoon("trust", { t: "fig", id, op: "trust", v }));
+        const feel = h("div", { class: "big" });
+        card.append(h("div", { class: "hint" }, `How ${f.name} feels about you`), feel,
+          h("h3", null, "Fondness"), h("div", { class: "relbar" }, fond, h("div", { class: "ends" }, h("span", null, "can't stand you"), h("span", null, "adores you"))),
+          h("h3", null, "Trust"), h("div", { class: "relbar" }, trust, h("div", { class: "ends" }, h("span", null, "jumpy around your cursor"), h("span", null, "totally relaxed"))),
+          h("p", { class: "hint" }, "Fans come over to say hi and bring you balls. Being picked up, thrown, poked or punched changes this, depending on what they like."));
+        cardUpdate = f => { feel.textContent = f.feels; setRange(fond, f.fond); setRange(trust, f.trust); };
+      } else {
+        const r = f.rels.find(r => r.id === route.rel);
+        if (!r) { route.rel = "you"; drawCard(); return; }
+        const mine = range(-1, 1, 0.01, r.mine, v => sendSoon("aff", { t: "fig", id, op: "affinity", other: r.id, v }));
+        const theirs = h("div", { class: "meter", style: { gridTemplateColumns: "1fr 44px" } }, h("div", { class: "bar" }, h("i")), h("span", { class: "n" }));
+        const word = h("div", { class: "big" }), shared = h("p"), rel = h("p", { class: "hint" });
+        card.append(h("div", { class: "hint" }, `How ${f.name} feels about ${r.name}`), word,
+          h("div", { class: "relbar" }, mine, h("div", { class: "ends" }, h("span", null, "can't stand them"), h("span", null, "best friends"))),
+          h("h3", null, `${r.name} feels…`), theirs, h("h3", null, "In common"), shared, rel,
+          h("button", { class: "btn small", onclick: () => go("figure", r.id) }, `Open ${r.name}'s page`));
+        cardUpdate = f => {
+          const r2 = f.rels.find(x => x.id === route.rel); if (!r2) return;
+          word.textContent = feelWord(r2.mine); setRange(mine, r2.mine);
+          const k = (r2.theirs + 1) / 2;
+          $("i", theirs).style.width = (k * 100) + "%"; $("i", theirs).style.setProperty("--fill", r2.theirs > 0.15 ? "var(--good)" : r2.theirs < -0.15 ? "var(--bad)" : "var(--meh)");
+          $(".n", theirs).textContent = feelWord(r2.theirs).toLowerCase();
+          shared.textContent = r2.shared.length ? `They both love ${r2.shared.join(", ").toLowerCase()}. (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match)` : `Not much (${Math.round(Math.max(0, r2.similarity) * 100)}% taste match).`;
+          rel.textContent = `Colour rule: ${relWord(r2.relation)}. Change it in Colours & fights.`;
+        };
+      }
+      cardUpdate(f);
+    }
+    drawCard(); paintSel();
+    return f => {
+      centreFig.update(f.pose, f.hex);
+      for (const o of others) {
+        const v = o.id === "you" ? f.fond : (f.rels.find(r => r.id === o.id) || { mine: 0 }).mine;
+        const e = edges[o.id];
+        e.setAttribute("stroke", v > 0.15 ? "var(--good)" : v < -0.15 ? "var(--bad)" : "var(--meh)");
+        e.setAttribute("stroke-width", (1.4 + Math.abs(v) * 6).toFixed(1));
+        const r = f.rels.find(r => r.id === o.id);
+        e.setAttribute("stroke-dasharray", r && r.relation === "Ignore" ? "4 6" : "");
+        labels[o.id].textContent = feelWord(v).toLowerCase();
+        if (nodes[o.id].dot && r) nodes[o.id].dot.setAttribute("fill", r.hex);
+      }
+      cardUpdate(f);
+    };
+  },
+
+  moves(panel, f) {
+    const id = f.id;
+    const KINDS = [["walk", "Walk"], ["run", "Run"], ["idle", "Standing around"], ["climb", "Climbing"], ["jump", "Jumping"], ["fight", "Fighting"], ["celebrate", "Celebrating"], ["rope", "Grappling hook"]];
+    const desc = h("p", { class: "sub", style: { maxWidth: "640px" } });
+    const boxes = KINDS.map(([k, label]) => {
+      const opts = INIT.styles[k].map(o => ({ value: o.v, label: o.v === 0 ? "Auto (from personality)" : o.label }));
+      const sel = select(opts, f.style.choice[k], v => send({ t: "fig", id, op: "style", key: k, v: +v }));
+      const now = h("span", { class: "val", style: { textAlign: "left" } });
+      return { k, sel, now, el: h("div", { class: "field", style: { gridTemplateColumns: "170px 280px 1fr" } }, h("label", null, label), sel, now) };
+    });
+    add(panel, h("h2", { style: { marginTop: 0 } }, "How they move"), desc, boxes.map(b => b.el),
+      h("div", { class: "row", style: { marginTop: "14px" } },
+        h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "quirks" }), title: "Keep the styles, re-roll the little quirks (bounce, stride, posture...)" }, "🎲 Re-roll quirks"),
+        h("span", { class: "hint" }, "Auto picks a style from their personality. Quirks make two figures with the same style still move differently.")));
+    return f => {
+      desc.textContent = f.style.describe;
+      for (const b of boxes) {
+        b.sel.set(f.style.choice[b.k]);
+        b.now.textContent = f.style.choice[b.k] === 0 ? `→ ${f.style.resolved[b.k].toLowerCase()}` : "";
+      }
+    };
+  },
+
+  mood(panel, f) {
+    const id = f.id;
+    const M = [["stamina", "Energy left", "#43a047"], ["joy", "Joy", "#fbc02d"], ["sadness", "Sadness", "#5c8fd6"], ["fear", "Fear", "#8e6cc9"], ["annoyance", "Annoyance", "#e53935"], ["boredom", "Boredom", "#9e9e9e"], ["loneliness", "Loneliness", "#26a69a"]];
+    const rows = M.map(([k, label, col]) => {
+      const i = h("i", { style: { "--fill": col } }), n = h("span", { class: "n" });
+      return { k, i, n, el: h("div", { class: "meter" }, h("label", null, label), h("div", { class: "bar" }, i), n) };
+    });
+    const hpI = h("i", { style: { "--fill": "#e53935" } }), hpN = h("span", { class: "n" });
+    const status = h("p", { class: "sub" });
+    add(panel, h("h2", { style: { marginTop: 0 } }, "Right now"), status, rows.map(r => r.el),
+      h("h3", null, "Health"), h("div", { class: "meter" }, h("label", null, "HP"), h("div", { class: "bar" }, hpI), hpN),
+      h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"));
+    return f => {
+      status.textContent = `${f.activity}. ${f.feels}.`;
+      for (const r of rows) { const v = f.mood[r.k]; r.i.style.width = (v * 100) + "%"; r.n.textContent = Math.round(v * 100); }
+      hpI.style.width = Math.max(0, f.hp) + "%"; hpN.textContent = Math.round(Math.max(0, f.hp));
+    };
+  },
+
+  look(panel, f) {
+    const id = f.id;
+    const sizeVal = h("span", { class: "val" });
+    const size = range(0.4, 3, 0.05, f.size, v => sizeVal.textContent = Math.round(v * 100) + "%", v => send({ t: "fig", id, op: "size", v }));
+    const gear = select(INIT.gear.map(g => ({ value: g.v, label: g.label })), f.gear, v => send({ t: "fig", id, op: "gear", v: +v }));
+    add(panel, h("h2", { style: { marginTop: 0 } }, "Look"),
+      h("div", { class: "field" }, h("label", null, "Size"), size, sizeVal),
+      h("div", { class: "field" }, h("label", null, "On their hands"), gear, h("span")),
+      h("p", { class: "hint" }, "Colour is up top, next to their name."));
+    return f => { setRange(size, f.size); if (idle(size)) sizeVal.textContent = Math.round(f.size * 100) + "%"; gear.set(f.gear); };
+  },
+};
+
+function figMini() {
+  const g = s("g", { transform: "translate(0 25) scale(0.74)" });
+  const svg = figSvg();
+  // Reuse the figure drawing's parts inside the node.
+  for (const c of [...svg.childNodes]) if (!c.classList || !c.classList.contains("ground")) g.append(c);
+  g.update = svg.update;
+  return g;
+}
+
+function faceSvg(b) {
+  const mouth = { "-2": "M8 21 Q14 15 20 21", "-1": "M9 20 Q14 17.5 19 20", "0": "M9 19 L19 19", "1": "M9 18 Q14 21.5 19 18", "2": "M8 17 Q14 24 20 17" }[b];
+  const brows = b === -2 ? s("path", { d: "M8 9 L12 11 M20 9 L16 11" }) : null;
+  const eyes = b === 2 ? s("path", { d: "M9.5 12 q1.5 -2 3 0 M15.5 12 q1.5 -2 3 0" }) : s("path", { d: "M11 12 v1 M17 12 v1" });
+  return s("svg", { viewBox: "0 0 28 28" }, s("circle", { cx: 14, cy: 14, r: 11.5 }), eyes, s("path", { d: mouth }), brows);
+}
+
+function swatchRow(pick) {
+  let cur = "";
+  const btns = INIT.palette.map(p => h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => { touched(wrap); cur = p.name; pick(p.name); paint(); } }));
+  const wrap = h("div", { class: "swatches" }, btns);
+  function paint() { btns.forEach((b, i) => b.classList.toggle("on", INIT.palette[i].name === cur)); }
+  wrap.set = v => { if (idle(wrap)) { cur = v; paint(); } };
+  return wrap;
+}
+
+function feelWord(v) {
+  return v > 0.75 ? "Best friends" : v > 0.4 ? "Friends" : v > 0.15 ? "Friendly" : v > -0.15 ? "Neutral" : v > -0.5 ? "Don't get along" : "Can't stand";
+}
+function relWord(r) { const x = INIT.relations.find(x => x.key === r); return x ? x.label.toLowerCase() : r; }
+
+// ---------------- Library ----------------
+
+PAGES.library = {
+  sig: () => S.library.map(l => l.name).join("|"),
+  build(root) {
+    add(root, h("h1", null, "Saved figures"),
+      h("p", { class: "sub" }, S.library.length ? "Your own characters. Spawn them back any time, as many as you like." : "Nothing saved yet. Open a figure and press “★ Save to library”."));
+    const grid = h("div", { class: "grid" });
+    for (const l of S.library) {
+      const svg = figSvg(); svg.update(STANDING, l.hex);
+      grid.append(h("div", { class: "card", style: { cursor: "default" } }, h("div", { class: "tape" }),
+        h("div", { class: "name" }, h("span", { class: "dot", style: { background: l.hex } }), l.name), svg,
+        h("div", { class: "act" }, l.describe), l.likes ? h("div", { class: "likes" }, l.likes) : null,
+        h("div", { class: "row", style: { marginTop: "8px" } },
+          h("button", { class: "btn small primary", onclick: () => { send({ t: "lib", op: "spawn", name: l.name }); toast(`${l.name} is on the way`); } }, "Spawn"),
+          armed("Delete", "Sure?", () => send({ t: "lib", op: "delete", name: l.name }), "btn small danger"))));
+    }
+    add(root, grid);
+  },
+};
+
+// ---------------- Colours & fights ----------------
+
+const REL_GLYPH = { Default: "·", Friends: "♥", Neutral: "–", Rivals: "⚔", Enemies: "☠", Ignore: "∅" };
+
+PAGES.fights = {
+  build(root) {
+    const F = () => S.fight;
+    const set = (key, v) => send({ t: "fight", key, v });
+    const checks = [
+      check("Fights happen", "Turn off for a peaceful desktop.", () => F().enabled, v => set("enabled", v)),
+      check("They can punch your cursor", "Grumpy figures may box with it, knocking it across the screen.", () => F().punchCursor, v => set("punchCursor", v)),
+      check("Show health bars", "Only while they're hurt.", () => F().healthBars, v => set("healthBars", v)),
+    ];
+    const fv = h("span", { class: "val" }), sv = h("span", { class: "val" }), rv = h("span", { class: "val" });
+    const freq = range(0, 2, 0.05, F().frequency, v => { fv.textContent = v.toFixed(2) + "×"; sendSoon("freq", { t: "fight", key: "frequency", v }); });
+    const str = range(0.25, 3, 0.05, F().strength, v => { sv.textContent = v.toFixed(2) + "×"; sendSoon("str", { t: "fight", key: "strength", v }); });
+    const rev = range(3, 120, 1, F().reviveSeconds, v => { rv.textContent = v + "s"; sendSoon("rev", { t: "fight", key: "reviveSeconds", v }); });
+    const death = select(INIT.deathRules.map(d => ({ value: d.key, label: d.label })), F().onZeroHealth, v => set("onZeroHealth", v));
+    const relOpts = INIT.relations.filter(r => r.key !== "Default").map(r => ({ value: r.key, label: r.label }));
+    const same = select(relOpts, F().sameColour, v => set("sameColour", v));
+    const diff = select(relOpts, F().differentColour, v => set("differentColour", v));
+    add(root, h("h1", null, "Colours & fights"), h("p", { class: "sub" }, "Colour decides who's friends, who's rivals and who's at war. Fights are live: every punch is decided in the moment."),
+      h("div", { class: "split" }, h("div", null, checks,
+        h("h2", null, "How rough"),
+        h("div", { class: "field" }, h("label", null, "How often"), freq, fv),
+        h("div", { class: "field" }, h("label", null, "Hit strength"), str, sv),
+        h("div", { class: "field" }, h("label", null, "At zero health"), death, h("span")),
+        h("div", { class: "field" }, h("label", null, "Back up after"), rev, rv)),
+      h("div", null,
+        h("h2", { style: { marginTop: 0 } }, "Who gets along"),
+        h("div", { class: "field", style: { gridTemplateColumns: "150px 1fr" } }, h("label", null, "Same colour"), same),
+        h("div", { class: "field", style: { gridTemplateColumns: "150px 1fr" } }, h("label", null, "Different colours"), diff),
+        h("h3", null, "Exceptions (click a square to change it)"), matrix(),
+        h("div", { class: "legend" }, Object.entries(REL_GLYPH).map(([k, g]) => h("span", null, `${g} ${k === "Default" ? "default" : k.toLowerCase()}`))))));
+    const cells = [...root.querySelectorAll("[data-pair]")];
+    return () => {
+      checks.forEach(c => c.update());
+      setRange(freq, F().frequency); setRange(str, F().strength); setRange(rev, F().reviveSeconds);
+      if (idle(freq)) fv.textContent = F().frequency.toFixed(2) + "×";
+      if (idle(str)) sv.textContent = F().strength.toFixed(2) + "×";
+      if (idle(rev)) rv.textContent = Math.round(F().reviveSeconds) + "s";
+      death.set(F().onZeroHealth); same.set(F().sameColour); diff.set(F().differentColour);
+      for (const c of cells) {
+        const r = F().pairs[c.dataset.pair];
+        c.textContent = REL_GLYPH[r || "Default"];
+        c.classList.toggle("def", !r);
+        c.title = `${c.dataset.pair.replace("|", " & ")}: ${r ? relWord(r) : "default"}`;
+      }
+    };
+  },
+};
+
+function matrix() {
+  const names = INIT.palette.map(p => p.name);
+  const order = ["Default", "Friends", "Neutral", "Rivals", "Enemies", "Ignore"];
+  const key = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+  const t = h("table", { class: "matrix" });
+  t.append(h("tr", null, h("th"), INIT.palette.map(p => h("th", null, h("span", { class: "cdot", style: { background: p.hex }, title: p.name })))));
+  INIT.palette.forEach((p, i) => {
+    t.append(h("tr", null, h("th", null, h("span", { class: "cdot", style: { background: p.hex }, title: p.name })),
+      names.map((n, j) => j < i ? h("td") : h("td", null, h("button", { "data-pair": key(p.name, n), onclick: e => {
+        const k = e.currentTarget.dataset.pair, cur = S.fight.pairs[k] || "Default";
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        const [a, b] = k.split("|");
+        send({ t: "fight", key: "pair", a, b, rel: next, v: 0 });
+      } })))));
+  });
+  return t;
+}
+
+// ---------------- Toys ----------------
+
+PAGES.toys = {
+  sig: () => S.props.map(p => p.id).join(","),
+  build(root) {
+    add(root, h("h1", null, "Toys"), h("p", { class: "sub" }, "Balls to kick, juggle, throw and fight over. Grab one with the mouse to throw it yourself."),
+      h("div", { class: "row" }, INIT.propKinds.map(k => h("button", { class: "btn small", onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, `+ ${k.name}`)),
+        S.props.length ? armed("Remove all", "Sure?", () => send({ t: "clear", what: "balls" }), "btn small danger") : null));
+    const list = h("div", { style: { marginTop: "16px" } });
+    const items = S.props.map(p => {
+      const sv = h("span", { class: "val" }), bv = h("span", { class: "val" });
+      const size = range(0.3, 5, 0.05, p.size, v => { sv.textContent = Math.round(v * 100) + "%"; sendSoon("ps" + p.id, { t: "prop", op: "size", id: p.id, v }); });
+      const bounce = range(0, 0.95, 0.01, p.bounce, v => { bv.textContent = Math.round(v * 100) + "%"; sendSoon("pb" + p.id, { t: "prop", op: "bounce", id: p.id, v }); });
+      const pic = ballSvg(p.kind, p.hex);
+      const colour = h("input", { type: "color", value: p.hex.toLowerCase() });
+      colour.addEventListener("input", () => { touched(colour); sendSoon("pc" + p.id, { t: "prop", op: "color", id: p.id, hex: colour.value }); });
+      const holder = h("span", { class: "hint" });
+      const el = h("div", { class: "toy" + (route.toy === p.id ? " sk" : "") }, pic,
+        h("div", null, h("div", { style: { font: "18px var(--hand)" } }, p.name, " ", holder),
+          h("div", { class: "ctl" }, h("label", null, "Size"), size, sv, h("label", null, "Bounce"), bounce, bv,
+            p.kind === "Ball" || p.kind === "BeachBall" ? [h("label", null, "Colour"), colour, h("span")] : null)),
+        armed("Remove", "Sure?", () => send({ t: "prop", op: "remove", id: p.id }), "btn small danger"));
+      list.append(el);
+      return { id: p.id, size, bounce, sv, bv, holder };
+    });
+    if (!S.props.length) list.append(h("div", { class: "empty" }, "No toys out right now."));
+    add(root, list);
+    return () => {
+      for (const it of items) {
+        const p = S.props.find(x => x.id === it.id); if (!p) continue;
+        setRange(it.size, p.size); setRange(it.bounce, p.bounce);
+        if (idle(it.size)) it.sv.textContent = Math.round(p.size * 100) + "%";
+        if (idle(it.bounce)) it.bv.textContent = Math.round(p.bounce * 100) + "%";
+        it.holder.textContent = p.held ? `(${p.held} has it)` : "";
+      }
+    };
+  },
+};
+
+function ballSvg(kind, hex) {
+  const g = s("svg", { viewBox: "-32 -32 64 64" });
+  const outline = { fill: "none", stroke: "var(--ink)", "stroke-width": 2.2, filter: "var(--stroke-filter)" };
+  if (kind === "SoccerBall") {
+    g.append(s("circle", { r: 26, fill: "#fff" }), s("path", { d: "M0 -9 L8.6 -2.8 L5.3 7.3 L-5.3 7.3 L-8.6 -2.8 Z", fill: "#222" }),
+      s("path", { d: "M0 -9 L0 -26 M8.6 -2.8 L24 -8 M5.3 7.3 L15 21 M-5.3 7.3 L-15 21 M-8.6 -2.8 L-24 -8", stroke: "#222", "stroke-width": 2, fill: "none" }));
+  } else if (kind === "Basketball") {
+    g.append(s("circle", { r: 26, fill: "#e8742c" }), s("path", { d: "M-26 0 H26 M0 -26 V26 M-18 -18 Q-6 0 -18 18 M18 -18 Q6 0 18 18", stroke: "#3a2214", "stroke-width": 2, fill: "none" }));
+  } else if (kind === "BeachBall") {
+    const cols = [hex, "#fff", "#fdd835", "#fff", "#1e88e5", "#fff"];
+    cols.forEach((c, i) => {
+      const a0 = i / 6 * Math.PI * 2, a1 = (i + 1) / 6 * Math.PI * 2;
+      g.append(s("path", { d: `M0 0 L${Math.cos(a0) * 26} ${Math.sin(a0) * 26} A26 26 0 0 1 ${Math.cos(a1) * 26} ${Math.sin(a1) * 26} Z`, fill: c }));
+    });
+  } else g.append(s("circle", { r: 26, fill: hex }), s("path", { d: "M-12 -14 Q-6 -19 2 -18", stroke: "#fff8", "stroke-width": 4, fill: "none", "stroke-linecap": "round" }));
+  g.append(s("circle", { r: 26, ...outline }));
+  return g;
+}
+
+// ---------------- Settings ----------------
+
+PAGES.settings = {
+  build(root) {
+    const st = () => S.settings;
+    const setS = (key, v) => send({ t: "setting", key, v });
+    const chips = INIT.fps.map(o => {
+      const c = h("button", { class: "chip", onclick: () => { touched(c); setS("fps", o.value); } }, o.value > 0 ? `${o.label} fps` : o.label);
+      c.value = o.value;
+      return c;
+    });
+    const cv = h("span", { class: "val" });
+    const custom = range(15, 360, 1, st().fps > 0 ? st().fps : 60, v => { cv.textContent = v; sendSoon("fps", { t: "setting", key: "fps", v }); });
+    const themes = [["auto", "Follow Windows"], ["paper", "Paper"], ["chalk", "Chalkboard"]].map(([k, l]) => {
+      const c = h("button", { class: "chip", onclick: () => { touched(c); setS("theme", k); S.settings.theme = k; applyTheme(); } }, l);
+      c.key = k;
+      return c;
+    });
+    const checks = [
+      check("Remember everyone between runs", "Figures, their feelings and the balls come back next time.", () => st().remember, v => setS("remember", v)),
+      check("Show what they see", "Draws the window edges they can stand on and climb.", () => st().platforms, v => setS("platforms", v)),
+      check("Hide the figures", "Pauses everything until you turn it back off.", () => st().hidden, v => setS("hidden", v)),
+    ];
+    add(root, h("h1", null, "Settings"),
+      h("h2", null, "Frame rate"), h("p", { class: "sub" }, `Your monitor runs at ${INIT.refresh} Hz. Lower is lighter on your computer; higher is smoother.`),
+      h("div", { class: "row" }, chips),
+      h("div", { class: "field", style: { marginTop: "8px" } }, h("label", null, "Or exactly"), custom, cv),
+      h("h2", null, "Look"), h("div", { class: "row" }, themes),
+      h("h2", null, "Behaviour"), checks,
+      h("h2", null, "About"),
+      h("p", null, `StickFight ${INIT.version || ""}: stick figures that live, play and fight on your desktop.`),
+      h("div", { class: "row" },
+        h("button", { class: "btn small", onclick: () => window.open("https://github.com/Lindorak/StickFight") }, "GitHub page"),
+        armed("Quit StickFight", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
+    return () => {
+      chips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.value === st().fps); });
+      setRange(custom, st().fps > 0 ? st().fps : 60);
+      if (idle(custom)) cv.textContent = st().fps > 0 ? st().fps : "–";
+      themes.forEach(c => c.classList.toggle("on", c.key === st().theme));
+      checks.forEach(c => c.update());
+    };
+  },
+};
+
+// ---------------- theme + chrome ----------------
+
+const dark = window.matchMedia("(prefers-color-scheme: dark)");
+function applyTheme() {
+  const t = S ? S.settings.theme : "auto";
+  const chalk = t === "chalk" || (t === "auto" && dark.matches);
+  document.documentElement.classList.toggle("chalk", chalk);
+}
+dark.addEventListener("change", applyTheme);
+
+for (const b of document.querySelectorAll(".winbtn")) b.addEventListener("click", () => send({ t: b.dataset.win }));
+for (const e of document.querySelectorAll(".edge")) e.addEventListener("pointerdown", ev => { ev.preventDefault(); send({ t: "resize", edge: e.dataset.edge }); });
+if ($("#titlebar")) $("#titlebar").addEventListener("dblclick", e => { if (!e.target.closest(".winbtn")) send({ t: "max" }); });
+document.addEventListener("keydown", e => { if (QUICK && e.key === "Escape") send({ t: "close" }); });
+
+// ---------------- tray quick panel ----------------
+
+let quickUpdate = () => {};
+function buildQuick() {
+  const root = $("#quick");
+  const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
+  const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
+  const count = h("span", { class: "hint" });
+  add(root,
+    h("div", { class: "q-head" },
+      s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
+      h("span", { class: "brand-name" }, "StickFight"), h("span", { class: "spacer" }), count),
+    h("h3", null, "Draw someone"),
+    h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }))),
+    h("h3", null, "Toss in a toy"),
+    h("div", { class: "q-toys" }, INIT.propKinds.map(k => h("button", { class: "q-toy", title: k.name, onclick: () => send({ t: "prop", op: "add", kind: k.key }) }, ballSvg(k.key, "#E53935"), h("span", null, k.name)))),
+    h("div", { class: "q-checks" }, hideC, fightC),
+    h("div", { class: "row q-foot" },
+      h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
+      h("span", { class: "spacer" }),
+      armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
+  quickUpdate = () => {
+    hideC.update(); fightC.update();
+    const n = S.figures.length;
+    count.textContent = `${n} figure${n === 1 ? "" : "s"} · ${S.fpsNow || 0} fps`;
+  };
+}
+for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => go(t.dataset.page));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && route.page === "figure") go("cast"); });
+
+// ---------------- mock host (previewing the page in a normal browser) ----------------
+
+const Mock = {
+  handle(m) {
+    if (m.t === "fig") {
+      const f = this.state.figures.find(f => f.id === m.id);
+      if (f && m.op === "trait") f.traits[m.key] = m.v;
+      if (f && m.op === "rename") f.name = m.name;
+      if (f && m.op === "color") f.hex = m.hex;
+      if (f && m.op === "taste") f.tastes.opinions[m.key] = m.v;
+      if (f && m.op === "fond") f.fond = m.v;
+    }
+    if (m.t === "setting") this.state.settings[m.key] = m.v;
+    if (m.t === "fight") this.state.fight[m.key] = m.v;
+  },
+  start() {
+    const things = ["PlayingBall", "Juggling", "Climbing", "Exploring", "Chatting", "HighFives", "Fighting", "Sparring", "Napping", "Tricks", "Dancing", "Sitting", "HighPlaces", "Taskbar", "Ledges", "SoccerBalls", "Basketballs", "BeachBalls", "YourCursor", "BeingPickedUp", "BeingThrown"];
+    const group = k => ["HighPlaces", "Taskbar", "Ledges"].includes(k) ? "Places" : ["SoccerBalls", "Basketballs", "BeachBalls"].includes(k) ? "Toys" : ["YourCursor", "BeingPickedUp", "BeingThrown"].includes(k) ? "You" : "Things to do";
+    const opts = (...l) => l.map((label, v) => ({ v, label: v === 0 ? "Auto" : label }));
+    const palette = [["Red", "#E53935"], ["Blue", "#1E88E5"], ["Green", "#43A047"], ["Orange", "#FB8C00"], ["Purple", "#8E24AA"], ["Yellow", "#FDD835"], ["Cyan", "#00ACC1"], ["Pink", "#EC407A"], ["Black", "#262626"], ["White", "#F4F4F4"]];
+    receive({
+      t: "init", version: "0.4.0", refresh: 144,
+      palette: palette.map(([name, hex]) => ({ name, hex })),
+      presets: [["Balanced", "A bit of everything."], ["Explorer", "Always climbing to the next window."], ["Couch potato", "Sits, naps, sits again."], ["Hothead", "Swats first, asks later."]].map(([name, blurb]) => ({ name, blurb, traits: {} })),
+      things: things.map(k => ({ key: k, name: k.replace(/([a-z])([A-Z])/g, "$1 $2"), group: group(k) })),
+      styles: { walk: opts("", "Normal", "Bouncy", "Swagger"), run: opts("", "Sprinter", "Flailer"), idle: opts("", "Loose", "Arms Crossed"), climb: opts("", "Methodical"), jump: opts("", "Tuck"), fight: opts("", "Boxer", "Kicker"), celebrate: opts("", "Cheer", "Dance"), rope: opts("", "Never", "Rappel", "Haul", "Zip") },
+      gear: [{ v: 0, label: "Bare hands" }, { v: 1, label: "Boxing gloves" }, { v: 2, label: "Brass knuckles" }],
+      relations: ["Default", "Friends", "Neutral", "Rivals", "Enemies", "Ignore"].map(k => ({ key: k, label: k })),
+      deathRules: [{ key: "KnockdownOnly", label: "Just knocked down" }, { key: "KnockOut", label: "Knocked out, then gets back up" }, { key: "Permanent", label: "Dies for good" }],
+      propKinds: [{ key: "Ball", name: "Ball" }, { key: "SoccerBall", name: "Soccer ball" }, { key: "Basketball", name: "Basketball" }, { key: "BeachBall", name: "Beach ball" }],
+      fps: [{ label: "Match monitor (144 Hz)", value: -1 }, { label: "30", value: 30 }, { label: "60", value: 60 }, { label: "72", value: 72 }, { label: "120", value: 120 }, { label: "Unlimited", value: 0 }],
+    });
+    const mk = (id, name, hex, acts) => ({
+      id, name, hex, team: name, size: 1, gear: 0, activity: acts, feels: "Likes you", fond: 0.4, trust: 0.6, hp: 80, ko: false, dead: false, facing: 1, pose: STANDING,
+      mood: { stamina: 0.7, joy: 0.5, sadness: 0.1, fear: 0.05, annoyance: 0.2, boredom: 0.4, loneliness: 0.3 },
+      traits: { energy: 0.6, curiosity: 0.7, bravery: 0.5, playfulness: 0.8, aggression: 0.3, sociability: 0.6 },
+      describe: "Energetic, curious and playful",
+      tastes: { opinions: Object.fromEntries(things.map((k, i) => [k, Math.round(Math.sin(i * 7 + id) * 100) / 100])), fav: "Green", hate: "Black", describe: "Loves dancing, juggling, high places; hates napping. Favourite colour: green." },
+      style: { choice: { walk: 0, run: 0, idle: 0, climb: 0, jump: 0, fight: 0, celebrate: 0, rope: 0 }, resolved: { walk: "Bouncy", run: "Sprinter", idle: "Loose", climb: "Leaper", jump: "Flipper", fight: "Acrobat", celebrate: "Dance", rope: "Zip" }, describe: "Walks with a bounce, sprints, stands loose, fights with flips and flying kicks, and dances when it wins. Zips up a grappling hook." },
+      rels: [],
+    });
+    const figs = [mk(1, "Red", "#E53935", "Juggling"), mk(2, "Blue", "#1E88E5", "Chatting with Green"), mk(3, "Green", "#43A047", "Chatting with Blue"), mk(4, "Yellow", "#FDD835", "Climbing a rope")];
+    figs.forEach(f => f.rels = figs.filter(o => o !== f).map(o => ({ id: o.id, name: o.name, hex: o.hex, mine: Math.round(Math.sin(f.id * 3 + o.id) * 100) / 100, theirs: Math.round(Math.cos(f.id + o.id * 2) * 100) / 100, relation: "Neutral", similarity: 0.4, shared: ["Dancing"] })));
+    this.state = {
+      t: "state", figures: figs, props: [{ id: 7, kind: "SoccerBall", name: "Soccer ball", size: 1, bounce: 0.65, hex: "#E53935", held: null }, { id: 8, kind: "BeachBall", name: "Beach ball", size: 1.6, bounce: 0.8, hex: "#E53935", held: "Red" }],
+      library: [{ name: "Sparky", hex: "#FB8C00", size: 1, describe: "Hyper and fearless", likes: "Loves climbing, tricks." }],
+      fight: { enabled: true, punchCursor: true, frequency: 1, strength: 1, onZeroHealth: "KnockdownOnly", reviveSeconds: 15, healthBars: true, sameColour: "Friends", differentColour: "Neutral", pairs: { "Blue|Red": "Rivals" } },
+      settings: { fps: 60, remember: true, platforms: false, hidden: false, theme: "auto" }, fpsNow: 60,
+    };
+    let t = 0;
+    setInterval(() => {
+      t += 0.16;
+      for (const f of this.state.figures) {
+        const k = Math.sin(t * 3 + f.id), k2 = Math.cos(t * 3 + f.id);
+        f.pose = STANDING.map(([x, y], i) => i === J.HandN ? [x + k * 6, y - 8 - k2 * 6] : i === J.FootN ? [x + k * 4, y - Math.max(0, k) * 5] : [x, y + (i < 2 ? Math.sin(t * 2) * 0.6 : 0)]);
+      }
+      receive(JSON.parse(JSON.stringify(this.state)));
+    }, 160);
+  },
+};
+
+if (host) send({ t: "ready" }); else Mock.start();

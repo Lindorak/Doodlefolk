@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Numerics;
 using Vortice.Mathematics;
 
@@ -92,11 +92,34 @@ sealed class Prop
 
     public void ApplyCarry(Env env)
     {
-        if (Free && OnGround) Pos += env.Delta(GroundHwnd);
+        if (Free && OnGround) { var d = env.Delta(GroundHwnd); Pos += d; _prevPos += d; }
+    }
+
+    // Drawn between the last two simulation steps (see Figure.BeginInterp).
+    Vector2 _prevPos, _savePos;
+    float _prevAngle, _saveAngle;
+    bool _interp;
+
+    public void BeginInterp(float a)
+    {
+        _savePos = Pos; _saveAngle = Angle;
+        _interp = true;
+        if (a >= 1 || Vector2.DistanceSquared(_prevPos, Pos) > Radius * Radius * 100) return;
+        Pos = Vector2.Lerp(_prevPos, Pos, a);
+        Angle = _prevAngle + (Angle - _prevAngle) * a;
+    }
+
+    public void EndInterp()
+    {
+        if (!_interp) return;
+        Pos = _savePos; Angle = _saveAngle;
+        _interp = false;
     }
 
     public void Step(float dt, World w)
     {
+        _prevPos = Pos;
+        _prevAngle = Angle;
         SinceTouch += dt;
         SinceBounce += dt;
         if (Holder != null)

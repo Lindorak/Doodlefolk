@@ -384,6 +384,9 @@ sealed partial class Brain
         return f.Base.X + (it.Pos.X - (lo + hi) / 2);   // the curled-up body's middle in the middle of it
     }
 
+    /// <summary>The thing they're using right now (sitting on, warming up by, reading…), if any.</summary>
+    public Item? UsingNow => _g == G.UseItem ? _item : null;
+
     public Item? HidingIn => _g == G.UseItem && (_verb == Verb.Hide || (_verb == Verb.Lie && _item?.Def.Verbs.Contains(Verb.Hide) == true)) ? _item : null;
 
     /// <summary>An object we're using was grabbed, eaten by someone else, or removed.</summary>

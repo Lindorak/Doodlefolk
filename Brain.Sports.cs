@@ -9,6 +9,8 @@ sealed partial class Brain
 {
     public Match? Match;
     bool _toMatch;
+    int _courtTries;
+    float _courtTriedAt = -99;
     float _kickAt = -1, _actCd;
     Vector2 _sportKick;
     Vector2? _shotSpot;
@@ -213,6 +215,10 @@ sealed partial class Brain
             var plat = w.Env.Platforms.FirstOrDefault(p => p.Hwnd == court.GroundHwnd && court.Pos.X >= p.X1 - 2 && court.Pos.X <= p.X2 + 2);
             if (plat != null)
             {
+                // Can't get onto it (we keep "arriving" somewhere else, on top of something say): give up on this game.
+                _courtTries = _t0 - _courtTriedAt < 8 ? _courtTries + 1 : 1;
+                _courtTriedAt = _t0;
+                if (_courtTries > 3) { _courtTries = 0; f.Emote(V("can't get there…", "HOW DO I GET THERE?!", "forget it.", "um… I can't reach…", "the court eludes me"), 1.2f); LeaveMatch(); Go(G.Idle, 2); return; }
                 var a = Anchor.On(w.Env, plat, M.ClampIn(HomeX(m), plat.X1 + 10 * S, plat.X2 - 10 * S));
                 _toMatch = true;
                 Navigate(() => a.Resolve(w.Env), 20 * S, true, () => Go(G.Sport, 600), WalkPurpose.Other);

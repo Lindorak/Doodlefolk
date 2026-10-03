@@ -258,7 +258,7 @@ sealed partial class App
                 if (used) return;
                 if (gift != null)
                     used = !a._w.Items.Contains(gift) || gift.BitesLeft < gift.Def.Bites || gift.User != null || gift.Seated.Any(s => s != null) || gift.Holder != null || gift.Lifted
-                           || a._w.Figures.Any(f => f.Brain.Activity.Contains(gift.Def.Name, StringComparison.OrdinalIgnoreCase));
+                           || a._w.Figures.Any(f => f.Brain.UsingNow == gift || f.Brain.Activity.Contains(gift.Def.Name, StringComparison.OrdinalIgnoreCase));
                 else if (giftBall != null) used = giftBall.LastTouch != null || giftBall.Holder != null || a._w.Figures.Any(f => f.Brain.Seeking == giftBall);
             });
             a.SimRule("no asking for another present before using the last", 6, t => used || to == null || a._w.Wish?.By != to,
@@ -401,6 +401,9 @@ sealed partial class App
     {
         _simWall = DateTime.Now;
         World.Log("simtest: " + SimSpecText());
+        // Replaying a failure: DF_TRACE_AT=<seconds> logs every brain's goal changes from then on (events.log).
+        if (double.TryParse(Environment.GetEnvironmentVariable("DF_TRACE_AT"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var traceAt))
+            SimAt(traceAt, "trace on", () => { foreach (var f in _w.Figures) f.Brain.TraceUntil = 1e9f; });
         _w.Env.Refresh(_overlay.Handle);
         foreach (var fct in SimFactors)
         {

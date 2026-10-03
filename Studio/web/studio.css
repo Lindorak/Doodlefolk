@@ -522,3 +522,6 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .weight-ctl .val { min-width: 54px; font: 15px var(--scrawl); color: var(--ink-2); text-align: right; }
 /* A toggle button that's on (quick panel: Focus, Ambience, Moon gravity). */
 .btn.on { background: var(--marker); color: var(--ink); border-color: var(--ink); }
+/* Quit, always in reach: the Studio's title bar and the top of the quick panel. */
+.quit-top { app-region: no-drag; margin-right: 8px; white-space: nowrap; }
+.q-quit { white-space: nowrap; }

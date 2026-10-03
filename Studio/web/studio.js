@@ -406,6 +406,7 @@ function muteButton() {
   muteUpdate(b);
   return b;
 }
+if ($("#titlebar") && $(".winbtns")) $("#titlebar").insertBefore(armed("⏻ Quit", "Quit? Click again", () => send({ t: "quit" }), "btn small danger quit-top"), $(".winbtns"));
 if ($("#mute")) $("#mute").addEventListener("click", () => S && send({ t: "setting", key: "sound", v: !(S.settings.sound !== false) }));
 
 function onState() {
@@ -2146,7 +2147,8 @@ function buildQuick() {
   add(root,
     h("div", { class: "q-head" },
       s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
-      h("span", { class: "brand-name" }, "Doodlefolk"), h("span", { class: "spacer" }), count, muteB),
+      h("span", { class: "brand-name" }, "Doodlefolk"), h("span", { class: "spacer" }), count, muteB,
+      armed("⏻ Quit", "Quit? Click again", () => send({ t: "quit" }), "btn small danger q-quit")),
     h("h3", null, "Draw someone"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex, color: "#111", "font-size": "11px", "text-shadow": "0 0 2px #fff" }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }, S.settings.colourBlind ? TEAM_SYM[p.name] || "" : ""))),
     h("h3", null, "Draw something"), summonBox(true),
@@ -2175,7 +2177,7 @@ function buildQuick() {
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
       h("span", { class: "spacer" }),
-      armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
+      armed("Quit Doodlefolk", "Quit? Click again", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
     focusQ.classList.toggle("on", !!(S.settings.focus && S.settings.focus.on));
     ambQ.classList.toggle("on", !!(S.settings.ambience && S.settings.ambience.on));

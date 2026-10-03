@@ -54,7 +54,9 @@ static class Program
             App.Uninstall();
             return;
         }
-        if (!first) return;
+        // From the taskbar's jump list (or started again): tell the running copy, don't start a second one.
+        if (args.Contains("--quit")) { if (!first) App.SignalRunning(args); return; }
+        if (!first) { App.SignalRunning(args); return; }
         ApplicationConfiguration.Initialize();
         using var app = new App(args);
         Application.Run(app);

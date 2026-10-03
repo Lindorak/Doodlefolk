@@ -84,6 +84,7 @@ sealed partial class App : ApplicationContext
         _overlay.MouseDown += OnMouseDown;
         _overlay.MouseUp += (_, _) => EndPress();
         _tray = BuildTray();
+        ListenForSignals();
         if (_selfTest) { _tray.Visible = false; _clock.Scale = TestSpeed; SelfTestStage(); }
         if (_trailer) { _tray.Visible = false; if (_cardArt) CardArtStage(); else if (_animSheet) AnimSheetStage(); else if (_simRun) SimStage(); else TrailerStage(); }
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;

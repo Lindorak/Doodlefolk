@@ -102,6 +102,36 @@ static class ItemCatalog
     static Shape L(float x0, float y0, float x1, float y1, int c, float w = 1.6f) => new('l', new[] { x0, y0, x1, y1 }, c, w);
     static Shape C(int c, float w, params float[] xy) => new('c', xy, c, w);
 
+    // ---------------- pots ----------------
+    // Everything that grows grows in a proper terracotta pot: tapered, a rolled rim, dark soil on top. The plant
+    // comes up out of the soil (its shapes are drawn as if on the ground, then lifted by PotLift).
+    static int Terracotta => ItemDef.AddColour(M.Hex(0xC8643C));
+    static int TerracottaDark => ItemDef.AddColour(M.Hex(0x9A4A2B));
+    static int TerracottaLight => ItemDef.AddColour(M.Hex(0xE08A62));
+    static int Soil => ItemDef.AddColour(M.Hex(0x4A3128));
+    const float PotLift = 9.6f;
+
+    static Shape[] Pot(params Shape[] plant) => new[]
+    {
+        P(Terracotta, -5.4f, 0, 5.4f, 0, 7.1f, 8.6f, -7.1f, 8.6f),
+        L(-4.3f, 1.6f, -5.6f, 7.4f, TerracottaLight, 0.7f),
+        O(-8.3f, 8.2f, 8.3f, 11.4f, 1.2f, TerracottaDark),
+        L(-7.4f, 10.4f, 7.4f, 10.4f, TerracottaLight, 0.5f),
+        E(0, 11.3f, 7.0f, 1.15f, Soil),
+    }.Concat(plant.Select(Lift)).ToArray();
+
+    static Shape Lift(Shape sh)
+    {
+        var p = (float[])sh.P.Clone();
+        switch (sh.Kind)
+        {
+            case 'e': p[1] += PotLift; break;
+            case 'r': case 'o': case 'l': p[1] += PotLift; p[3] += PotLift; break;
+            default: for (int i = 1; i < p.Length; i += 2) p[i] += PotLift; break;
+        }
+        return sh with { P = p };
+    }
+
     public static ItemDef[] All { get; private set; } = WithDetails(Build());
 
     /// <summary>Objects from mods join the catalogue.</summary>
@@ -247,33 +277,33 @@ static class ItemCatalog
         // ---------------- garden ----------------
         Add(new ItemDef
         {
-            Key = "seedpatch", Name = "Seed patch", Words = new[] { "seed", "seeds", "plant a seed", "garden", "flower bed", "seed patch" }, W = 18, H = 4, Color = M.Hex(0x6D4C41),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), E(-3, 2.6f, 1, 0.6f, 1), E(2.5f, 2.8f, 1, 0.6f, 1) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+            Key = "seedpatch", Name = "Seed patch", Words = new[] { "seed", "seeds", "plant a seed", "garden", "flower bed", "seed patch", "flower pot", "plant pot", "pot" }, W = 18, H = 12, Color = M.Hex(0x6D4C41),
+            Shapes = Pot(E(-3, 2.1f, 0.9f, 0.5f, 17), E(2.5f, 2.2f, 0.9f, 0.5f, 17), E(0, 2.0f, 0.8f, 0.45f, 17)), Verbs = new[] { Verb.Tend }, Mass = 1,
         });
         Add(new ItemDef
         {
-            Key = "sprout", Name = "Sprout", Words = new[] { "sprout", "seedling" }, W = 18, H = 10, Color = M.Hex(0x6D4C41),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), L(0, 2, 0, 8, 18, 1.2f), E(-2.2f, 8.2f, 2.2f, 1.1f, 18), E(2.2f, 8.2f, 2.2f, 1.1f, 18) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+            Key = "sprout", Name = "Sprout", Words = new[] { "sprout", "seedling" }, W = 18, H = 20, Color = M.Hex(0x6D4C41),
+            Shapes = Pot(L(0, 2, 0, 8, 18, 1.2f), E(-2.2f, 8.2f, 2.2f, 1.1f, 18), E(2.2f, 8.2f, 2.2f, 1.1f, 18)), Verbs = new[] { Verb.Tend }, Mass = 1,
         });
         Add(new ItemDef
         {
-            Key = "bud", Name = "Budding plant", Words = new[] { "bud", "young plant", "plant" }, W = 18, H = 20, Color = M.Hex(0x6D4C41),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 0), L(0, 2, 0, 17, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 12, 3.5f, 1.4f, 18), E(0, 18.5f, 1.8f, 2.6f, 10) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+            Key = "bud", Name = "Budding plant", Words = new[] { "bud", "young plant", "plant" }, W = 18, H = 30, Color = M.Hex(0x6D4C41),
+            Shapes = Pot(L(0, 2, 0, 17, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 12, 3.5f, 1.4f, 18), E(0, 18.5f, 1.8f, 2.6f, 10)), Verbs = new[] { Verb.Tend }, Mass = 1,
         });
         Add(new ItemDef
         {
-            Key = "tulip", Name = "Tulip", Words = new[] { "tulip", "flower", "flowers", "rose", "daisy" }, W = 18, H = 26, Color = M.Hex(0xE53935),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 19, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 13, 3.5f, 1.4f, 18), P(0, -3.5f, 19, 3.5f, 19, 4, 25, 1.5f, 23, 0, 26, -1.5f, 23, -4, 25) }, Verbs = new[] { Verb.Tend }, Mass = 1, Likes = new[] { Thing.Sitting },
+            Key = "tulip", Name = "Tulip", Words = new[] { "tulip", "flower", "flowers", "rose", "daisy" }, W = 18, H = 36, Color = M.Hex(0xE53935),
+            Shapes = Pot(L(0, 2, 0, 19, 10, 1.6f), E(-3.5f, 9, 3.5f, 1.4f, 18), E(3.5f, 13, 3.5f, 1.4f, 18), P(0, -3.5f, 19, 3.5f, 19, 4, 25, 1.5f, 23, 0, 26, -1.5f, 23, -4, 25)), Verbs = new[] { Verb.Tend }, Mass = 1, Likes = new[] { Thing.Sitting },
         });
         Add(new ItemDef
         {
-            Key = "sunflower", Name = "Sunflower", Words = new[] { "sunflower", "sunflowers" }, W = 22, H = 40, Color = M.Hex(0xFDD835),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 33, 10, 2), E(-4.5f, 14, 4.5f, 1.8f, 18), E(4.5f, 21, 4.5f, 1.8f, 18), E(0, 34, 8, 8, 0), E(0, 34, 4, 4, 13) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+            Key = "sunflower", Name = "Sunflower", Words = new[] { "sunflower", "sunflowers" }, W = 22, H = 50, Color = M.Hex(0xFDD835),
+            Shapes = Pot(L(0, 2, 0, 33, 10, 2), E(-4.5f, 14, 4.5f, 1.8f, 18), E(4.5f, 21, 4.5f, 1.8f, 18), E(0, 34, 8, 8, 0), E(0, 34, 4, 4, 13)), Verbs = new[] { Verb.Tend }, Mass = 1,
         });
         Add(new ItemDef
         {
-            Key = "tomatoplant", Name = "Tomato plant", Words = new[] { "tomato plant", "tomato", "tomatoes", "vegetable", "veggie patch" }, W = 22, H = 26, Color = M.Hex(0xE53935),
-            Shapes = new[] { E(0, 1.5f, 9, 2.2f, 13), L(0, 2, 0, 24, 10, 1.6f), L(0, 12, -6, 18, 10, 1.2f), L(0, 15, 6, 21, 10, 1.2f), E(-5, 9, 4, 2, 18), E(5, 14, 4, 2, 18), E(-6, 16, 2.2f, 2.2f, 0), E(6, 19, 2.2f, 2.2f, 0), E(2, 25, 2.2f, 2.2f, 0) }, Verbs = new[] { Verb.Tend }, Mass = 1,
+            Key = "tomatoplant", Name = "Tomato plant", Words = new[] { "tomato plant", "tomato", "tomatoes", "vegetable", "veggie patch" }, W = 22, H = 36, Color = M.Hex(0xE53935),
+            Shapes = Pot(L(0, 2, 0, 24, 10, 1.6f), L(0, 12, -6, 18, 10, 1.2f), L(0, 15, 6, 21, 10, 1.2f), E(-5, 9, 4, 2, 18), E(5, 14, 4, 2, 18), E(-6, 16, 2.2f, 2.2f, 0), E(6, 19, 2.2f, 2.2f, 0), E(2, 25, 2.2f, 2.2f, 0)), Verbs = new[] { Verb.Tend }, Mass = 1,
         });
 
         // ---------------- seasonal ----------------

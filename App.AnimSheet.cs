@@ -148,7 +148,7 @@ sealed partial class App
                 }
                 var fig = f; var t = thing;
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => fig.Brain.HaulNow(t, t.Pos.X + 260 * _w.Scale, _w)));
-            }, (f, _) => thing != null ? new Vector2(thing.Pos.X, thing.Pos.Y - 40 * _w.Scale) : Vector2.Zero, null, 3.4f));
+            }, (f, _) => thing != null ? new Vector2(thing.Pos.X, (f?.Base.Y ?? thing.Pos.Y) - 40 * _w.Scale) : Vector2.Zero, null, 3.4f));
         }
         // Skipping rope: a beginner, an expert (double-unders), and long rope with two turners.
         foreach (var (label, skill, longRope) in new[] { ("Beginner", 0.15f, false), ("Expert", 0.9f, false), ("Long rope", 0.3f, true), ("Double Dutch", 0.8f, true) })
@@ -174,7 +174,7 @@ sealed partial class App
                     }
                 var fig = f; var it = rope;
                 _animLater.Add((_tFrame / (double)TFps + (longRope ? 1.6 : 0.1), () => fig.Brain.UseNow(it, Verb.Skip, _w)));
-            }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 1.6f));
+            }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, longRope ? 3.5f : 1.6f));
         }
         // Hide-and-seek behind a window: tucked into the corner where one window's top goes behind another.
         foreach (var (label, peek) in new[] { ("Behind a window", false), ("Peeking round a window", true) })
@@ -255,7 +255,7 @@ sealed partial class App
         Fig("Hair", "Afro, face on", 1.5f, f => { f.Look.Hair = "afro"; f.Look.HairColour = "#2B1D16"; f.SetAction(Act.SitFront); }, 1.0f);
         // Juggling with their hands: three, four (a fountain) and five, face on.
         foreach (var (label, skill) in new[] { ("Three", 0.3f), ("Four (fountain)", 0.7f), ("Five", 0.95f) })
-            Fig("Juggling", label, 2.2f, f => { f.Brain.Skills[SkillKind.Juggling] = skill; f.Brain.StartHandJuggle(_w, 60); f.JugCatch = () => true; }, 2.1f);
+            Fig("Juggling", label, 2.2f, f => { f.Brain.Skills[SkillKind.Juggling] = skill; f.Brain.StartHandJuggle(_w, 60); f.JugCatch = () => true; }, skill > 0.85f ? 2.4f : 2.1f);
         Fig("Juggling", "A fumble", 4f, f => { f.Brain.Skills[SkillKind.Juggling] = 0.2f; f.Brain.StartHandJuggle(_w, 60); int n = 0; f.JugCatch = () => ++n < 4; }, 1.0f);
         // Jumping at the cursor: hung in the air at different heights above them (and a little to one side); counts the hits.
         foreach (var (label, upH, off) in new[] { ("Cursor just overhead", 0.25f, 0f), ("Cursor high", 0.8f, 0f), ("Cursor very high", 1.35f, 0f), ("Cursor high, to the side", 0.8f, 30f), ("Cursor high, drifting", 0.8f, -1f), ("Hunter, cursor high", 0.8f, -2f) })
@@ -269,7 +269,7 @@ sealed partial class App
                 int hits0 = Figure.CursorHits, swings0 = Figure.CursorSwings;
                 if (off == -1)   // drifting slowly back and forth over their head
                     for (int k = 1; k < 78; k++) { int kk = k; float x0 = fig.Base.X; _animLater.Add((_tFrame / (double)TFps + k * 0.1, () => _fakeCursor = new Vector2(x0 + MathF.Sin(kk * 0.1f * 1.3f) * 70 * S, _fakeCursor!.Value.Y))); }
-                if (off == -2) { fig.Hunter = true; _fakeCursor = new Vector2(fig.Base.X + 200 * S, _fakeCursor!.Value.Y); }
+                if (off == -2) { fig.Hunter = true; _fakeCursor = new Vector2(fig.Base.X + 200 * S, _fakeCursor!.Value.Y); fig.Brain.OnSpawned(); }
                 else fig.Brain.BoxCursorNow();
                 _animLater.Add((_tFrame / (double)TFps + 7.9, () => Console.WriteLine($"{label}: {Figure.CursorHits - hits0} hits of {Figure.CursorSwings - swings0} jumps")));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - f.Height) : Vector2.Zero, null, 2.2f));
@@ -293,7 +293,14 @@ sealed partial class App
                     var c = SpawnItem(ItemCatalog.Find("campfire")!);
                     c!.Pos = new Vector2(top.X1 + 200 * S, top.Y); c.Vel = Vector2.Zero; c.OnGround = true;
                 }
-                if (walk) { f.Facing = 1; f.DesiredVX = f.WalkSpeed; }
+                if (walk)
+                {
+                    var walker = f;
+                    _animLater.Add((_tFrame / (double)TFps + 0.15, () =>
+                    {
+                        walker.Brain.Puppet(99); walker.Facing = 1; walker.DesiredVX = walker.WalkSpeed;
+                    }));
+                }
             }, (f, _) => f != null ? new Vector2(walk ? f.Base.X : 1100, f.Base.Y - 20 * _w.Scale) : Vector2.Zero, null, walk ? 1.2f : 2.4f));
         }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
@@ -410,6 +417,12 @@ sealed partial class App
         foreach (var f in _w.Figures.ToList()) _w.RemoveFigure(f);
         _w.Pets.Clear();
         foreach (var it in _w.Items.ToList()) _w.RemoveItem(it);
+        foreach (var prop in _w.Props.ToList()) _w.RemoveProp(prop);
+        _w.Env.Staged!.Clear();
+        _w.Env.Refresh(_overlay.Handle);
+        _w.Weather.ClearCover();
+        _w.Seasons.ClearFallen(_w.Scale);
+        _fakeCursor = new Vector2(-5000, -5000);
         _animFig = null; _animPet = null;
         var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
         if (job.Pet is { } kind)

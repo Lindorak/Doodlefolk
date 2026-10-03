@@ -104,6 +104,7 @@ sealed partial class Brain
         Stamina = o.Stamina; Boredom = o.Boredom; Loneliness = o.Loneliness; Annoyance = o.Annoyance; CursorTrust = o.CursorTrust;
         Episodes.Clear(); Episodes.AddRange(o.Episodes);
         _gift = o._gift; _giftBall = o._giftBall; _giftAt = o._giftAt;   // a present they haven't got to yet
+        Dream = o.Dream; DreamsDone.Clear(); DreamsDone.AddRange(o.DreamsDone);
         _fondness = o._fondness;
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
         foreach (var (k, v) in o.Love) Love[k] = v;
@@ -202,7 +203,18 @@ sealed partial class Brain
     }
 
     /// <summary>How long a huff lasts: longer the more fed up they already are.</summary>
-    float AnnoyedFor => 1.2f + Annoyance * 3.5f;
+    float AnnoyedFor
+    {
+        get
+        {
+            _huffs.Add(_t0);
+            _huffs.RemoveAll(t => _t0 - t > 15);
+            return 1.2f + Annoyance * 3.5f + (_huffs.Count >= 3 ? 2.5f : 0);
+        }
+    }
+    readonly List<float> _huffs = new();
+    /// <summary>Had enough (three huffs in a quarter of a minute): off somewhere quieter.</summary>
+    bool FedUp => _huffs.Count >= 3 && _t0 - _huffs[^1] < 15;
 
     public void OnHit(Figure? from, bool knockedDown, World w)
     {
@@ -250,6 +262,7 @@ sealed partial class Brain
         RecallPlace(w);
         UpdateSymbols(w);
         EnjoyGift(w);
+        UpdateAmbition(w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);
@@ -293,6 +306,14 @@ sealed partial class Brain
         switch (_g)
         {
             case G.Busy: break;
+            case G.Idle when FedUp && _t > 0.2f && f.Grounded:
+            {
+                _huffs.Clear();
+                f.Emote(V("I'm out.", "OKAY, ENOUGH!", "Ugh. Leaving.", "I need some quiet…", "Elsewhere."), 1.4f);
+                var seg = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+                if (seg != null && PickExplore(w.Env, seg, out var away)) away(); else if (seg != null) Wander(seg);
+                break;
+            }
             case G.Idle:
                 DoIdle(w);
                 if (_t > _dur && f.Action != Act.Fidget) Choose(w);
@@ -818,6 +839,8 @@ sealed partial class Brain
         PrankOptions(w, opts);
         ModBehaviourOptions(w, opts);
         ParentOptions(w, opts);
+        AmbitionOptions(w, opts);
+        GuestOptions(w, opts);
         Decide(opts);
     }
 

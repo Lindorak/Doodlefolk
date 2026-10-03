@@ -234,6 +234,7 @@ sealed partial class App
             diary = b.Diary.AsEnumerable().Reverse().Take(80).Select(d => new { at = d.At.ToString("yyyy-MM-ddTHH:mm:ss"), text = d.Text, mood = d.Mood }),
             decision = b.LastDecision, decidedAgo = R(b.DecidedAgo), route = b.RoutePlan,
             habits = b.Habits().Select(x => new { what = x.what, v = R(x.v), tried = x.tried }),
+            dream = b.DreamTitle, dreamProgress = b.Dream != null ? R(b.Dream.Progress) : 0, dreamStep = b.DreamStep, dreamsDone = b.DreamsDone.TakeLast(6),
             remembers = b.Remembers().Select(e => new { text = e.Text, feel = e.Feel, who = e.Who, weight = e.Weight, when = e.When.ToString("yyyy-MM-ddTHH:mm:ss") }),
             gender = f.Gender.ToString(),
             attraction = Enum.GetValues<Attraction>().Where(a => a is Attraction.Girls or Attraction.Boys or Attraction.Nonbinary && f.Attraction.HasFlag(a)).Select(a => a.ToString()),

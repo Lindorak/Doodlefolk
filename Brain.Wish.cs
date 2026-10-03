@@ -162,18 +162,26 @@ sealed partial class Brain
 
     /// <summary>They asked for it, so as soon as it's landed they go and enjoy it: eat the pizza, sit in the chair, play
     /// with the ball (unless they're asleep, in a fight or in the middle of a game; then when they're free).</summary>
+    /// <summary>Free to go for a present: not asleep, fighting, in a game or an event, or eating; voluntary play and
+    /// lounging (and hunting your cursor) are dropped for it.</summary>
+    public bool FreeForGift => f.Mode == Mode.Control && f.Grounded && !Engaged && !InFight && !Asleep && Match == null
+        && (_g is G.Idle or G.Watch or G.SitFloor or G.SitEdge or G.Cheer or G.Wave or G.Hunt or G.Annoyed or G.Dribble or G.Juggle or G.Kick or G.Trick or G.Groove or G.Carry
+            || (_g == G.Walk && _purpose is WalkPurpose.Wander or WalkPurpose.Explore or WalkPurpose.Ball)
+            || (_g == G.UseItem && _verb is not Verb.Eat && _item != _gift));
+
+    float _giftTryAt;
+
     void EnjoyGift(World w)
     {
         if (_giftAt < 0 || _t0 - _giftAt < 0.8f) return;
-        if (_t0 - _giftAt > 120) { _giftAt = -1; return; }
-        bool free = f.Mode == Mode.Control && f.Grounded && !Engaged && !InFight && !Asleep
-                    && (_g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch or G.Cheer or G.Wave or G.Hunt or G.Annoyed || (_g == G.UseItem && _verb is not Verb.Eat && _item != _gift));
-        if (!free || (_g == G.Walk && _purpose != WalkPurpose.Wander && _purpose != WalkPurpose.Explore)) return;
+        if (_t0 - _giftAt > 150) { _giftAt = -1; _gift = null; _giftBall = null; return; }
+        if (!FreeForGift || _t0 < _giftTryAt) return;
         if (_gift is { } g)
         {
             if (!w.Items.Contains(g)) { _gift = null; _giftAt = -1; return; }
             if (!g.OnGround || !g.Free || GiftVerb(g) is not Verb gv) return;
-            _gift = null; _giftAt = -1;
+            // Keep it in mind until it's actually used: if the way there fails, try again in a bit.
+            _giftTryAt = _t0 + 12;
             f.Emote(gv == Verb.Eat ? V("yum!", "FOOD!!", "mine.", "for me…", "a feast!") : "♪", 1);
             UseItem(g, gv, w);
             return;

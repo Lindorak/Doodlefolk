@@ -28,6 +28,8 @@ sealed partial class Brain
     /// <summary>Top options at the last decision (label, share of the chance) and what was picked.</summary>
     public (string label, float share)[] Thoughts = Array.Empty<(string, float)>();
     public string LastDecision = "";
+    /// <summary>How many decisions they've made (this run).</summary>
+    public int Decisions;
     public float DecidedAgo => _t0 - _decidedAt;
     float _decidedAt;
 
@@ -70,6 +72,7 @@ sealed partial class Brain
         LastDecision = pick.label;
         World.Audit($"decide\t{f.Name}\t{pick.label}\t{pick.s / total:F2}\t{string.Join("|", Thoughts.Take(4).Select(t => $"{t.label}:{t.share:F2}"))}");
         _decidedAt = _t0;
+        Decisions++;
         _recent.Add((pick.label, _t0));
         if (_recent.Count > 30) _recent.RemoveAt(0);
         pick.act();
@@ -105,8 +108,10 @@ sealed partial class Brain
             var key = NavGraph.Key(c.p);
             plan = () =>
             {
+                var reached = c.p;
                 Navigate(() => target.Resolve(env), 4 * S, false, () =>
                 {
+                    NoteExplored(reached);
                     if (startY - f.Base.Y > 250 * S) DiaryClimbed(startY - f.Base.Y);
                     if (startY - f.Base.Y > 120 * S && P.Playfulness > 0.45f && rng.NextDouble() < 0.6) Go(G.Cheer, 0.9f);
                     else Go(G.Idle, rng.Range(0.5f, 2f));

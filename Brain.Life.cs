@@ -41,6 +41,7 @@ sealed partial class Brain
             if (_practisedAt.TryGetValue(k, out var at) && f.Age - at < 0.5f) return;
             _practisedAt[k] = f.Age;
         }
+        amount *= PracticeBoost(k);
         float before = Sk(k), after = MathF.Min(1, before + amount * (1 - before));
         Skills[k] = after;
         string what = k switch { SkillKind.Ball => "ball games", SkillKind.Drawing => "drawing", _ => k.ToString().ToLowerInvariant() };

@@ -137,6 +137,7 @@ sealed partial class Brain
     {
         var it = _item;
         if (it == null || !w.Items.Contains(it) || !it.Free) { LeaveItem(); Go(G.Idle, 1); return; }
+        if (it == _gift) { _gift = null; _giftAt = -1; }
         if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter or Verb.Lasso) { Equipped(it); return; }
         if (_verb == Verb.Collect) { _item = null; Collected(it, w); Go(G.Cheer, 1); return; }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);

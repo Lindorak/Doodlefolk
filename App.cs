@@ -923,6 +923,8 @@ sealed partial class App : ApplicationContext
         if (s.Gender is Gender g) f.Gender = g;
         f.Brain.Diary.Clear();
         f.Brain.Diary.AddRange(s.Diary);
+        f.Brain.Dream = s.Dream;
+        f.Brain.DreamsDone.Clear(); f.Brain.DreamsDone.AddRange(s.DreamsDone);
         f.Brain.Episodes.Clear();
         foreach (var e in s.Episodes.TakeLast(96)) { e.At = e.Recalled = -(float)(DateTime.Now - e.When).TotalSeconds; f.Brain.Episodes.Add(e); }
         foreach (var (k, v) in s.Skills) if (Enum.TryParse<SkillKind>(k, out var sk)) f.Brain.Skills[sk] = Math.Clamp(v, 0, 1);
@@ -996,6 +998,7 @@ sealed partial class App : ApplicationContext
             Sweetheart = f.Brain.Sweetheart(_w)?.Name,
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
             Episodes = f.Brain.Episodes.ToList(),
+            Dream = f.Brain.Dream, DreamsDone = f.Brain.DreamsDone.ToList(),
             Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
             Born = f.Brain.Born,
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).Union(f.Brain.ParentNames).ToList(),

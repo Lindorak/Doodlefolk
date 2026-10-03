@@ -46,7 +46,7 @@ static class Archetypes
 sealed partial class Brain
 {
     Archetype A => f.Archetype;
-    float _jealous, _archCd, _flusterCd;
+    float _jealous, _archCd, _flusterCd, _jealousCd;
     Figure? _jealousOf;
 
     /// <summary>For the tests: who they're jealous of, and who they're fighting (if anyone).</summary>
@@ -219,9 +219,10 @@ sealed partial class Brain
                 bool busyWithOther = other != null && other != f && dear.Brain._g is G.Chat or G.DanceWith or G.HighFive or G.SitWith or G.Follow;
                 _jealous = busyWithOther ? M.Clamp01(_jealous + 0.12f) : MathF.Max(0, _jealous - 0.04f);
                 if (busyWithOther) _jealousOf = other;
-                if (_jealous > 0.6f && _jealousOf != null && !Engaged && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch && !InFight && Stamina > 0.2f)
+                if (_jealous > 0.6f && _jealousOf != null && _t0 > _jealousCd && !Engaged && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch && !InFight && Stamina > 0.2f)
                 {
                     _jealous = 0.2f;
+                    _jealousCd = _t0 + 30;
                     var rival = _jealousOf;
                     SayInCharacter("jealous", dear, w, null, 2);
                     AddAffinity(rival, -0.04f);
@@ -231,7 +232,9 @@ sealed partial class Brain
                     {
                         FaceTo(rival.Base.X);
                         SayInCharacter("glare", rival, w, "…", 1.6f);
-                        Go(G.Idle, 2.5f);
+                        // Then stick close for a while.
+                        Go(G.Follow, rng.Range(10, 20));
+                        _partner = dear; _initiator = true;
                     }, WalkPurpose.Social);
                     _navAbout = dear;
                 }

@@ -898,6 +898,8 @@ const SUBPANELS = {
     const status = h("p", { class: "sub" });
     // What's on their mind: the options weighed at the last decision, and the route they're following.
     const decided = h("p", { class: "sub" });
+    const dreamLine = h("div", { class: "meter" }, h("label", null, "Dream"), h("div", { class: "bar" }, h("i", { style: { "--fill": "var(--accent)" } })), h("span", { class: "n" }));
+    const dreamHint = h("p", { class: "hint" });
     const habits = h("div", { class: "hint" });
     const remembers = h("ul", { class: "memories" });
     const route = h("p", { class: "hint" });
@@ -908,13 +910,18 @@ const SUBPANELS = {
         h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"),
         h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice: juggling, climbing, fighting, ball games, dancing and drawing all get better the more they do them."),
         h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "party" }) }, "🎉 Throw them a party"), bday)),
-      h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), decided, thoughts, route, h("h3", null, "Habits they've formed"), habits,
+      h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), dreamLine, dreamHint, decided, thoughts, route, h("h3", null, "Habits they've formed"), habits,
         h("h3", null, "What they remember most"), remembers,
         h("p", { class: "hint" }, "Each time they decide, every option gets a score from their needs, mood, likes and personality. Bars show how likely each one was. Things they've done a lot lately score lower, and places they couldn't reach are skipped for a while."))));
     const skillBox = h("div", { class: "thoughts" });
     const bday = h("span", { class: "hint" });
     let thoughtSig = "", skillSig = "", remSig = "";
     return f => {
+      dreamLine.querySelector("label").textContent = f.dream ? "Dream" : "Dream";
+      dreamLine.querySelector("i").style.width = Math.round((f.dreamProgress || 0) * 100) + "%";
+      dreamLine.querySelector(".n").textContent = f.dream ? Math.round((f.dreamProgress || 0) * 100) + "%" : "";
+      dreamHint.textContent = (f.dream ? `${f.dream}${f.dreamStep ? " · next: " + f.dreamStep.toLowerCase() : ""}` : "No big dream right now.")
+        + ((f.dreamsDone || []).length ? ` · Dreams come true: ${f.dreamsDone.length}` : "");
       decided.textContent = f.decision ? `Last decided to: ${f.decision.toLowerCase()} (${ago(f.decidedAgo)})` : "Hasn't had to decide anything yet.";
       route.textContent = f.route ? `Route: ${f.route}` : "";
       const hb = f.habits || [];

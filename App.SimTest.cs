@@ -254,7 +254,7 @@ sealed partial class App
             bool used = false;
             a.SimEvery(0.5, 5.5, "watch the present", t =>
             {
-                if (to != null && to.Mode == Mode.Control && to.Grounded) footTime += 0.5f;
+                if (to != null && to.Brain.FreeForGift) footTime += 0.5f;   // time they could have gone for it
                 if (used) return;
                 if (gift != null)
                     used = !a._w.Items.Contains(gift) || gift.BitesLeft < gift.Def.Bites || gift.User != null || gift.Seated.Any(s => s != null) || gift.Holder != null || gift.Lifted
@@ -264,8 +264,8 @@ sealed partial class App
             a.SimAt(45, "the wish was enjoyed", () =>
             {
                 // Fair only if they had a chance (on their feet for a while, not flung about the whole time).
-                if ((gift != null || giftBall != null) && footTime >= 10)
-                    a.SimCheck("a granted wish gets used", used, $"{what}: never touched in {footTime:0}s on their feet");
+                if ((gift != null || giftBall != null) && footTime >= 25)
+                    a.SimCheck("a granted wish gets used", used, $"{what}: never touched in {footTime:0}s free; {to?.Name} is {to?.Brain.Activity}, last chose {to?.Brain.LastDecision}; gift at {gift?.Pos ?? giftBall?.Pos}, on ground {gift?.OnGround ?? giftBall?.OnGround}, free {gift?.Free ?? giftBall?.Free}, they're at {to?.Base}");
             });
         }),
         new("Moving", new[] { "none", "furniture" }, (a, v) =>
@@ -284,6 +284,15 @@ sealed partial class App
                     figs[i].Brain.HaulNow(it, x, a._w);
                 }
             });
+        }),
+        new("Dreams", new[] { "later", "now" }, (a, v) =>
+        {
+            if (v != "now") return;
+            a.SimAt(3, "dream", () => { foreach (var f in a._w.Figures) f.Brain.ThinkAboutDreams(); });
+            // A dream's next step competes fairly: someone deciding freely, again and again, takes one sooner or later.
+            a.SimRule("dreams get worked on", 10, t => a._w.Figures.All(f => f.Brain.Dream == null || f.Brain.DreamSteps > 0 || f.Brain.DreamOffers < 12),
+                () => string.Join("; ", a._w.Figures.Where(f => f.Brain.Dream != null && f.Brain.DreamSteps == 0).Select(f => $"{f.Name}: {f.Brain.DreamTitle}, offered {f.Brain.DreamOffers} times, last {f.Brain.LastDecision}")));
+            a.SimAt(a._simDur - 1, "dreams", () => a._simMetrics["dreams"] = string.Join("; ", a._w.Figures.Select(f => f.Brain.DreamTitle).Where(t => t.Length > 0)));
         }),
         new("Babies", new[] { "on", "off" }, (a, v) => a._settings.Babies = v == "on"),
         new("Jobs", new[] { "on", "off" }, (a, v) => a._settings.Jobs = v == "on"),

@@ -83,6 +83,7 @@ sealed partial class Brain
         if (!StartSocialWith(o, kind, w))
         {
             Flash(Manpu.SweatDrop, 2.5f);   // turned down: awkward
+            _unreachable[o] = _t0 + 25;     // and give them some space
             f.Emote("?", 1);
             AddAffinity(o, -0.02f);
             Go(G.Idle, 1.5f);

@@ -219,6 +219,21 @@ sealed partial class Figure
     /// <summary>The animation sheets: always this move (-1: its own choice).</summary>
     public int ForceDanceMove = -1;
 
+    void EaseDanceHands(float t, Vector2 near, Vector2 far, bool reachAround,
+                        ref Vector2 hN, ref Vector2 hF, ref Vector2 eN, ref Vector2 eF)
+    {
+        float edge = FidgetLength(Fidget.Groove) * 0.18f;
+        float env = M.Smooth(t / edge) * M.Smooth((FidgetDur - t) / edge);
+        hN = Vector2.Lerp(hN, near, env); hF = Vector2.Lerp(hF, far, env);
+        if (reachAround)
+        {
+            float arc = MathF.Sin(env * MathF.PI) * Arm * 0.45f;
+            hN.X += arc; hF.X -= arc;
+        }
+        eN = new(-_hN.Y, _hN.X * Facing);
+        eF = new(-_hF.Y, _hF.X * Facing);
+    }
+
     /// <summary>Eight moves; each figure favours a few (its own taste), and moves on every couple of bars.</summary>
     void DancePose(float t, ref float hipT, ref float leanT, ref float tiltT, ref float pdxT, ref float handW,
                    ref Vector2 hN, ref Vector2 hF, ref Vector2 eN, ref Vector2 eF)
@@ -237,7 +252,7 @@ sealed partial class Figure
         {
             case 0:   // the sway
                 pdxT = sway * 2.5f * S;
-                hN = new(Arm * 0.4f, -Arm * 0.25f + down * Arm * 0.3f); hF = new(-Arm * 0.2f, -Arm * 0.1f - down * Arm * 0.3f);
+                EaseDanceHands(t, new(Arm * 0.4f, -Arm * 0.25f + down * Arm * 0.3f), new(-Arm * 0.2f, -Arm * 0.1f - down * Arm * 0.3f), true, ref hN, ref hF, ref eN, ref eF);
                 tiltT += sway * 0.12f;
                 break;
             case 1:   // raise the roof
@@ -278,14 +293,12 @@ sealed partial class Figure
                 float tw = MathF.Sin(t * 8);
                 pdxT = tw * 2.2f * S;
                 hipT = StandHip * (0.84f + 0.08f * (sway * 0.5f + 0.5f));
-                hN = new(Arm * 0.35f - tw * Arm * 0.2f, Torso * 0.3f); hF = new(-Arm * 0.1f + tw * Arm * 0.2f, Torso * 0.35f);
-                eN = eF = new(-0.5f, 1);
+                EaseDanceHands(t, new(Arm * 0.35f - tw * Arm * 0.2f, Torso * 0.3f), new(-Arm * 0.1f + tw * Arm * 0.2f, Torso * 0.35f), false, ref hN, ref hF, ref eN, ref eF);
                 leanT = -tw * 0.08f;
                 break;
             }
             case 5:   // arms overhead, waving side to side
-                hN = new(Arm * 0.25f + sway * Arm * 0.35f, -Arm * 0.9f); hF = new(-Arm * 0.05f + sway * Arm * 0.35f, -Arm * 0.88f);
-                eN = eF = new(0.2f, 1);
+                EaseDanceHands(t, new(Arm * 0.25f + sway * Arm * 0.35f, -Arm * 0.9f), new(-Arm * 0.05f + sway * Arm * 0.35f, -Arm * 0.88f), true, ref hN, ref hF, ref eN, ref eF);
                 leanT = sway * 0.1f;
                 break;
             case 6:   // bounce and clap on the off-beat

@@ -37,7 +37,9 @@ sealed partial class Item
     public float Sc => _s * SizeMul;
     /// <summary>Stretch (resizable things like the fish tank): width and height, separately.</summary>
     public float ScaleX = 1, ScaleY = 1;
-    public bool Resizable => Def.Key == "fishtank";
+    public bool Resizable => Def.Key == "fishtank" || IsWater;
+    /// <summary>Water (and a tank of it) stretches sideways only: its depth is under the window, out of sight.</summary>
+    public bool WidthOnly => IsWater || Def.Key == "fishtank";
     public bool Held => Pinned || Holder != null;
     public bool Free => !Held;
 
@@ -741,6 +743,7 @@ sealed partial class Item
     System.Drawing.RectangleF BoundsBody()
     {
         float sc = Sc, w = Def.W * sc * ScaleX, h = Def.H * sc * ScaleY, pad = 6 * sc;
+        if (IsWater) h = MathF.Max(h, 26 * sc);   // reeds, the ladder, leaping fish
         if (Def.Verbs.Contains(Verb.Warm)) { h += 46 * sc; w = MathF.Max(w, (World.Current?.Night > 0.3f ? 250 : 150) * sc); }
         if (Def.Verbs.Contains(Verb.Dance)) h += 30 * sc;
         if (Def.Verbs.Contains(Verb.Read)) w = MathF.Max(w, 20 * sc);

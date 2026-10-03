@@ -657,7 +657,7 @@ sealed partial class App : ApplicationContext
             foreach (var it in _w.Items) if (!IsStatic(it) && Dirty(it.Bounds())) { _r.PushAbove(GroundUnder(it.Pos)); it.DrawDropShadow(_r); _r.PopClip(); }
             foreach (var p in _w.Props) if (p.Holder == null && Dirty(p.Bounds(_w.Env))) { _r.PushAbove(GroundUnder(p.Pos + new Vector2(0, p.Radius))); _r.Disc(p.Pos + Gfx.DropOffset * _w.Scale, p.Radius, drop); _r.PopClip(); }
             foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) { _r.PushAbove(GroundUnder(pet.Pos)); _r.Oval(pet.Centre + Gfx.DropOffset * pet.S, pet.Length * 0.5f, pet.Height * 0.45f, drop); _r.PopClip(); }
-            for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i]) { var fg = _w.Figures[i]; _r.PushAbove(GroundUnder(fg.Base)); fg.DrawDropShadow(_r); _r.PopClip(); }
+            for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].Swimming) { var fg = _w.Figures[i]; _r.PushAbove(GroundUnder(fg.Base)); fg.DrawDropShadow(_r); _r.PopClip(); }
             _r.EndShadowLayer();
         }
         // Hide-and-seek: hiders crouch behind things, so they're drawn before them.
@@ -673,7 +673,13 @@ sealed partial class App : ApplicationContext
         if (_w.Fx.Bounds() is RectangleF fxb && Dirty(fxb)) _w.Fx.Draw(_r);
         foreach (var pet in _w.Pets) if (Dirty(pet.Bounds())) pet.Draw(_r);
         DrawLeashes();
-        for (int i = 0; i < _w.Figures.Count; i++) if (figVisible[i] && !_w.Figures[i].HidingBehind) _w.Figures[i].Draw(_r);
+        for (int i = 0; i < _w.Figures.Count; i++)
+        {
+            if (!figVisible[i] || _w.Figures[i].HidingBehind) continue;
+            var fg = _w.Figures[i];
+            if (fg.Brain.WaterItem is { } wet) { _r.PushAbove(wet.SurfaceY); fg.Draw(_r); _r.PopClip(); }
+            else fg.Draw(_r);
+        }
         DrawItems(true);
         _r.BlitLayer(true, clip);
         DrawLassos();
@@ -704,6 +710,7 @@ sealed partial class App : ApplicationContext
     bool Shadow(Figure f, out Vector2 center, out float rx, out float ry, out float alpha)
     {
         center = default; rx = ry = alpha = 0;
+        if (f.Swimming) return false;   // in the water: no shadow on the window below
         float lowest = float.MinValue;
         foreach (var j in f.Jt) lowest = MathF.Max(lowest, j.Y);
         float x = f.Jt[J.Pelvis].X;

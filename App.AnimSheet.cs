@@ -81,6 +81,21 @@ sealed partial class App
         Net("Goal (low)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 5), new(1700, 0)));
         Net("Goal (rolled in)", "goal", 2.0f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-30, 5), new(500, 0)));
         Net("Walk into it", "goal", 2.4f, 1.6f, new(4, 16), (g, f) => { f.PlaceAt(_w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero), g.Local(-24, 0).X); f.Facing = 1; f.DesiredVX = f.WalkSpeed; });
+        // Water: level with the window's edge, its depth below; swimmers in it up to the shoulders, a dive out of sight.
+        foreach (var (label, key, swim, dive, wide) in new[] { ("Pond", "pond", false, false, 1f), ("Pond (swim)", "pond", true, false, 1f), ("Pond (dive)", "pond", true, true, 1f),
+                                                              ("Pool (swim)", "pool", true, false, 1f), ("Pool (dive)", "pool", true, true, 1f), ("Pond, wider", "pond", false, false, 1.8f) })
+        {
+            Item? water = null;
+            _animJobs.Add(new("Water", label, 7, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                water = SpawnItem(ItemCatalog.Find(key)!);
+                water!.ScaleX = wide;
+                // Under the figure (moving them would start them arriving all over again).
+                water.Pos = new Vector2(swim ? f!.Base.X : 1400, floor.Y); water.Vel = Vector2.Zero; water.OnGround = true;
+                if (swim) f!.Brain.SwimNow(water, _w, dive);
+            }, (f, _) => swim && f != null ? new Vector2(f.Base.X, f.Base.Y - 10 * _w.Scale) : water?.Local(0, 8) ?? Vector2.Zero, null, swim ? 1.1f : 1.4f * wide));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {

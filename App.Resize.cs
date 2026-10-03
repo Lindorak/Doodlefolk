@@ -3,7 +3,8 @@ using System.Numerics;
 namespace Doodlefolk;
 
 /// <summary>Resizing things like windows (the fish tank): drag a side edge to make it wider or narrower, the top edge
-/// to make it taller or shorter, or a top corner for both. The bottom stays on whatever it's standing on.</summary>
+/// to make it taller or shorter, or a top corner for both (water, only wider or narrower: its depth is out of sight under
+/// the window). The bottom stays on whatever it's standing on.</summary>
 sealed partial class App
 {
     Item? _resizeIt;
@@ -20,7 +21,7 @@ sealed partial class App
             if (!it.Resizable || !it.Free || !it.OnGround) continue;
             float w = it.Def.W * it.Sc * it.ScaleX, h = it.Def.H * it.Sc * it.ScaleY;
             float left = it.Pos.X - w / 2, right = it.Pos.X + w / 2, top = it.Pos.Y - h, bottom = it.Pos.Y;
-            bool nearL = MathF.Abs(c.X - left) < EdgeGrip, nearR = MathF.Abs(c.X - right) < EdgeGrip, nearT = MathF.Abs(c.Y - top) < EdgeGrip;
+            bool nearL = MathF.Abs(c.X - left) < EdgeGrip, nearR = MathF.Abs(c.X - right) < EdgeGrip, nearT = !it.WidthOnly && MathF.Abs(c.Y - top) < EdgeGrip;
             bool inY = c.Y > top - EdgeGrip && c.Y < bottom, inX = c.X > left - EdgeGrip && c.X < right + EdgeGrip;
             if (nearT && nearL) return (it, "NW");
             if (nearT && nearR) return (it, "NE");

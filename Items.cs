@@ -373,15 +373,16 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
-            Key = "pond", Name = "Pond", Words = new[] { "pond", "lake", "duck pond", "ducks", "duck", "fishing", "fishing pond" }, W = 150, H = 10, Color = M.Hex(0x4FA3D9),
-            Shapes = new[] { E(0, 4, 76, 5.5f, 13), E(0, 4.6f, 72, 4.2f, 0), E(-40, 6.4f, 7, 1.5f, 10), E(32, 6, 6, 1.3f, 10), L(-70, 4, -73, 22, 10, 1.2f), L(-66, 4, -65, 18, 10, 1.2f), L(-68, 4, -69, 25, 10, 1.2f),
-                             E(-73, 21, 0.9f, 2.6f, 13), E(-69, 24, 0.9f, 2.6f, 13), L(68, 4, 70, 16, 10, 1.2f) },
+            // Level with the window's edge, its depth under it (out of sight): banks, reeds and ducks are drawn by Item.
+            Key = "pond", Name = "Pond", Words = new[] { "pond", "lake", "duck pond", "ducks", "duck", "fishing", "fishing pond" }, W = 156, H = 6, Color = M.Hex(0x4FA3D9),
+            Shapes = new Shape[0],
             Verbs = new[] { Verb.Swim, Verb.Fish }, Mass = 20, Likes = new[] { Thing.Exploring },
         });
         Add(new ItemDef
         {
-            Key = "pool", Name = "Swimming pool", Words = new[] { "pool", "swimming pool", "paddling pool", "swimming", "swim" }, W = 110, H = 12, Color = M.Hex(0x29B6F6),
-            Shapes = new[] { R(-55, 0, 55, 12, 7), R(-51, 2, 51, 10.5f, 0), L(44, 10, 44, 24, 5, 1.4f), L(49, 10, 49, 24, 5, 1.4f), L(44, 14, 49, 14, 5, 1.2f), L(44, 18, 49, 18, 5, 1.2f), L(44, 22, 49, 22, 5, 1.2f) },
+            // Level with the window's edge, its depth under it: tiled edges, a ladder and a diving board, drawn by Item.
+            Key = "pool", Name = "Swimming pool", Words = new[] { "pool", "swimming pool", "paddling pool", "swimming", "swim" }, W = 114, H = 6, Color = M.Hex(0x29B6F6),
+            Shapes = new Shape[0],
             Verbs = new[] { Verb.Swim }, Mass = 20, Likes = new[] { Thing.Exploring },
         });
         Add(new ItemDef

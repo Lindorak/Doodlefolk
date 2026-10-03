@@ -34,7 +34,7 @@ public class CatalogTests
         {
             Assert.False(string.IsNullOrWhiteSpace(d.Name), d.Key);
             Assert.True(d.W > 0 && d.H > 0, d.Key);
-            Assert.NotEmpty(d.Shapes);
+            if (!d.Verbs.Contains(Verb.Swim)) Assert.NotEmpty(d.Shapes);   // water is drawn by Item (surface, banks, edges)
             Assert.All(d.Shapes, s => Assert.InRange(s.Col, 0, ItemDef.Fixed.Length - 1));
             if (d.Verbs.Contains(Verb.Sit)) Assert.NotEmpty(d.Seats);
         }

@@ -143,7 +143,11 @@ sealed partial class Brain
         _water = water;
         float half = water.Def.W * water.Sc * 0.5f * water.ScaleX;
         float off = rng.Range(-1, 1) * MathF.Max(0, half - (MathF.Max(f.Leg, f.Torso + f.HeadR * 2) + 2 * S));
-        Navigate(() => w.Items.Contains(water) && water.Free ? new Vector2(water.Pos.X + off, water.Pos.Y) : null, 10 * S, false, () =>
+        Navigate(() => w.Items.Contains(water) && water.Free ? new Vector2(water.Pos.X + off, water.Pos.Y) : null, 10 * S, false, () => EnterWater(water, w), WalkPurpose.Other);
+    }
+
+    void EnterWater(Item water, World w)
+    {
         {
             if (!w.Items.Contains(water)) { Go(G.Idle, 1); return; }
             f.Swimming = true; water.Swimmers++;
@@ -154,7 +158,7 @@ sealed partial class Brain
             f.Emote(V("splash!", "CANNONBALL!!!", "cold. fine.", "it's a bit cold…", "into the water"), 1.3f);
             Write("swim", V($"Went for a swim in the {water.Def.Name.ToLowerInvariant()}.", "SWIMMING!!! SPLASH SPLASH!", "Swam a bit. Wet now.", $"I swam in the {water.Def.Name.ToLowerInvariant()}. I can do it!", "The water held me."), "♪", 900);
             w.Sticker("swim");
-        }, WalkPurpose.Other);
+        }
     }
 
     void DoSwim(World w)
@@ -174,6 +178,20 @@ sealed partial class Brain
             if (rng.NextDouble() < World.Dt * 0.15) _swimPause = rng.Range(2, 5);
         }
         f.SetAction(Act.Stand);
+        // Now and then a dive: down out of sight, along a bit under the water, and up again with a splash.
+        if (_diveT > 0)
+        {
+            _diveT -= World.Dt;
+            f.Diving = M.MoveTowards(f.Diving, _diveT > 0.5f ? 1 : 0, World.Dt * 2.2f);
+            if (_diveT <= 0) { f.Diving = 0; w.Fx.Splash(f.Base + new Vector2(0, -2 * S), S, rng, 1.1f); f.Emote(V("pah!", "WOO!", "…", "phew!", "up for air"), 0.9f); }
+        }
+        else if (_diveSoon && _t > 1.5f || _swimPause <= 0 && rng.NextDouble() < World.Dt * 0.05 * (0.4f + P.Bravery))
+        {
+            _diveSoon = false;
+            _diveT = rng.Range(2.2f, 4.5f);
+            w.Fx.Splash(f.Base + new Vector2(0, -2 * S), S, rng, 1.2f);
+            World.Play(Sfx.Squirt, f.Base, 0.3f, 0.7f);
+        }
         Wet = 1;
         Boredom = MathF.Max(0, Boredom - World.Dt * 0.01f);
         Cheered(World.Dt * 0.01f * (1 + Hot(w) * 2));
@@ -181,8 +199,15 @@ sealed partial class Brain
         if (MathF.Abs(f.Vel.X) > 10 * S && rng.NextDouble() < World.Dt * 2) w.Fx.Splash(f.Jt[J.HandN], S, rng, 0.5f);
     }
 
+    float _diveT;
+    bool _diveSoon;
+
+    /// <summary>For the contact sheets and tests: go for a swim now (and dive once in).</summary>
+    public void SwimNow(Item water, World w, bool dive = false) { _water = water; EnterWater(water, w); _diveSoon = dive; }
+
     void StopSwim()
     {
+        _diveT = 0; f.Diving = 0;
         if (_water is { } water) water.Swimmers = Math.Max(0, water.Swimmers - 1);
         f.Swimming = false;
         f.DesiredVX = 0;
@@ -201,7 +226,7 @@ sealed partial class Brain
             if (!w.Items.Contains(pond)) { Go(G.Idle, 1); return; }
             FaceTo(pond.Pos.X);
             f.FishingIn = pond;
-            f.Bobber = new Vector2(f.Base.X + f.Facing * 34 * S, pond.Pos.Y - 5.5f * pond.Sc);
+            f.Bobber = new Vector2(f.Base.X + f.Facing * 34 * S, pond.SurfaceY);
             f.Bite = false;
             _caught = 0;
             _biteAt = _t + rng.Range(8, 25);

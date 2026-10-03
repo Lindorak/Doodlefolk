@@ -12,6 +12,8 @@ sealed partial class Figure
     /// <summary>Giving a leg-up: 1 crouched with cupped hands, 2 heaving upward.</summary>
     public int Boosting;
     public bool Swimming;
+    /// <summary>0 at the surface, 1 right under it (a dive: out of sight in the water below the window's edge).</summary>
+    public float Diving;
     /// <summary>The water it's fishing in, where the float is, and whether something's biting.</summary>
     public Item? FishingIn;
     public Vector2 Bobber;
@@ -75,12 +77,15 @@ sealed partial class Figure
         if (Swimming)
         {
             float t = _time;
+            // The water's surface is level with the window's edge and its depth goes on below it: a swimmer is down in
+            // it (drawn only above the surface), and a dive takes them out of sight altogether.
+            float under = Diving * (Leg + Torso + HeadR * 2 + NeckGap + 6 * S);
             if (MathF.Abs(Vel.X) > 12 * S)
             {
-                // Front crawl.
-                hipT = 3.4f * S + MathF.Sin(t * 3) * 0.4f * S; leanT = 1.42f;
-                fN = new(-Leg * 0.95f, 2.5f * S + MathF.Sin(t * 10) * 1.6f * S);
-                fF = new(-Leg * 0.92f, 2.5f * S - MathF.Sin(t * 10) * 1.6f * S);
+                // Front crawl: lying along the surface, back and head just out, arms coming over.
+                hipT = -4.6f * S + MathF.Sin(t * 3) * 0.4f * S - under; leanT = 1.32f;
+                fN = new(-Leg * 0.95f, -5.5f * S + MathF.Sin(t * 10) * 1.8f * S - under);
+                fF = new(-Leg * 0.92f, -5.5f * S - MathF.Sin(t * 10) * 1.8f * S - under);
                 kPref = new(0, -1);
                 float a = t * 3.4f;
                 hN = new(MathF.Cos(a) * Arm * 0.85f, MathF.Sin(a) * Arm * 0.7f);
@@ -89,9 +94,9 @@ sealed partial class Figure
             }
             else
             {
-                // Treading water: waist deep, hands sculling.
-                hipT = 2 * S + MathF.Sin(t * 2.2f) * 0.8f * S; leanT = 0.04f;
-                fN = new(2 * S, 1 * S); fF = new(-1.5f * S, 1.5f * S);
+                // Treading water: in up to the shoulders, hands sculling at the surface.
+                hipT = -Torso + 1.2f * S + MathF.Sin(t * 2.2f) * 0.8f * S - under; leanT = 0.04f;
+                fN = new(2 * S, hipT - Leg * 0.8f); fF = new(-1.5f * S, hipT - Leg * 0.75f);
                 kPref = new(1, -1);
                 float k = MathF.Sin(t * 4.2f + Id);
                 hN = new(Arm * 0.55f + k * Arm * 0.18f, Torso * 0.78f); hF = new(-Arm * 0.35f - k * Arm * 0.18f, Torso * 0.8f);

@@ -161,6 +161,15 @@ function select(options, value, onchange) {
 }
 document.addEventListener("pointerdown", e => { if (openMenu && !e.target.closest(".dd-menu, .dd-btn")) openMenu(); });
 document.addEventListener("scroll", () => openMenu && openMenu(), true);
+/* Weight: a slider from skinny to obese, with the word for it beside it. */
+const weightWord = v => v < 0.1 ? "Skinny" : v < 0.3 ? "Fit" : v < 0.5 ? "Chubby" : v < 0.75 ? "Fat" : "Obese";
+function weightSlider(value, onset) {
+  const val = h("span", { class: "val" }, weightWord(value || 0));
+  const r = range(0, 1, 0.01, value || 0, v => { val.textContent = weightWord(v); onset(v); });
+  r.title = "Skinny · Fit · Chubby · Fat · Obese. Eating and exercise keep changing it from here (if Weight is on in Settings).";
+  return { r, val, el: h("span", { class: "row tight weight-ctl" }, r, val), set(v) { setRange(r, v || 0); if (idle(r)) val.textContent = weightWord(v || 0); } };
+}
+
 function range(min, max, step, value, oninput, onchange) {
   const r = h("input", { type: "range", min, max, step, value });
   r.addEventListener("input", () => { touched(r); paintRange(r); oninput && oninput(+r.value); });
@@ -987,6 +996,8 @@ const SUBPANELS = {
     const sizeVal = h("span", { class: "val" });
     const size = range(0.4, 3, 0.05, f.size, v => sizeVal.textContent = Math.round(v * 100) + "%", v => send({ t: "fig", id, op: "size", v }));
     const gear = select(INIT.gear.map(g => ({ value: g.v, label: g.label })), f.gear, v => send({ t: "fig", id, op: "gear", v: +v }));
+    const wt = weightSlider(f.bodyWeight, v => sendSoon("fw" + id, { t: "fig", id, op: "weight", v }));
+    const wtOff = h("p", { class: "hint" }, "Weight is switched off in Settings → Pets and bodies, so everyone's drawn at their usual shape.");
     const LP = INIT.lookParts;
     const CLOTH = ["#E53935", "#1E88E5", "#43A047", "#FB8C00", "#8E24AA", "#FDD835", "#00ACC1", "#EC407A", "#2E2E2E", "#F4F4F4", "#6D4C41", "#283593"];
     const HAIR = ["#2B1D16", "#3B2A20", "#6D4C2F", "#A86B32", "#D9B262", "#E8D9A8", "#B33A1F", "#9E9E9E", "#F2F2F2", "#5C6BC0", "#EC407A", "#43A047"];
@@ -1018,10 +1029,12 @@ const SUBPANELS = {
       rows.map(r => r.el),
       h("h3", null, "Body"),
       h("div", { class: "field" }, h("label", null, "Size"), size, sizeVal),
+      h("div", { class: "field" }, h("label", null, "Weight"), wt.r, wt.val), wtOff,
       h("div", { class: "field" }, h("label", null, "On their hands"), gear, h("span")),
       h("p", { class: "hint" }, "Their main colour is up top, next to their name."));
     return f => {
       setRange(size, f.size); if (idle(size)) sizeVal.textContent = Math.round(f.size * 100) + "%"; gear.set(f.gear);
+      wt.set(f.bodyWeight); wtOff.hidden = S.settings.weight !== false;
       for (const r of rows) {
         r.sel.set(f.look[r.slot] || "");
         if (r.sw) { r.sw.set(f.look[r.colKey]); r.sw.style.visibility = f.look[r.slot] || (r.slot === "hair" && f.look.beard) ? "visible" : "hidden"; }
@@ -2099,12 +2112,13 @@ function buildPop(kind, id) {
     const name = h("input", { class: "text", value: x.name, maxlength: 24, onchange: () => send({ t: "pet", op: "rename", id, v: name.value }) });
     const col = colourPicker(x.hex, hex => sendSoon("petc", { t: "pet", op: "color", id, hex }));
     const sz = range(0.5, 2.5, 0.05, x.size, v => sendSoon("pets", { t: "pet", op: "size", id, v }));
+    const pwt = weightSlider(x.weight, v => sendSoon("pw" + id, { t: "pet", op: "weight", id, v }));
     const needs = h("div", { class: "thoughts" });
     const acts = h("div", { class: "row tight pop-acts" });
     const teach = x.kind === "Parrot" ? h("input", { class: "text", placeholder: "Say a word or phrase to teach…", maxlength: 32,
       onkeydown: e => { if (e.key === "Enter" && teach.value.trim()) { send({ t: "pet", op: "talk", id, v: teach.value }); teach.value = ""; } } }) : null;
     let actSig = "";
-    add(root, head(art, x.name, sub), needs, acts, teach && field("Teach", teach), field("Name", name), field("Colour", col), field("Size", sz),
+    add(root, head(art, x.name, sub), needs, acts, teach && field("Teach", teach), field("Name", name), field("Colour", col), field("Size", sz), field("Weight", pwt.el),
       h("div", { class: "row pop-foot" },
         h("button", { class: "btn small", onclick: () => send({ t: "studio", page: "pets" }) }, "Care & training…"),
         h("span", { class: "spacer" }),
@@ -2115,7 +2129,7 @@ function buildPop(kind, id) {
       const sig = [x.leashed, x.onCursor].join();
       if (sig !== actSig) { actSig = sig; acts.replaceChildren(...petActions(x, close).filter(Boolean)); fit(); }
       if (idle(name)) name.value = x.name;
-      col.set(x.hex); setRange(sz, x.size);
+      col.set(x.hex); setRange(sz, x.size); pwt.set(x.weight);
     });
   } else if (kind === "prop") {
     const sub = h("div", { class: "hint" });
@@ -2143,6 +2157,9 @@ function buildPop(kind, id) {
     const sz = range(0.3, 3.5, 0.05, x.size, v => sendSoon("is", { t: "item", op: "size", id, v }));
     const tiltVal = h("span", { class: "val" });
     const tilt = d => { x.tilt = Math.max(-90, Math.min(90, d)); send({ t: "item", op: "tilt", id, v: x.tilt }); tiltVal.textContent = x.tilt ? `${x.tilt}°` : "upright"; };
+    let fireB = null;
+    if (def && def.verbs.includes("Warm"))
+      fireB = h("button", { class: "btn small", onclick: () => { x.out = !x.out; send({ t: "item", op: "fire", id }); fireB.textContent = x.out ? "🔥 Light it again" : "💧 Put it out"; } }, x.out ? "🔥 Light it again" : "💧 Put it out");
     let music = null;
     if (def && def.verbs.includes("Dance"))
       music = h("button", { class: "btn small", onclick: () => { x.playing = !x.playing; send({ t: "item", op: "music", id }); music.textContent = x.playing ? "Music off" : "Music on"; } }, x.playing ? "Music off" : "Music on");
@@ -2156,6 +2173,7 @@ function buildPop(kind, id) {
         h("button", { class: "btn small icon", title: "Lean right", onclick: () => tilt((x.tilt || 0) + 15) }, "⟳"),
         h("button", { class: "btn small", onclick: () => tilt(0) }, "Upright"),
         h("button", { class: "btn small", onclick: () => send({ t: "item", op: "flip", id }) }, "Flip ⇄"), tiltVal)),
+      fireB && h("div", { class: "row tight pop-acts" }, fireB),
       h("div", { class: "row pop-foot" }, music, h("span", { class: "spacer" }), more("toys"),
         armed("Remove", "Sure?", () => { send({ t: "item", op: "remove", id }); close(); }, "btn small danger")));
     updates.push(() => {
@@ -2164,12 +2182,15 @@ function buildPop(kind, id) {
       if (col) col.set(x.hex);
       setRange(sz, x.size);
       tiltVal.textContent = x.tilt ? `${x.tilt}°` : "upright";
+      if (fireB) fireB.textContent = x.out ? "🔥 Light it again" : "💧 Put it out";
+      if (music) music.textContent = x.playing ? "Music off" : "Music on";
     });
   } else {
     const sub = h("div", { class: "hint" });
     const dot = figSvg("fig pop-fig");
     const col = colourPicker(x.hex, hex => sendSoon("fc", { t: "fig", op: "color", id, hex }));
     const sz = range(0.4, 3, 0.05, x.size, v => sendSoon("fs", { t: "fig", op: "size", id, v }));
+    const fwt = weightSlider(x.bodyWeight, v => sendSoon("fw" + id, { t: "fig", op: "weight", id, v }));
     const heal = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "heal", id }) }, "Heal");
     const hunt = h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "hunter", id, v: !x.hunter }) });
     const feels = h("span", { class: "hint" });
@@ -2181,7 +2202,7 @@ function buildPop(kind, id) {
     add(root, head(dot, x.name, sub),
       field("Talk", say), reply,
       field("Play", h("div", { class: "row tight" }, game("Catch"), game("Tag"), game("HideSeek"))),
-      field("Colour", col), field("Size", sz),
+      field("Colour", col), field("Size", sz), field("Weight", fwt.el),
       h("div", { class: "row tight pop-acts" },
         h("button", { class: "btn small primary", onclick: () => { send({ t: "fig", op: "call", id }); close(); } }, "Come here"),
         h("button", { class: "btn small", onclick: () => send({ t: "fig", op: "dance", id }) }, "Dance!"), heal, hunt),
@@ -2192,7 +2213,7 @@ function buildPop(kind, id) {
       sub.textContent = x.dead ? "Gone" : x.activity;
       feels.textContent = x.feels || "";
       col.set(x.hex);
-      setRange(sz, x.size);
+      setRange(sz, x.size); fwt.set(x.bodyWeight);
       heal.hidden = !(x.hp < 99.5);
       hunt.textContent = x.hunter ? "Stop hunting" : "Hunt the cursor";
     });

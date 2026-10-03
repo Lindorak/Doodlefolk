@@ -103,7 +103,7 @@ sealed class Weather
         float bin = BinPx * S, maxStep = 0.55f * bin;
         bool melting = !Snowing || !Piles;
         float melt = dt * 0.035f * S * (Piles ? 1 : 12);
-        var fires = w.Items.Where(i => i.Def.Verbs.Contains(Verb.Warm) && i.Holder == null).ToList();
+        var fires = w.Items.Where(i => i.Burning && i.Holder == null).ToList();
         foreach (var p in w.Env.Platforms)
         {
             var k = NavGraph.Key(p);

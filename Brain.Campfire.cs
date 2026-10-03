@@ -62,6 +62,15 @@ sealed partial class Brain
 
     public void DebugWarm(World w, Item fire) => UseItem(fire, Verb.Warm, w);
 
+    /// <summary>The fire's been put out: those round it are let down (or relieved, if it was hot work).</summary>
+    public void OnFireOut(Item fire, World w)
+    {
+        if (_g == G.UseItem && _item == fire && _verb == Verb.Warm)
+            f.Emote(V("aww…", "AWWW NO!", "oh. okay.", "it went out…", "the fire!"), 1.4f);
+        else if (Vector2.Distance(f.Base, fire.Pos) < 260 * S && rng.NextDouble() < 0.4)
+            f.Emote(V("oh, it's out.", "WHO DID THAT?", "hm.", "the fire's out…", "aw"), 1.2f);
+    }
+
     void ListenTo(Figure teller)
     {
         _storyTeller = teller;

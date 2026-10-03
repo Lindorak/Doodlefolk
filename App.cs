@@ -599,6 +599,7 @@ sealed partial class App : ApplicationContext
             // Still objects stay on screen as they are; only moving/animated/changed ones are redrawn.
             if (!it.Changed()) continue;
             _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(it.Bounds(), _w.Scale) : it.Bounds()));
+            if (it.InkLast is { } ii) _regNow.Add(ToRect(ii));
             it.Shadow(_w.Env, out var sc, out float srx, out float sry, out _);
             if (srx > 0) _regNow.Add(ToRect(RectangleF.FromLTRB(sc.X - srx, sc.Y - sry, sc.X + srx, sc.Y + sry)));
         }
@@ -630,6 +631,9 @@ sealed partial class App : ApplicationContext
         _r.Frame(_regAll, (Action<RectangleF>)DrawScene);
         foreach (var f in _w.Figures) f.InkLast = f.InkNow ?? f.InkLast;
         foreach (var m in _w.Matches) m.InkLast = m.InkNow ?? m.InkLast;
+        // Things drawn into the cached layers count too (that happens before the frame), so a lamp picked up off the
+        // layer takes its glow with it.
+        foreach (var it in _w.Items) if (it.InkNow is { } iw) { it.InkLast = iw; it.InkNow = null; }
         foreach (var pet in _w.Pets) pet.InkLast = pet.InkNow ?? pet.InkLast;
         return true;
     }
@@ -700,7 +704,7 @@ sealed partial class App : ApplicationContext
         {
             if (it.Holder == null) continue;
             if (it.Holder.Weapon == it) it.Holder.SyncWeapon(it);   // follows the (interpolated) hand
-            if (Dirty(it.Bounds())) it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
+            if (Dirty(it.Reach())) it.Draw(_r, false, _clock.Elapsed.TotalSeconds);      // carried things in front
         }
         foreach (var pr in _w.Projectiles) if (Dirty(pr.Bounds())) pr.Draw(_r);
         foreach (var m in _w.Matches) if (Dirty(m.Bounds())) m.Draw(_r);

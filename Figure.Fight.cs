@@ -48,6 +48,8 @@ sealed partial class Figure
     public Func<Figure, bool>? CanHit;
     /// <summary>When fighting the cursor: the point we're punching at.</summary>
     public Vector2? PunchTarget;
+    /// <summary>Punches and kicks that have landed on the cursor, ever (for tests).</summary>
+    public static int CursorHits, CursorSwings;
     float _bowlCd;
 
     public bool InWindup => Atk != null && AtkT < Atk.Windup;
@@ -168,6 +170,7 @@ sealed partial class Figure
         if (PunchTarget is Vector2 cur && cursorHit)
         {
             _atkHit = LastAttackLanded = true;
+            CursorHits++;
             World.Log($"{Name} {a.Kind} hit the cursor");
             World.Play(Sfx.Bonk, cur, 0.6f);
             w.Fx.Spark(cur, S, w.Rng, 0.8f + a.Damage * 0.03f, new Color4(1, 1, 1, 1));

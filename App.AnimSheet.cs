@@ -179,6 +179,23 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => { fig.Brain.Puppet(99); fig.SetAction(peek ? Act.Stand : Act.Curl); }));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 2.2f));
         }
+        // Jumping at the cursor: hung in the air at different heights above them (and a little to one side); counts the hits.
+        foreach (var (label, upH, off) in new[] { ("Cursor just overhead", 0.25f, 0f), ("Cursor high", 0.8f, 0f), ("Cursor very high", 1.35f, 0f), ("Cursor high, to the side", 0.8f, 30f), ("Cursor high, drifting", 0.8f, -1f), ("Hunter, cursor high", 0.8f, -2f) })
+        {
+            _animJobs.Add(new("CursorJump", label, 8, (f, _) =>
+            {
+                float S = _w.Scale;
+                var fig = f!;
+                fig.Traits.Aggression = 1; fig.Traits.Bravery = 1;
+                _fakeCursor = new Vector2(fig.Base.X + MathF.Max(0, off) * S, fig.Jt[J.Neck].Y - fig.Arm - upH * fig.Height);
+                int hits0 = Figure.CursorHits, swings0 = Figure.CursorSwings;
+                if (off == -1)   // drifting slowly back and forth over their head
+                    for (int k = 1; k < 78; k++) { int kk = k; float x0 = fig.Base.X; _animLater.Add((_tFrame / (double)TFps + k * 0.1, () => _fakeCursor = new Vector2(x0 + MathF.Sin(kk * 0.1f * 1.3f) * 70 * S, _fakeCursor!.Value.Y))); }
+                if (off == -2) { fig.Hunter = true; _fakeCursor = new Vector2(fig.Base.X + 200 * S, _fakeCursor!.Value.Y); }
+                else fig.Brain.BoxCursorNow();
+                _animLater.Add((_tFrame / (double)TFps + 7.9, () => Console.WriteLine($"{label}: {Figure.CursorHits - hits0} hits of {Figure.CursorSwings - swings0} jumps")));
+            }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - f.Height) : Vector2.Zero, null, 2.2f));
+        }
         // Snow: lying in drifts on a window top (rounded off at the ends), footprints as someone walks through, melting by a fire.
         foreach (var (label, walk, fire) in new[] { ("Lying on a window", false, false), ("Walking through", true, false), ("Melting by a fire", false, true) })
         {

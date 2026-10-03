@@ -122,7 +122,7 @@ sealed partial class App
     {
         double t = _clock.Elapsed.TotalSeconds;
         if (_skipItems) return;
-        foreach (var it in _w.Items) if (it.Holder == null && !IsStatic(it) && Dirty(it.Bounds())) it.Draw(_r, over, t);
+        foreach (var it in _w.Items) if (it.Holder == null && !IsStatic(it) && Dirty(it.Reach())) it.Draw(_r, over, t);
     }
 
     // Things being held (a book, a sword, the radio) are saved too; half-eaten food isn't.
@@ -131,7 +131,7 @@ sealed partial class App
                                      Owner = _w.Figures.FirstOrDefault(f => f.Id == i.OwnerId)?.Name,
                                      ScaleX = i.ScaleX, ScaleY = i.ScaleY, Fill = MathF.Round(i.Fill, 3), Dirt = i.Dirt, Growth = MathF.Round(i.Growth, 3), PlantKind = i.PlantKind,
                                      Label = i.Label.Length > 0 ? i.Label : null, LabelColour = i.Label.Length > 0 ? Settings.Hex(i.OwnerColour) : null,
-                                     Planter = _w.Figures.FirstOrDefault(f => f.Id == i.PlanterId)?.Name }).ToList();
+                                     Planter = _w.Figures.FirstOrDefault(f => f.Id == i.PlanterId)?.Name, Out = i.Out }).ToList();
 
     void RestoreItems(List<SavedItem> items)
     {
@@ -152,6 +152,7 @@ sealed partial class App
                     it.Fill = Math.Clamp(s.Fill, 0, 1); it.Dirt = Math.Max(0, s.Dirt); it.Growth = s.Growth; it.PlantKind = s.PlantKind;
                     if (s.Label != null) { it.Label = s.Label; if (s.LabelColour != null && it.OwnerId == 0) it.OwnerColour = Settings.ParseHex(s.LabelColour); }
                     if (s.Planter != null && _w.Figures.FirstOrDefault(f => f.Name == s.Planter) is { } planter) it.PlanterId = planter.Id;
+                    if (s.Out && it.Def.Verbs.Contains(Verb.Warm)) { it.Out = true; it.OutAt = -1e9; }
                 }
     }
 }

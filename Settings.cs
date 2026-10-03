@@ -68,6 +68,8 @@ sealed class SavedItem
     public float Growth { get; set; }
     public string PlantKind { get; set; } = "";
     public string? Planter { get; set; }
+    /// <summary>A fire that was put out.</summary>
+    public bool Out { get; set; }
     public string? Label { get; set; }
     public string? LabelColour { get; set; }
 }

@@ -542,6 +542,8 @@ sealed partial class Brain
         Rules.Enabled && Rules.PunchCursor && !World.Calm && !World.Focus && Stamina > 0.25f &&
         ((P.Aggression > 0.55f && CursorTrust < 0.55f) || (UserFondness < -0.5f && P.Aggression > 0.4f && P.Bravery > 0.4f));
 
+    public void BoxCursorNow() => BeginCursorFight();
+
     void BeginCursorFight()
     {
         Go(G.CursorFight, rng.Range(6, 14));
@@ -582,9 +584,17 @@ sealed partial class Brain
         if (!f.Grounded)
         {
             f.DesiredVX = 0;
-            // Time the jab so its strike lands right at the top of the jump.
+            // Throw it so the strike lands when the cursor will be in reach: where we'll be by then, the cursor where it
+            // is now. Last chance at the top of the jump, whatever.
             var jab = AttackDef.Get(AttackKind.Jab);
-            if (_airPunch && f.Vel.Y > -f.Gravity * (jab.Windup + jab.Active * 0.5f)) { f.StartAirAttack(AttackKind.Jab); _airPunch = false; }
+            if (_airPunch)
+            {
+                float tau = jab.Windup + jab.Active * 0.5f;
+                var then = neck + f.Vel * tau + new Vector2(0, 0.5f * f.Gravity * tau * tau);
+                bool willReach = Vector2.Distance(then, cur) < f.Arm * 0.92f;
+                bool apex = f.Vel.Y > -f.Gravity * tau * 0.35f;
+                if (willReach || apex) { f.StartAirAttack(AttackKind.Jab); _airPunch = false; }
+            }
             return;
         }
         if (f.JumpPending) { f.DesiredVX = 0; return; }   // crouching to jump: keep the punch queued
@@ -598,9 +608,14 @@ sealed partial class Brain
             if (d > 40 * S) { f.DesiredVX = MathF.Sign(dx) * f.RunSpeed * 0.8f; return; }
             f.DesiredVX = 0;
             if (_atkCd > 0) return;
-            float need = up - f.Arm * 0.6f;
+            float need = up - f.Arm * 0.5f;   // the top of the jump puts it comfortably inside arm's reach
             float vy = MathF.Sqrt(2 * f.Gravity * MathF.Max(need, 20 * S));
-            f.RequestJump(new Vector2(dx * 1.2f, -vy), 0.06f);
+            // Lead a moving cursor: aim to be under where it'll be at the top of the jump.
+            float tUp = vy / f.Gravity + 0.06f;
+            float aimX = cur.X + Math.Clamp(w.CursorVel.X, -900 * S, 900 * S) * tUp;
+            float vx = Math.Clamp((aimX - f.Base.X) / MathF.Max(tUp, 0.15f), -f.RunSpeed * 1.2f, f.RunSpeed * 1.2f);
+            f.RequestJump(new Vector2(vx, -vy), 0.06f);
+            Figure.CursorSwings++;
             _airPunch = true;
             _atkCd = rng.Range(0.5f, 0.9f);
             if (rng.NextDouble() < 0.3) f.Emote("#@!", 0.7f);

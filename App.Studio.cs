@@ -157,7 +157,7 @@ sealed partial class App
         items = _w.Items.Select(i => new
         {
             id = i.Id, key = i.Def.Key, name = i.Def.Name, hex = Settings.Hex(i.Color), size = i.SizeMul, flip = i.Flip,
-            tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing, owner = i.OwnerId, homeable = Brain.HomeKind(i),
+            tilt = MathF.Round(i.RestAngle * 180 / MathF.PI), playing = i.Playing, @out = i.Out, owner = i.OwnerId, homeable = Brain.HomeKind(i),
             users = i.Seated.Where(s => s != null).Select(s => s!.Name).Concat(i.User != null ? new[] { i.User.Name } : Array.Empty<string>()).Concat(i.Holder != null ? new[] { i.Holder.Name } : Array.Empty<string>()).Distinct(),
         }),
         pets = _w.Pets.Select(PetJson),
@@ -226,7 +226,7 @@ sealed partial class App
             feels = b.FeelingsAboutYou(),
             fond = R(b.UserFondness),
             hunter = f.Hunter,
-            family = FamilyLine(f), weightWord = f.WeightWord,
+            family = FamilyLine(f), weightWord = f.WeightWord, bodyWeight = MathF.Round(f.Weight, 2),
             job = (int)b.Job >= 0 ? b.Job.ToString() : "None", coins = b.Coins, stage = World.LifePace > 0 || b.Baby ? b.LifeStage : "", ageYears = World.LifePace > 0 || b.ParentIds.Count > 0 ? (int)b.AgeYears : 0, retired = b.IsElder,
             skills = Enum.GetValues<SkillKind>().Select(k => new { name = char.ToUpperInvariant(Brain.SkillName(k)[0]) + Brain.SkillName(k)[1..], v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
@@ -633,6 +633,7 @@ sealed partial class App
                 break;
             case "color": f.Color = Settings.ParseHex(Str(m, "hex")); break;
             case "size": ResizeFigure(f, Math.Clamp(Num(m, "v"), 0.4f, 3f)); break;
+            case "weight": f.Weight = Math.Clamp(Num(m, "v"), 0, 1); break;
             case "gear": f.Gear = (Gear)m.GetProperty("v").GetInt32(); break;
             case "trait":
             {
@@ -739,6 +740,7 @@ sealed partial class App
         switch (op)
         {
             case "remove": _w.RemoveItem(it); break;
+            case "fire": if (it.Out) it.Relight(_w); else it.PutOut(_w); break;
             case "size": it.SizeMul = Math.Clamp(Num(m, "v"), 0.3f, 3.5f); break;
             case "color": it.Color = Settings.ParseHex(Str(m, "hex")); break;
             case "flip": it.Flip = !it.Flip; break;
@@ -765,6 +767,7 @@ sealed partial class App
         {
             case "remove": _w.Pets.Remove(p); break;
             case "size": p.SizeMul = Math.Clamp(Num(m, "v"), 0.5f, 2.5f); break;
+            case "weight": p.Weight = Math.Clamp(Num(m, "v"), 0, 1); break;
             case "color": p.Color = Settings.ParseHex(Str(m, "hex")); break;
             case "rename": { var n = Str(m, "v").Trim(); if (n.Length is > 0 and <= 24) p.Name = n; break; }
             case "call": p.CallTo(_w.Cursor); break;

@@ -37,7 +37,7 @@ sealed partial class App
             AmbienceChannel.Birds => night < 0.35f && !wx.Raining && season != Season.Winter ? (hour is >= 5 and < 10 ? 1 : 0.55f) : 0,
             AmbienceChannel.Crickets => night > 0.5f && !wx.Raining && season is Season.Summer or Season.Autumn ? 1 : 0,
             AmbienceChannel.Chatter => _w.Figures.Count < 2 ? 0 : Math.Min(1, _w.Figures.Count(f => f.CurrentEmote != null) / 3f) * 0.8f + (_w.Figures.Count >= 4 ? 0.15f : 0),
-            AmbienceChannel.Fire => _w.Items.Any(i => i.Def.Key == "campfire" && i.Holder == null) ? 1 : 0,
+            AmbienceChannel.Fire => _w.Items.Any(i => i.Def.Key == "campfire" && i.Holder == null && i.Burning) ? 1 : 0,
             _ => 0,
         };
     }

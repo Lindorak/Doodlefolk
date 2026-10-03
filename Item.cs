@@ -230,7 +230,21 @@ sealed partial class Item
         return new Color4(k.R, k.G, k.B, alpha);
     }
 
+    /// <summary>Everywhere it was drawn (glows and light cones included), this frame and the last time it was drawn,
+    /// so when it moves nothing of it is left behind (see Figure.InkNow).</summary>
+    public System.Drawing.RectangleF? InkNow, InkLast;
+
+    /// <summary>Its outline and everything it last drew round it (a lamp's glow): what has to be touched for it to need drawing.</summary>
+    public System.Drawing.RectangleF Reach() => InkLast is { } ink ? System.Drawing.RectangleF.Union(Bounds(), ink) : Bounds();
+
     public void Draw(Renderer r, bool over, double time)
+    {
+        var saved = r.BeginInk();
+        try { DrawAll(r, over, time); }
+        finally { if (r.EndInk(saved) is { } ink) InkNow = InkNow is { } n ? System.Drawing.RectangleF.Union(n, ink) : ink; }
+    }
+
+    void DrawAll(Renderer r, bool over, double time)
     {
         if (Def.Verbs.Contains(Verb.Skip) && Holder is { SkipPhase: >= 0 }) return;   // drawn as the turning rope instead
         float k = 1;
@@ -594,8 +608,58 @@ sealed partial class Item
     /// <summary>A real campfire: a ring of stones, crossed logs with glowing cracks, a bed of embers, layered flame
     /// tongues (deep orange outside, yellow, a white-hot core) that lick and sway, sparks drifting up, a wisp of
     /// smoke, and warm light that flickers on the ground around it (much stronger at night).</summary>
+    /// <summary>A fire that's been put out (right-click → Put it out): no flames, warmth or light; the embers die
+    /// and a thread of smoke curls up for a while.</summary>
+    public bool Out;
+    public double OutAt = -1e9;
+    public bool Burning => Def.Verbs.Contains(Verb.Warm) && !Out;
+    bool Smouldering => Out && World.Now - OutAt < 45;
+
+    public void PutOut(World w)
+    {
+        if (Out || !Def.Verbs.Contains(Verb.Warm)) return;
+        Out = true; OutAt = World.Now;
+        World.Play(Sfx.Hiss, Pos, 0.5f, 0.8f);
+        w.Fx.Dust(Local(0, 8), _s, 10, 0.9f, w.Rng);
+        foreach (var f in w.Figures) f.Brain.OnFireOut(this, w);
+    }
+
+    public void Relight(World w)
+    {
+        if (!Out) return;
+        Out = false;
+        World.Play(Sfx.Crackle, Pos, 0.4f);
+        w.Fx.Spark(Local(0, 6), _s * 1.2f, w.Rng, 1.2f, new Color4(1, 0.7f, 0.25f, 1));
+    }
+
+    void DrawFireOut(Renderer r, double time)
+    {
+        float sc = Sc, t = (float)time, since = (float)(World.Now - OutAt);
+        var stone = new Color4(0.36f, 0.34f, 0.33f, 1);
+        var stoneDark = new Color4(0.2f, 0.19f, 0.19f, 1);
+        for (int i = 0; i < 4; i++) { var c = Local(-11 + i * 7.3f, 4.2f); r.Oval(c, 3.6f * sc, 2.3f * sc, stoneDark); r.Oval(c - new Vector2(0.4f, 0.5f) * sc, 3.1f * sc, 1.9f * sc, stone); }
+        // Ash, and the last few embers going dark.
+        r.Oval(Local(0, 2.5f), 10 * sc, 2.4f * sc, new Color4(0.3f, 0.29f, 0.29f, 1));
+        r.Oval(Local(-2, 3), 6 * sc, 1.3f * sc, new Color4(0.55f, 0.54f, 0.53f, 0.8f));
+        float ember = M.Clamp01(1 - since / 25);
+        if (ember > 0)
+            for (int i = 0; i < 4; i++)
+                r.Disc(Local(-6 + i * 4, 2.8f + (i % 2) * 0.5f), (0.6f + 0.3f * MathF.Sin(t * 2 + i)) * sc, new Color4(1, 0.35f, 0.08f, ember * (0.5f + 0.4f * MathF.Sin(t * 1.5f + i * 2))));
+        // A thread of smoke, thinning out.
+        float smoke = M.Clamp01(1 - since / 45);
+        if (smoke > 0)
+            for (int i = 0; i < 6; i++)
+            {
+                float p = (t * 0.28f + i / 6f) % 1;
+                var at = Local(MathF.Sin(t * 0.9f + p * 5) * 3 * p, 6 + p * 62);
+                float rr = (2.4f + 6 * p) * sc;
+                r.Disc(at, rr, new Color4(0.55f, 0.55f, 0.58f, (1 - p) * 0.32f * smoke));
+            }
+    }
+
     void DrawFire(Renderer r, double time)
     {
+        if (Out) { DrawFireOut(r, time); return; }
         float sc = Sc, t = (float)time;
         float night = World.Current?.Night ?? 0;
         float flick = Flicker(time, Id);
@@ -720,7 +784,7 @@ sealed partial class Item
 
     /// <summary>Does this object need redrawing this frame (it moved, changed, animates, or someone's using it)?</summary>
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
-    public bool Animating => Held || !OnGround || Pinned || Def.Verbs.Contains(Verb.Warm) || (Def.Verbs.Contains(Verb.Dance) && Playing)
+    public bool Animating => Held || !OnGround || Pinned || (Def.Verbs.Contains(Verb.Warm) && (!Out || Smouldering)) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || Def.Key is "puddle" or "poop" or "fishtank" or "buildsite" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
                      || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s || HasHider;
 
@@ -729,7 +793,7 @@ sealed partial class Item
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>
     public int StateKey() => HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),
-                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt, MathF.Round(ScaleX * 100), MathF.Round(ScaleY * 100), PlantKind, WorldStateKey));
+                                   User?.Id ?? 0, Seated.Count(s => s != null), OwnerId, HashCode.Combine((int)(Fill * 40), Dirt, MathF.Round(ScaleX * 100), MathF.Round(ScaleY * 100), PlantKind, WorldStateKey, Out));
 
     public bool Changed()
     {
@@ -769,7 +833,7 @@ sealed partial class Item
     {
         float sc = Sc, w = Def.W * sc * ScaleX, h = Def.H * sc * ScaleY, pad = 6 * sc;
         if (IsWater) h = MathF.Max(h, 26 * sc);   // reeds, the ladder, leaping fish
-        if (Def.Verbs.Contains(Verb.Warm)) { h += 46 * sc; w = MathF.Max(w, (World.Current?.Night > 0.3f ? 250 : 150) * sc); }
+        if (Def.Verbs.Contains(Verb.Warm)) { h += (Out ? 72 : 46) * sc; w = MathF.Max(w, (World.Current?.Night > 0.3f ? 250 : 150) * sc); }
         if (Def.Verbs.Contains(Verb.Dance)) h += 30 * sc;
         if (Def.Verbs.Contains(Verb.Read)) w = MathF.Max(w, 20 * sc);
         float ext = MathF.Max(w, h) * MathF.Abs(MathF.Sin(Angle));

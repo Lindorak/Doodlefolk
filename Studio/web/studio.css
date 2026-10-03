@@ -517,3 +517,6 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 /* Community goal */
 .goal-bar { height: 12px; border: 1.5px solid var(--ink); border-radius: 8px; overflow: hidden; margin: 6px 0; }
 .goal-bar > div { height: 100%; background: var(--accent); }
+.weight-ctl { flex: 1; align-items: center; }
+.weight-ctl input[type=range] { flex: 1; min-width: 90px; }
+.weight-ctl .val { min-width: 54px; font: 15px var(--scrawl); color: var(--ink-2); text-align: right; }

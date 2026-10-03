@@ -84,7 +84,14 @@ sealed partial class Brain
             if (!MoveToward(tx, 30 * S)) return;
             f.DesiredVX = 0;
             FaceTo(cur.X);
-            // Right under it but it's too high: jump at it, swinging.
+            // Right under it and within a jump: box it (jumping and punching up at it).
+            float upNeck = f.Jt[J.Neck].Y - cur.Y;
+            if (Rules.Enabled && Rules.PunchCursor && upNeck > -4 * S && upNeck < f.Arm * 0.95f + f.Height * 1.5f && MathF.Abs(cur.X - f.Base.X) < 80 * S)
+            {
+                BeginCursorFight();
+                return;
+            }
+            // Too high even for that: jump at it anyway, furious.
             if (f.Base.Y - cur.Y > f.Height * 1.05f && f.Base.Y - cur.Y < f.Height * 3.2f && MathF.Abs(cur.X - f.Base.X) < 80 * S && _huntPlanT <= 0.1f)
             {
                 float rise = f.Base.Y - cur.Y - f.Height * 0.6f;

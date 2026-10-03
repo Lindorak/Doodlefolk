@@ -15,7 +15,7 @@ sealed partial class App
     /// <summary>Who's lit by a campfire (and, at night, dimmed away from one).</summary>
     void LightFrame(double now)
     {
-        var fires = _w.Items.Where(i => i.Def.Key == "campfire" && i.Holder == null).ToList();
+        var fires = _w.Items.Where(i => i.Def.Key == "campfire" && i.Holder == null && i.Burning).ToList();
         float night = _settings.DayNight ? _w.Night : 0;
         // Lamps, fairy lights, lanterns and lit windows (only after dark).
         var lamps = new List<(Vector2 at, float reach, float strength)>();

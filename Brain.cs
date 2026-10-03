@@ -10,7 +10,7 @@ sealed partial class Brain
     enum G
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
-        Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch, Scoop,
+        Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch, Scoop, Toss,
         Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit, Haul, Skip,
     }
 
@@ -400,6 +400,7 @@ sealed partial class Brain
             case G.Kick: DoKick(w); break;
             case G.Dribble: DoDribble(w); break;
             case G.Juggle: DoJuggle(w); break;
+            case G.Toss: DoToss(w); break;
             case G.Carry: DoCarry(w); break;
             case G.Scoop: DoScoop(w); break;
             case G.Haul: DoHaul(w); break;
@@ -821,6 +822,7 @@ sealed partial class Brain
         if (Stamina < 0.35f)
             opts.Add((0.6f - Stamina) * 8, () => { f.Emote(V("phew…", "OUT OF BREATH!", "need a sec.", "*pant*", "breathe…"), 1.2f); Go(G.SitFloor, rng.Range(20, 60)); }, "Catch their breath");
         SleepOptions(w, opts);
+        JuggleOptions(w, opts);
         if (seg.X2 - seg.X1 > 60 * S) opts.Add((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg), "Wander");
         if (Stamina > 0.35f && PickExplore(env, seg, out var explore))
             opts.Add(P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore, "Explore");

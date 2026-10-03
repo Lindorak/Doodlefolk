@@ -200,6 +200,7 @@ sealed partial class Figure
         GrapplePose(ref hN, ref hF, ref eN, ref eF, ref handW, ref leanT);
         SkipArms(ref hN, ref hF, ref eN, ref eF, ref handW);
         HoldHands(ref hN, ref hF, ref handW);
+        JuggleArms(ref hN, ref hF, ref eN, ref eF, ref handW);
 
         if (LookAt is Vector2 la && Action != Act.Lie)
         {

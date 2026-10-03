@@ -52,12 +52,15 @@ sealed partial class Brain
                 if (!Enum.TryParse<SkillKind>(t, out var k) || b.Stamina < 0.3f) return null;
                 switch (k)
                 {
-                    case SkillKind.Juggling or SkillKind.Ball:
+                    case SkillKind.Juggling:
+                        // Real juggling needs nothing but their own beanbags.
+                        return ("Practise juggling", 2.2f, () => { b.f.Emote(b.V("practice time!", "PRACTICE!!", "again.", "one more try…", "practice"), 1.2f); b.StartHandJuggle(w, 30); });
+                    case SkillKind.Ball:
                         if (b.NearestFreeBall(w, 1500 * b.S) is { SizeMul: <= 1.8f })
-                            return (k == SkillKind.Juggling ? "Practise juggling" : "Practise with the ball", 2.2f, () => { b.f.Emote(b.V("practice time!", "PRACTICE!!", "again.", "one more try…", "practice"), 1.2f); b.ForceBall(w, k == SkillKind.Juggling ? BallPlay.Juggle : BallPlay.Dribble); });
+                            return ("Practise with the ball", 2.2f, () => { b.f.Emote(b.V("practice time!", "PRACTICE!!", "again.", "one more try…", "practice"), 1.2f); b.ForceBall(w, b.rng.NextDouble() < 0.4 ? BallPlay.Juggle : BallPlay.Dribble); });
                         // No ball about: ask you for one.
                         if (w.Wishes && w.Wish == null && b._t0 > b._nextWish)
-                            return ("Ask for a ball", 1.2f, () => { b._nextWish = b._t0 + 120; w.Wish = new Wish { By = b.f, What = new(Prop.KindName(PropKind.SoccerBall), null, k == SkillKind.Juggling ? PropKind.Ball : PropKind.SoccerBall, 1, "a ball? (to practise!)"), Until = World.Now + 15 }; });
+                            return ("Ask for a ball", 1.2f, () => { b._nextWish = b._t0 + 120; w.Wish = new Wish { By = b.f, What = new(Prop.KindName(PropKind.SoccerBall), null, PropKind.SoccerBall, 1, "a ball? (to practise!)"), Until = World.Now + 15 }; });
                         // Plan B: footwork without a ball.
                         return ("Practise footwork", 1.2f, () => { b.f.Emote(b.V("footwork!", "TAP TAP TAP!", "drills.", "left, right…", "the feet remember"), 1.2f); b.Go(G.Idle, 5); b.f.StartFidget(Fidget.KickPebble); b.Practice(k, 0.012f); });
                     case SkillKind.Dancing:

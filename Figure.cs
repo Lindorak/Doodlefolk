@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 namespace Doodlefolk;
 
 enum Mode { Spawning, Control, Ragdoll, GetUp }
-enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm, Scoop }
+enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm, Scoop, Juggle }
 
 /// <summary>Joint indices. N = near side (drawn in front), F = far side (drawn behind, slightly darker).</summary>
 static class J
@@ -319,6 +319,7 @@ sealed partial class Figure
         _time += dt;
         TickMoves(dt);
         TickCombat(dt);
+        StepJuggle(dt);
         TickWeapon(dt);
         Array.Copy(Jt, _jtPrev, J.Count);
         switch (Mode)
@@ -512,7 +513,13 @@ sealed partial class Figure
         float lead = Math.Clamp(vPlan * dur * 1.5f, -Leg * 0.6f, Leg * 0.6f);
         float stance = Action == Act.Fight ? (st.Fight == FightStyle.Kicker ? 10 : 8) * S : idle ? (JumpPending ? 7f : 5.5f) * S : 0;
         float tN = Base.X + Facing * stance, tF = Base.X - Facing * stance;
-        if (idle && Action != Act.Fight && !JumpPending)
+        if (idle && Action == Act.Juggle)
+        {
+            // Face on, feet apart.
+            tN = Base.X + Facing * 4.5f * S;
+            tF = Base.X - Facing * 4.5f * S;
+        }
+        else if (idle && Action != Act.Fight && !JumpPending)
         {
             // Standing around: feet staggered (one a little ahead), not side by side like a soldier.
             float k = ((Id * 7919) % 100) / 100f;

@@ -64,6 +64,7 @@ sealed partial class Figure
         DrawRod(r, fade);
         DrawHealthBar(r);
         DrawRope(r, fade);
+        DrawJuggle(r, fade);
         DrawManpu(r, fade);
         if (fade > 0.5f) DrawEmote(r);
         if (fade > 0.5f) DrawDream(r);

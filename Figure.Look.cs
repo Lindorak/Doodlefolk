@@ -16,7 +16,7 @@ sealed partial class Figure
     bool _clothInit;
     readonly Vector2[] _lookBuf = new Vector2[48];
 
-    bool FrontView => Action is Act.SitFront or Act.SitBack && Grounded && Mode == Mode.Control;
+    bool FrontView => Action is Act.SitFront or Act.SitBack or Act.Juggle && Grounded && Mode == Mode.Control;
 
     (Vector2 h, Vector2 up, Vector2 fwd) HeadFrame()
     {

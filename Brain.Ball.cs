@@ -16,7 +16,7 @@ sealed partial class Brain
     float _carryX;
 
     /// <summary>Chance each juggling tap succeeds: ~0.89 for an average figure, ~0.97 for a show-off.</summary>
-    float Skill => 0.72f + Sk(SkillKind.Juggling) * 0.27f;
+    float Skill => 0.72f + Sk(SkillKind.Ball) * 0.27f;
 
     /// <summary>A ball worth looking at (flying past nearby, or the one we're playing with).</summary>
     Prop? InterestingBall(World w)
@@ -350,7 +350,7 @@ sealed partial class Brain
                 _didContact = true;
                 float footDist = Vector2.Distance(f.Jt[J.FootN], b.Pos);
                 bool hit = footDist < b.Radius + 18 * S && (_count == 0 || rng.NextDouble() < Skill);
-                if (hit) Practice(SkillKind.Juggling, 0.004f);
+                if (hit) Practice(SkillKind.Ball, 0.004f);
                 World.Log($"{f.Name} tap #{_count}: footDist={footDist / S:F1}S ball=({b.Pos.X - f.Base.X:F0},{b.Pos.Y - f.Base.Y:F0}) vel=({b.Vel.X:F0},{b.Vel.Y:F0}) foot=({f.Jt[J.FootN].X - f.Base.X:F0},{f.Jt[J.FootN].Y - f.Base.Y:F0}) hit={hit}");
                 if (!hit)
                 {

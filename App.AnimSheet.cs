@@ -179,6 +179,10 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => { fig.Brain.Puppet(99); fig.SetAction(peek ? Act.Stand : Act.Curl); }));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 2.2f));
         }
+        // Juggling with their hands: three, four (a fountain) and five, face on.
+        foreach (var (label, skill) in new[] { ("Three", 0.3f), ("Four (fountain)", 0.7f), ("Five", 0.95f) })
+            Fig("Juggling", label, 2.2f, f => { f.Brain.Skills[SkillKind.Juggling] = skill; f.Brain.StartHandJuggle(_w, 60); f.JugCatch = () => true; }, 1.0f);
+        Fig("Juggling", "A fumble", 4f, f => { f.Brain.Skills[SkillKind.Juggling] = 0.2f; f.Brain.StartHandJuggle(_w, 60); int n = 0; f.JugCatch = () => ++n < 4; }, 1.0f);
         // Jumping at the cursor: hung in the air at different heights above them (and a little to one side); counts the hits.
         foreach (var (label, upH, off) in new[] { ("Cursor just overhead", 0.25f, 0f), ("Cursor high", 0.8f, 0f), ("Cursor very high", 1.35f, 0f), ("Cursor high, to the side", 0.8f, 30f), ("Cursor high, drifting", 0.8f, -1f), ("Hunter, cursor high", 0.8f, -2f) })
         {

@@ -16,6 +16,7 @@ sealed partial class App
     sealed record AnimJob(string Group, string Label, float Duration, Action<Figure?, Pet?> Start, Func<Figure?, Pet?, Vector2> Focus, PetKind? Pet = null, float Size = 1);
     readonly List<AnimJob> _animJobs = new();
     int _animJob = -1, _animFrame;
+    readonly List<(double at, Action act)> _animLater = new();
     bool _animStarted;
     double _animJobStart, _animNextShot;
     Figure? _animFig;
@@ -111,6 +112,29 @@ sealed partial class App
         foreach (var (label, m) in new[] { ("Anger vein", Manpu.Vein), ("Steam", Manpu.Steam), ("Vein + steam", Manpu.Vein | Manpu.Steam), ("Sweat drop", Manpu.SweatDrop), ("Gloom", Manpu.Gloom),
                                           ("Sparkles", Manpu.Sparkles), ("Shock", Manpu.Shock), ("Dizzy", Manpu.Dizzy), ("Blush + hearts", Manpu.Blush | Manpu.Hearts), ("Nervous", Manpu.Nervous) })
             Fig("Symbols", label, 2.4f, f => { foreach (var k in Enum.GetValues<Manpu>()) if (k != Manpu.None && m.HasFlag(k)) f.Brain.Flash(k, 99); }, 1.05f);
+        // Moving furniture: a chair overhead, a couch between two.
+        foreach (var (label, key, two) in new[] { ("Chair overhead", "chair", false), ("Lamp overhead", "lamp", false), ("Couch, two of them", "couch", true), ("Bed, two of them", "bed", true) })
+        {
+            Item? thing = null;
+            _animJobs.Add(new("Moving", label, 9, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                thing = SpawnItem(ItemCatalog.Find(key)!);
+                thing!.Pos = new Vector2(f!.Base.X + 90 * _w.Scale, floor.Y); thing.Vel = Vector2.Zero; thing.OnGround = true;
+                if (two)
+                {
+                    var mate = new Figure(Palette.All[(_animJob + 3) % Palette.All.Length].Color, "Mate", _w.Scale, Personality.Random(new Random(9)), new Random(9)) { SizeMul = 1 };
+                    mate.Traits.Sociability = 1; mate.Traits.Energy = 1;
+                    mate.PlaceAt(floor, thing.Pos.X + 120 * _w.Scale);
+                    mate.SpawnT = 0.999f;
+                    _w.Figures.Add(mate);
+                    mate.Brain.AddAffinity(f, 1);
+                    mate.Brain.Reset();
+                }
+                var fig = f; var t = thing;
+                _animLater.Add((_tFrame / (double)TFps + 0.6, () => fig.Brain.HaulNow(t, t.Pos.X + 260 * _w.Scale, _w)));
+            }, (f, _) => thing != null ? new Vector2(thing.Pos.X, thing.Pos.Y - 40 * _w.Scale) : Vector2.Zero, null, 3.4f));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {
@@ -144,6 +168,7 @@ sealed partial class App
             StartAnimJob(_animJobs[_animJob], t);
             return;
         }
+        for (int i = _animLater.Count - 1; i >= 0; i--) if (t >= _animLater[i].at) { var a = _animLater[i].act; _animLater.RemoveAt(i); a(); }
         var job = _animJobs[_animJob];
         if (!_animStarted && t >= _animJobStart - 0.1) { _animStarted = true; job.Start(_animFig, _animPet); _animJobStart = t; _animNextShot = t + 0.05; }
         if (!_animStarted || t < _animNextShot || _animFrame >= Shots) return;

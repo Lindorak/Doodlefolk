@@ -25,6 +25,9 @@ sealed partial class Item
     public bool Pinned;
     public Vector2 PinTarget, PinOffset;
     public Figure? Holder;           // carried in a hand (food, books)
+    /// <summary>Being moved: the mover (and the helper at the other end, for heavy things); lifted once they've picked it up.</summary>
+    public Figure? HaulA, HaulB;
+    public bool Lifted, HaulSolo;
     public bool Open;               // book being read
     public int BitesLeft;
     public bool Playing = true;     // radio
@@ -40,7 +43,7 @@ sealed partial class Item
     public bool Resizable => Def.Key == "fishtank" || IsWater;
     /// <summary>Water (and a tank of it) stretches sideways only: its depth is under the window, out of sight.</summary>
     public bool WidthOnly => IsWater || Def.Key == "fishtank";
-    public bool Held => Pinned || Holder != null;
+    public bool Held => Pinned || Holder != null || Lifted;
     public bool Free => !Held;
 
     public Item(ItemDef def, float scale)
@@ -89,6 +92,27 @@ sealed partial class Item
         {
             Holder.SyncWeapon(this);
             OnGround = false;
+            return;
+        }
+        if (Lifted && (HaulA is not { } h0 || !w.Figures.Contains(h0) || h0.Hauling != this || (HaulB != null && (!w.Figures.Contains(HaulB) || HaulB.Hauling != this))))
+        {
+            Lifted = false; HaulA = HaulB = null; HaulSolo = false; OnGround = false;
+        }
+        if (Lifted && HaulA is { } ha)
+        {
+            // Overhead, resting on the mover's hands; or slung between the two of them at hip height.
+            Vector2 prev = Pos;
+            if (HaulSolo || HaulB == null) Pos = new Vector2(ha.Base.X, ha.Jt[J.Head].Y - ha.HeadR - 1.5f * _s);
+            else
+            {
+                var hb = HaulB;
+                float lift = (ha.Leg + hb.Leg) * 0.5f * 0.8f;
+                Pos = new Vector2((ha.Base.X + hb.Base.X) * 0.5f, (ha.Base.Y + hb.Base.Y) * 0.5f - lift);
+                Angle = Math.Clamp((hb.Base.Y - ha.Base.Y) / MathF.Max(1, MathF.Abs(hb.Base.X - ha.Base.X)), -0.3f, 0.3f);
+            }
+            Vel = (Pos - prev) / MathF.Max(dt, 1e-4f);
+            OnGround = false;
+            if (HaulSolo || HaulB == null) Angle = 0;
             return;
         }
         if (Holder != null)

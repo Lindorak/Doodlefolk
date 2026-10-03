@@ -235,6 +235,56 @@ sealed partial class App
             a.SimRule("jealousy never turns into a fight", 1, t => a._w.Figures.All(f => f.Brain.Jealousy is not { jealousOf: { } j, foe: { } foe } || foe != j),
                 () => string.Join(", ", a._w.Figures.Where(f => f.Brain.Jealousy.foe != null).Select(f => $"{f.Name} fighting {f.Brain.Jealousy.foe!.Name}")));
         }),
+        new("Wishes", new[] { "none", "granted" }, (a, v) =>
+        {
+            if (v != "granted") return;
+            Item? gift = null; Prop? giftBall = null; string what = ""; Figure? to = null; float footTime = 0;
+            a.SimAt(5, "a wish, granted", () =>
+            {
+                // Someone free (an event's racers and acts finish that first, rightly).
+                if (a._w.Figures.FirstOrDefault(f => f.Mode == Mode.Control && f.Visitor == VisitorKind.None && f.Brain.HapRole.Length == 0) is not { } f) return;
+                what = f.Brain.ForceWish(a._w);
+                to = f;
+                int items = a._w.Items.Count, props = a._w.Props.Count;
+                a.GrantWish();
+                gift = a._w.Items.Count > items ? a._w.Items[^1] : null;
+                giftBall = a._w.Props.Count > props ? a._w.Props[^1] : null;
+            });
+            // Watched all along (a campfire is warmed by and left; a pizza is eaten and gone).
+            bool used = false;
+            a.SimEvery(0.5, 5.5, "watch the present", t =>
+            {
+                if (to != null && to.Mode == Mode.Control && to.Grounded) footTime += 0.5f;
+                if (used) return;
+                if (gift != null)
+                    used = !a._w.Items.Contains(gift) || gift.BitesLeft < gift.Def.Bites || gift.User != null || gift.Seated.Any(s => s != null) || gift.Holder != null || gift.Lifted
+                           || a._w.Figures.Any(f => f.Brain.Activity.Contains(gift.Def.Name, StringComparison.OrdinalIgnoreCase));
+                else if (giftBall != null) used = giftBall.LastTouch != null || giftBall.Holder != null || a._w.Figures.Any(f => f.Brain.Seeking == giftBall);
+            });
+            a.SimAt(45, "the wish was enjoyed", () =>
+            {
+                // Fair only if they had a chance (on their feet for a while, not flung about the whole time).
+                if ((gift != null || giftBall != null) && footTime >= 10)
+                    a.SimCheck("a granted wish gets used", used, $"{what}: never touched in {footTime:0}s on their feet");
+            });
+        }),
+        new("Moving", new[] { "none", "furniture" }, (a, v) =>
+        {
+            if (v != "furniture") return;
+            a.SimAt(8, "move things", () =>
+            {
+                var figs = a._w.Figures.Where(f => f.Mode == Mode.Control && f.Brain.HapRole.Length == 0).ToList();
+                foreach (var (key, i) in new[] { ("couch", 0), ("chair", 1) })
+                {
+                    if (i >= figs.Count) break;
+                    var it = a._w.Items.FirstOrDefault(x => x.Def.Key == key) ?? a.Put(key);
+                    if (it == null) continue;
+                    var seg = a._w.Env.Below(it.Pos.X, it.Pos.Y - 4);
+                    float x = seg != null ? M.ClampIn(it.Pos.X + 300, seg.X1 + 60, seg.X2 - 60) : it.Pos.X;
+                    figs[i].Brain.HaulNow(it, x, a._w);
+                }
+            });
+        }),
         new("Babies", new[] { "on", "off" }, (a, v) => a._settings.Babies = v == "on"),
         new("Jobs", new[] { "on", "off" }, (a, v) => a._settings.Jobs = v == "on"),
         new("Graphics", new[] { "low", "high", "ultra" }, (a, v) => { a._settings.Gfx = GfxSettings.For(v); Gfx.Q = a._settings.Gfx; }),
@@ -423,6 +473,7 @@ sealed partial class App
             if (!Finite(it.Pos)) SimFail($"{it.Def.Key} is somewhere impossible");
             else if (it.Free) Away(it, $"{it.Def.Key}", it.Pos, 15);
             if (it.Rider is { } r && (r.Riding != it || !_w.Figures.Contains(r))) SimFail($"{it.Def.Key} is ridden by someone who isn't riding it");
+            if (it.Lifted && (it.HaulA is not { } ha || !_w.Figures.Contains(ha) || ha.Hauling != it)) SimFail("nothing is left floating in the air", $"{it.Def.Key} lifted by {it.HaulA?.Name ?? "nobody"}");
             if (it.Rider is { } r2 && r2.Mode != Mode.Control) SimFail($"{it.Def.Key} is stuck to {r2.Name}, who fell off");
             int swimmers = _w.Figures.Count(f => f.Swimming && f.Brain.WaterItem == it);
             if (it.Swimmers != swimmers) SimFail($"{it.Def.Key} counts the wrong number of swimmers", $"{it.Swimmers} vs {swimmers}");

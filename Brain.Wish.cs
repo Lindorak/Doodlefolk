@@ -76,9 +76,10 @@ sealed partial class Brain
     }
 
     /// <summary>Something it fancies drawing just for fun (with the pencil and nothing it needs).</summary>
-    Want Whim(World w)
+    Want Whim(World w, bool forPencil = false)
     {
-        var pool = ItemCatalog.All.Where(d => d.Sport == null && !d.Verbs.Contains(Verb.Create) && (!d.Weapon || P.Aggression > 0.6f)
+        // Asking you for something: only things they'd actually use (the pencil draws whatever it likes).
+        var pool = ItemCatalog.All.Where(d => d.Sport == null && !d.Verbs.Contains(Verb.Create) && (!d.Weapon || P.Aggression > 0.6f) && (forPencil || Enjoyable(d))
                                               && (!d.Verbs.Contains(Verb.Eat) || Hunger > 0.3f)).ToList();
         float Weight(ItemDef d) => MathF.Max(0.05f, 1 + DefLike(d) * 1.5f) * rng.Range(0.5f, 1.5f);
         var pick = pool.OrderByDescending(Weight).First();
@@ -96,7 +97,6 @@ sealed partial class Brain
         if (_gift is { } g && w.Items.Contains(g) && g.OnGround && g.Free && GiftVerb(g) is Verb gv)
             opts.Add(4, () => { _gift = null; UseItem(g, gv, w); }, $"Enjoy the {g.Def.Name.ToLowerInvariant()}");
         else if (_gift != null && !w.Items.Contains(_gift)) _gift = null;
-        if (_giftBall != null) { if (!w.Props.Contains(_giftBall) || _giftBall.OnGround) _giftBall = null; }
 
         if (HasPencil)
         {
@@ -111,7 +111,7 @@ sealed partial class Brain
             }
             if (_t0 > _nextCreate && w.Items.Count < 40 && Stamina > 0.2f)
             {
-                var want = Wanting(w) ?? Whim(w);
+                var want = Wanting(w) ?? Whim(w, forPencil: true);
                 opts.Add((0.6f + P.Playfulness + P.Curiosity * 0.5f) * (0.5f + want.Strength + Boredom), () => BeginCreate(want), $"Draw {(want.Item?.Article ?? "a")} {want.Name.ToLowerInvariant()}");
             }
             return;
@@ -130,11 +130,13 @@ sealed partial class Brain
     public string ForceWish(World w)
     {
         var want = Wanting(w) ?? Whim(w);
-        if (HasPencil) { BeginCreate(want); return $"drawing {want.Name}"; }
+        if (HasPencil) { BeginCreate(Wanting(w) ?? Whim(w, forPencil: true)); return $"drawing {want.Name}"; }
         if (want.Say.Length == 0) want = want with { Say = $"{(want.Item?.Article ?? "a")} {want.Name.ToLowerInvariant()}?" };
         w.Wish = new Wish { By = f, What = want, Until = World.Now + 15 };
         return want.Name;
     }
+
+    static bool Enjoyable(ItemDef d) => d.Verbs.Any(v => v is not (Verb.Play or Verb.Create or Verb.Stand));
 
     static Verb? GiftVerb(Item it) =>
         it.Def.Verbs.Where(v => v is not (Verb.Play or Verb.Create)).Cast<Verb?>().FirstOrDefault();
@@ -153,6 +155,37 @@ sealed partial class Brain
         if (f.Mode == Mode.Control && f.Grounded && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge) f.SetAction(Act.Cheer);
         _gift = item;
         _giftBall = ball;
+        _giftAt = _t0;
+    }
+
+    float _giftAt = -1;
+
+    /// <summary>They asked for it, so as soon as it's landed they go and enjoy it: eat the pizza, sit in the chair, play
+    /// with the ball (unless they're asleep, in a fight or in the middle of a game; then when they're free).</summary>
+    void EnjoyGift(World w)
+    {
+        if (_giftAt < 0 || _t0 - _giftAt < 0.8f) return;
+        if (_t0 - _giftAt > 120) { _giftAt = -1; return; }
+        bool free = f.Mode == Mode.Control && f.Grounded && !Engaged && !InFight && !Asleep
+                    && (_g is G.Idle or G.Walk or G.SitFloor or G.SitEdge or G.Watch or G.Cheer or G.Wave or G.Hunt or G.Annoyed || (_g == G.UseItem && _verb is not Verb.Eat && _item != _gift));
+        if (!free || (_g == G.Walk && _purpose != WalkPurpose.Wander && _purpose != WalkPurpose.Explore)) return;
+        if (_gift is { } g)
+        {
+            if (!w.Items.Contains(g)) { _gift = null; _giftAt = -1; return; }
+            if (!g.OnGround || !g.Free || GiftVerb(g) is not Verb gv) return;
+            _gift = null; _giftAt = -1;
+            f.Emote(gv == Verb.Eat ? V("yum!", "FOOD!!", "mine.", "for me…", "a feast!") : "♪", 1);
+            UseItem(g, gv, w);
+            return;
+        }
+        if (_giftBall is { } b)
+        {
+            if (!w.Props.Contains(b) || !b.Free) { _giftBall = null; _giftAt = -1; return; }
+            if (!b.OnGround && b.Vel.LengthSquared() > 50 * 50 * S * S) return;
+            _giftBall = null; _giftAt = -1;
+            GoToBall(b, w, () => ChoosePlay(b, w, null));
+        }
+        else _giftAt = -1;
     }
 
     /// <summary>The bubble went unanswered. A little disappointing, nothing more.</summary>

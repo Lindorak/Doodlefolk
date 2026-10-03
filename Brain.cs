@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch, Scoop,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit, Haul,
     }
 
     readonly Figure f;
@@ -84,6 +84,7 @@ sealed partial class Brain
         if (_g is G.Carry or G.Throw && g is not (G.Carry or G.Throw) && f.Carrying != null) f.DropCarried(Vector2.Zero);
         if (_ball != null && _ball.Juggler == f && g != G.Juggle) _ball.Juggler = null;
         if (_g is G.Fight or G.CursorFight && g != _g) EndFight();
+        if (_g == G.Haul && g != G.Haul) LeaveHaul();
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
@@ -102,6 +103,7 @@ sealed partial class Brain
     {
         Stamina = o.Stamina; Boredom = o.Boredom; Loneliness = o.Loneliness; Annoyance = o.Annoyance; CursorTrust = o.CursorTrust;
         Episodes.Clear(); Episodes.AddRange(o.Episodes);
+        _gift = o._gift; _giftBall = o._giftBall; _giftAt = o._giftAt;   // a present they haven't got to yet
         _fondness = o._fondness;
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
         foreach (var (k, v) in o.Love) Love[k] = v;
@@ -192,12 +194,15 @@ sealed partial class Brain
         CursorTrust = MathF.Max(0, CursorTrust - (tickled ? 0 : 0.05f));
         Annoyance = M.Clamp01(Annoyance + (tickled ? 0 : 0.12f));
         if (tickled && _g != G.Sleep) { Go(G.Cheer, 0.8f); return; }
-        if (_g == G.Sleep) { f.Emote("!", 1); Go(G.Annoyed, 1.2f); return; }
+        if (_g == G.Sleep) { f.Emote("!", 1); Go(G.Annoyed, AnnoyedFor); return; }
         if (_g == G.CursorFight) return;
         if (WantsCursorFight() && rng.NextDouble() < 0.6) BeginCursorFight();
         else if (P.Aggression > 0.5f) Go(G.Swat, 0.34f);
         else Startle(w.Cursor);
     }
+
+    /// <summary>How long a huff lasts: longer the more fed up they already are.</summary>
+    float AnnoyedFor => 1.2f + Annoyance * 3.5f;
 
     public void OnHit(Figure? from, bool knockedDown, World w)
     {
@@ -219,7 +224,7 @@ sealed partial class Brain
         if (_g is G.Sleep or G.SitEdge or G.SitFloor or G.Idle or G.Walk or G.Watch)
         {
             if (from != null) _glareAt = from;
-            Go(G.Annoyed, 1.2f);
+            Go(G.Annoyed, AnnoyedFor);
         }
     }
 
@@ -244,6 +249,7 @@ sealed partial class Brain
         Reflect(w);
         RecallPlace(w);
         UpdateSymbols(w);
+        EnjoyGift(w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);
@@ -369,6 +375,7 @@ sealed partial class Brain
             case G.Juggle: DoJuggle(w); break;
             case G.Carry: DoCarry(w); break;
             case G.Scoop: DoScoop(w); break;
+            case G.Haul: DoHaul(w); break;
             case G.Throw: DoThrow(w); break;
             case G.Catch: DoCatch(w); break;
             case G.Fight: DoFight(w); break;
@@ -802,6 +809,7 @@ sealed partial class Brain
         LassoOptions(w, opts);
         GardenOptions(w, opts);
         TownOptions(w, opts);
+        RedecorateOptions(w, opts);
         HelpBuildOptions(w, opts);
         OutdoorOptions(w, opts);
         BoostOptions(w, opts);

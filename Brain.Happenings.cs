@@ -63,15 +63,23 @@ sealed partial class Brain
     bool HapGoTo(World w, Happening h, float x, float within, bool run = false)
     {
         var seg = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+        // On the event's floor already: go as near as this stretch of it allows (a spot past its end isn't worth
+        // walking off for, and trying again and again looks like dithering).
+        if (f.Grounded && seg != null && MathF.Abs(seg.Y - h.Y) < 3 && seg.X2 - seg.X1 > 20 * S) x = M.ClampIn(x, seg.X1 + 6 * S, seg.X2 - 6 * S);
         if (f.Grounded && seg != null && MathF.Abs(seg.Y - h.Y) < 3 && x >= seg.X1 && x <= seg.X2)
         {
             _run = run;
             return MoveToward(x, within);
         }
         if (!f.Grounded) return false;
+        // Getting back to the event from somewhere else: give a route a few seconds before trying another.
+        if (_t0 < _hapNavRetry) { f.DesiredVX = 0; return false; }
+        _hapNavRetry = _t0 + 4;
         Navigate(() => new Vector2(x, h.Y), within, run, () => Go(G.Happening, 1e6f), WalkPurpose.Other);
         return false;
     }
+
+    float _hapNavRetry;
 
     void DoHappening(World w)
     {

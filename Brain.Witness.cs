@@ -75,7 +75,7 @@ sealed partial class Brain
             // My friend is being all friendly with *them*?
             f.Emote("…", 1.1f);
             _glareAt = actor;
-            Go(G.Annoyed, 1.2f);
+            Go(G.Annoyed, AnnoyedFor);
         }
         else if (act != SocialAct.Hurt && aT > 0.5f && rng.NextDouble() < 0.3)
         {

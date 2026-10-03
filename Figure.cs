@@ -113,6 +113,8 @@ sealed partial class Figure
     public bool Nightmare;
     /// <summary>An object in hand (food, a book).</summary>
     public Item? CarryingItem;
+    /// <summary>Furniture being moved (lifted overhead, or one end of something heavy).</summary>
+    public Item? Hauling;
 
     /// <summary>Sit/lie on a surface of an object (or anything): stand right there, grounded on it.</summary>
     public void Mount(Vector2 at, IntPtr hwnd)

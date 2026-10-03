@@ -169,7 +169,7 @@ sealed partial class Brain
         {
             Saddened(0.15f);
             f.Emote(rng.NextDouble() < 0.5 ? "…" : "ha", 1.2f);
-            Go(G.Annoyed, 1.2f);
+            Go(G.Annoyed, AnnoyedFor);
             return true;
         }
         if (f.HP > FleeHP && rng.NextDouble() < P.Bravery * 0.7f + P.Aggression * 0.5f)

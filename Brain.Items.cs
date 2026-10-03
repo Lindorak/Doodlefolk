@@ -119,6 +119,8 @@ sealed partial class Brain
                 Verb.Warm => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 12 * S),
                 Verb.Dance => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 20 * S),
                 Verb.Tend => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 8 * S),
+                // Into a hiding place: from the entrance (the near edge), then crawl in.
+                Verb.Hide => item.Pos.X + MathF.Sign(f.Base.X - item.Pos.X == 0 ? 1 : f.Base.X - item.Pos.X) * (item.Def.W * item.Sc * 0.5f + 4 * S),
                 _ => item.Pos.X,
             };
             // Trampolines and tables: go up onto the surface. Everything else: the ground beside/under it.
@@ -298,6 +300,13 @@ sealed partial class Brain
                 if (rng.NextDouble() < World.Dt * 0.12) f.Emote(rng.NextDouble() < 0.5 ? "!" : "hm", 0.8f);
                 Boredom = MathF.Max(0, Boredom - World.Dt * 0.02f);
                 break;
+            case Verb.Hide when MathF.Abs(HideX(it) - f.Base.X) > 2 * S && _t < 3f:
+                // Crawling in, low, a bit at a time (the thing hides them as they go).
+                f.SetAction(Act.Curl);
+                f.KeepFacing = true;
+                FaceTo(it.Pos.X);
+                f.DesiredVX = MathF.Sign(HideX(it) - f.Base.X) * MathF.Max(28 * S, MathF.Abs(HideX(it) - f.Base.X) * 2.2f);
+                break;
             case Verb.Hide:
                 // Curled up inside; now and then peek out over the edge (of a box or a barrel: a tent has no rim
                 // to look over, so in there they stay out of sight).
@@ -367,7 +376,15 @@ sealed partial class Brain
     }
 
     /// <summary>The box, barrel or tent we're inside, if we're hiding (it's drawn over us).</summary>
-    public Item? HidingIn => _g == G.UseItem && _verb == Verb.Hide ? _item : null;
+    /// <summary>Where to stop crawling in: short of the middle, so the curled-up body (it reaches forward) ends up centred.</summary>
+    float HideX(Item it)
+    {
+        float lo = float.MaxValue, hi = float.MinValue;
+        foreach (var j in f.Jt) { lo = MathF.Min(lo, j.X); hi = MathF.Max(hi, j.X); }
+        return f.Base.X + (it.Pos.X - (lo + hi) / 2);   // the curled-up body's middle in the middle of it
+    }
+
+    public Item? HidingIn => _g == G.UseItem && (_verb == Verb.Hide || (_verb == Verb.Lie && _item?.Def.Verbs.Contains(Verb.Hide) == true)) ? _item : null;
 
     /// <summary>An object we're using was grabbed, eaten by someone else, or removed.</summary>
     public void OnItemGone(Item it)

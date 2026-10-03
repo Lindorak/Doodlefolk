@@ -26,7 +26,7 @@ sealed partial class App
         double t = _clock.Elapsed.TotalSeconds;
         // Where each still thing reaches: its outline plus room for its shadow and any glow.
         var reach = _static.ToDictionary(it => it, it => { var b = it.Bounds(); float pad = 90 * _w.Scale * MathF.Max(1, it.SizeMul); b.Inflate(pad, pad); return b; });
-        var overAreas = _static.Where(it => it.Def.Shapes.Any(s => s.Over)).Select(it => reach[it]).ToList();
+        var overAreas = new List<RectangleF>();   // occupied things (the only ones with parts in front) are drawn live
         _r.BuildLayers(tile =>
         {
             var here = _static.Where(it => reach[it].IntersectsWith(tile)).ToList();

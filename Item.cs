@@ -252,11 +252,13 @@ sealed partial class Item
         if (Def.Verbs.Contains(Verb.Read) && Open) { if (!over) DrawOpenBook(r); return; }
         if (Def.Verbs.Contains(Verb.Shelter) && Open && Holder is { } holder) { if (over) DrawOpenUmbrella(r, holder); return; }
         bool detail = Gfx.Q.DetailedArt;
-        // Someone hiding inside: the whole thing is in front of them (only a head peeking over the rim shows).
-        bool cover = over && HasHider;
+        // The front parts (arm rests, a blanket, a fort's door) go over whoever's in it, so they're drawn after them;
+        // with nobody in it, it's drawn all at once, behind anyone walking past.
+        bool occupied = Occupied;
         foreach (var sh in Def.Shapes)
         {
-            if ((sh.Over != over && !cover) || (sh.Detail && !detail)) continue;
+            if (sh.Detail && !detail) continue;
+            if (occupied ? sh.Over != over : over) continue;
             if (sh.WhenUsed && User == null && Seated.All(s => s == null)) continue;
             DrawShape(r, sh, k);
         }
@@ -786,10 +788,27 @@ sealed partial class Item
     /// <summary>Moving, held, or animating by itself (flames, music notes, a swinging hammock, swimming fish, smells).</summary>
     public bool Animating => Held || !OnGround || Pinned || (Def.Verbs.Contains(Verb.Warm) && (!Out || Smouldering)) || (Def.Verbs.Contains(Verb.Dance) && Playing)
                      || Def.Key is "puddle" or "poop" or "fishtank" or "buildsite" || (Def.Key == "hamsterwheel" && MathF.Abs(SpinV) > 0.05f) || (Def.Key is "litterbox" or "peepad" && Dirt >= 3)
-                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s || HasHider;
+                     || (Def.Verbs.Contains(Verb.Hammock) && SwingAmp > 0.01f) || AnimatingWorld || Net?.Motion > 0.05f * _s || HasHider || Occupied;
 
     /// <summary>Someone's hiding inside (curled up in the box, the barrel, the tent).</summary>
     public bool HasHider => User?.Brain.HidingIn == this;
+
+    /// <summary>Someone's in it (lying, sitting, hiding) and it has front parts to draw over them.</summary>
+    public bool Occupied => HasOverParts && (User != null || Seated.Any(s => s != null));
+    bool HasOverParts => _hasOver ??= Def.Shapes.Any(s => s.Over);
+    bool? _hasOver;
+
+    /// <summary>Is this figure in it (so drawn just before its front parts)?</summary>
+    public bool Holds(Figure f) => User == f || Seated.Contains(f);
+
+    /// <summary>The body of it (where someone inside is out of sight).</summary>
+    public System.Drawing.RectangleF Inside()
+    {
+        // Wider than it is: someone curled up in a narrow barrel can't be sticking out of its sides, so whatever of
+        // them is below the rim is out of sight (only this hider is clipped by it; nothing else).
+        float hw = Def.W * Sc * ScaleX * 0.5f + 26 * _s, h = Def.H * Sc * ScaleY;
+        return System.Drawing.RectangleF.FromLTRB(Pos.X - hw, Pos.Y - h, Pos.X + hw, Pos.Y + 3 * _s);
+    }
 
     /// <summary>Everything about how it looks right now (if this changes, it needs redrawing).</summary>
     public int StateKey() => HashCode.Combine(HashCode.Combine(MathF.Round(Pos.X), MathF.Round(Pos.Y), MathF.Round(Angle * 100), SizeMul, Color.GetHashCode(), Flip, Open, BitesLeft),

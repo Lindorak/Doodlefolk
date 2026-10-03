@@ -66,8 +66,20 @@ sealed partial class Figure
         DrawRope(r, fade);
         DrawJuggle(r, fade);
         DrawManpu(r, fade);
-        if (fade > 0.5f) DrawEmote(r);
-        if (fade > 0.5f) DrawDream(r);
+        if (fade > 0.5f && !NoBubbles) DrawEmote(r);
+        if (fade > 0.5f && !NoBubbles) DrawDream(r);
+    }
+
+    /// <summary>Drawing them clipped (inside a tent): leave their bubbles for DrawBubbles, outside the clip, so a
+    /// "z" still shows who's in there.</summary>
+    public bool NoBubbles;
+
+    public void DrawBubbles(Renderer r)
+    {
+        if (Fade <= 0.5f || Mode == Mode.Spawning) return;
+        var saved = r.BeginInk();
+        try { DrawEmote(r); DrawDream(r); }
+        finally { if (r.EndInk(saved) is { } ink) InkNow = InkNow is { } n ? System.Drawing.RectangleF.Union(n, ink) : ink; }
     }
 
     void DrawSketch(Renderer r)

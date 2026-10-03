@@ -297,8 +297,36 @@ sealed partial class App
                 place = SpawnItem(ItemCatalog.Find(key)!);
                 place!.Pos = new Vector2(1000, floor.Y); place.Vel = Vector2.Zero; place.OnGround = true;
                 f!.PlaceAt(floor, 960);
-                f.Brain.UseNow(place, Verb.Hide, _w);
+                f.SpawnT = 0.999f;
+                var hf = f; var hp = place;
+                _animLater.Add((_tFrame / (double)TFps + 0.15, () => hf.Brain.UseNow(hp!, Verb.Hide, _w)));   // once they're fully drawn
             }, (_, _) => place?.Local(0, 18) ?? Vector2.Zero, null, 1.1f));
+        }
+        // Asleep in the tent (out of sight, the z's showing), and someone walking past a couch with someone on it.
+        {
+            Item? tent = null;
+            _animJobs.Add(new("Hiding", "Asleep in the tent", 5, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                tent = SpawnItem(ItemCatalog.Find("tent")!);
+                tent!.Pos = new Vector2(1000, floor.Y); tent.Vel = Vector2.Zero; tent.OnGround = true;
+                f!.PlaceAt(floor, 1000); f.SpawnT = 0.999f;
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 0.15, () => fig.Brain.UseNow(tent, Verb.Lie, _w)));
+            }, (_, _) => tent?.Local(0, 30) ?? Vector2.Zero, null, 1.6f));
+            Item? couch = null;
+            _animJobs.Add(new("Hiding", "Walking past the couch", 4, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                couch = SpawnItem(ItemCatalog.Find("couch")!);
+                couch!.Pos = new Vector2(1000, floor.Y); couch.Vel = Vector2.Zero; couch.OnGround = true;
+                f!.PlaceAt(floor, 1000); f.SpawnT = 0.999f;
+                var walker = new Figure(Palette.All[(_animJob + 4) % Palette.All.Length].Color, "Walker", _w.Scale, Personality.Random(new Random(5)), new Random(5)) { SizeMul = 1 };
+                walker.PlaceAt(floor, 1000 - 200 * _w.Scale); walker.SpawnT = 0.999f;
+                _w.Figures.Add(walker);
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 0.15, () => { fig.Brain.UseNow(couch, Verb.Sit, _w); walker.Brain.Puppet(99); walker.Facing = 1; walker.DesiredVX = walker.WalkSpeed; }));
+            }, (_, _) => couch?.Local(0, 14) ?? Vector2.Zero, null, 1.6f));
         }
         foreach (var kind in Enum.GetValues<PetKind>())
         {

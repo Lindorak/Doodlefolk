@@ -243,6 +243,7 @@ sealed partial class Brain
         UpdateArchetype(dt, w);
         Reflect(w);
         RecallPlace(w);
+        UpdateSymbols(w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);

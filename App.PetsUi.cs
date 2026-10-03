@@ -29,6 +29,7 @@ sealed partial class App
         World.Jobs = _settings.Jobs;
         World.Calm = _settings.Calm;
         World.Gestures = _settings.GesturesOnly;
+        World.Manga = _settings.MangaSymbols;
         (World.Drama, World.EventRate, World.VisitorRate) = MoodNumbers(_settings.TownMood);
         (World.BeatPhase, World.BarPhase) = _settings.BeatDance && _w.ScreenMedia && _w.Screen != null ? _w.Screen.BeatPhase() : (-1, -1);
         World.ColourBlind = _settings.ColourBlind;

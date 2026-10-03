@@ -52,6 +52,7 @@ sealed partial class Figure
         DrawTeamBadge(r, fade);
         DrawRod(r, fade);
         DrawHealthBar(r);
+        DrawManpu(r, fade);
         if (fade > 0.5f) DrawEmote(r);
         if (fade > 0.5f) DrawDream(r);
     }

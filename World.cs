@@ -59,6 +59,8 @@ sealed partial class World
     public static bool Calm, ColourBlind;
     /// <summary>Figures speak only in gestures and symbols (setting).</summary>
     public static bool Gestures;
+    /// <summary>Manga symbols round their heads (anger veins, sweat drops, steam...).</summary>
+    public static bool Manga = true;
     /// <summary>How often you're busy (typing away) at this hour, learned over the weeks (0..1).</summary>
     public static float UserBusy;
     /// <summary>Town mood (an idea from RimWorld's storytellers): how much drama happens. Cozy 0.35, Classic 1, Chaos 2.</summary>

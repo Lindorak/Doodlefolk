@@ -143,6 +143,14 @@ sealed partial class Brain
     /// <summary>Say it in character, if there's something to say (otherwise the fallback, if any).</summary>
     void SayInCharacter(string moment, Figure? o, World w, string? fallback = null, float dur = 1.6f)
     {
+        switch (moment)
+        {
+            case "win": Flash(Manpu.Sparkles, 2.5f); break;
+            case "lose": Flash(A == Archetype.Tsundere ? Manpu.Vein : Manpu.Gloom, 3); break;
+            case "jealous" or "glare": Flash(Manpu.Vein, 3); break;
+            case "near" when A is Archetype.Tsundere or Archetype.Dandere: Flash(Manpu.SweatDrop, 2.5f); break;
+            case "thanks" when A == Archetype.Tsundere: Flash(Manpu.SweatDrop, 2); break;
+        }
         var line = Says(moment, o, w) ?? fallback;
         if (line != null) f.Emote(line, dur);
     }

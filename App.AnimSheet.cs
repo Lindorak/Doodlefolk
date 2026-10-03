@@ -107,6 +107,10 @@ sealed partial class App
                 f.Brain.FetchNow(ball, _w);
             }, (f, _) => f != null ? new Vector2(f.Base.X + 160 * _w.Scale, f.Base.Y - 50 * _w.Scale) : Vector2.Zero, null, 7f));
         }
+        // Manga symbols, one at a time (and a couple of pairs).
+        foreach (var (label, m) in new[] { ("Anger vein", Manpu.Vein), ("Steam", Manpu.Steam), ("Vein + steam", Manpu.Vein | Manpu.Steam), ("Sweat drop", Manpu.SweatDrop), ("Gloom", Manpu.Gloom),
+                                          ("Sparkles", Manpu.Sparkles), ("Shock", Manpu.Shock), ("Dizzy", Manpu.Dizzy), ("Blush + hearts", Manpu.Blush | Manpu.Hearts), ("Nervous", Manpu.Nervous) })
+            Fig("Symbols", label, 2.4f, f => { foreach (var k in Enum.GetValues<Manpu>()) if (k != Manpu.None && m.HasFlag(k)) f.Brain.Flash(k, 99); }, 1.05f);
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {

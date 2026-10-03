@@ -82,6 +82,7 @@ sealed partial class Brain
         foreach (var (wgt, k) in kinds) { roll -= wgt; if (roll <= 0) { kind = k; break; } }
         if (!StartSocialWith(o, kind, w))
         {
+            Flash(Manpu.SweatDrop, 2.5f);   // turned down: awkward
             f.Emote("?", 1);
             AddAffinity(o, -0.02f);
             Go(G.Idle, 1.5f);

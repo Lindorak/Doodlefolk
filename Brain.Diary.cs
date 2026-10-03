@@ -137,5 +137,7 @@ sealed partial class Brain
         ? V($"{o.Name} told me they like me. We're together now!", $"{o.Name} likes me!! We're dating!!", $"{o.Name} asked me out. I said yes. Obviously.")
         : $"{o.Name} told me they like me. I said no.", yes ? "♥" : "", 600);
 
-    void DiaryBreakup(Figure o) => Write("breakup:" + o.Name, V($"{o.Name} and I broke up.", $"{o.Name} and I broke up. I'll be okay. I think.", $"Done with {o.Name}. Good riddance.", $"{o.Name} and I broke up. I'm going to sit in the corner for a bit."), "💔", 600);
+    void DiaryBreakup(Figure o) { Flash(Manpu.Gloom, 20); DiaryBreakupLine(o); }
+
+    void DiaryBreakupLine(Figure o) => Write("breakup:" + o.Name, V($"{o.Name} and I broke up.", $"{o.Name} and I broke up. I'll be okay. I think.", $"Done with {o.Name}. Good riddance.", $"{o.Name} and I broke up. I'm going to sit in the corner for a bit."), "💔", 600);
 }

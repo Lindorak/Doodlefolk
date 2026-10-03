@@ -287,6 +287,8 @@ sealed class Settings
     /// <summary>Learned: how busy you usually are at each hour of the day (0..1).</summary>
     public float[] BusyByHour { get; set; } = new float[24];
     public bool GesturesOnly { get; set; }
+    /// <summary>Manga symbols round their heads: anger veins, steam, sweat drops, gloom, sparkles...</summary>
+    public bool MangaSymbols { get; set; } = true;
     public bool BreakNudges { get; set; }
     public int BreakMinutes { get; set; } = 60;
     /// <summary>Start with Windows; check GitHub for new versions; battery saver: off, battery (when unplugged), always.</summary>

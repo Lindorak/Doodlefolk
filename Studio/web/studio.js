@@ -1688,6 +1688,7 @@ PAGES.settings = {
       ((S.modContent || {}).events || []).map(e => h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "mod:" + e.key }) }, "✨ " + e.title)),
       h("button", { class: "btn small", onclick: () => send({ t: "happening", kind: "stop" }) }, "Stop"));
     const beatC = check("Dance to the beat", "When music's playing, dancers move in time with it. They listen to how loud your PC's sound is from moment to moment, on this PC only; nothing is recorded or kept.", () => st().beatDance !== false, v => setS("beatDance", v));
+    const mangaC = check("Manga symbols", "Little marks round their heads that show how they feel: an anger vein, steam when fuming, a sweat drop when awkward, gloom lines, sparkles, hearts, dizzy stars.", () => st().mangaSymbols !== false, v => setS("mangaSymbols", v));
     const gestC = check("Gestures only", "No words in their bubbles: they wave, shrug, shake their heads, nod, point and cheer instead, with a little symbol. (Their diaries still use words.)", () => !!st().gesturesOnly, v => setS("gesturesOnly", v));
     const breakC = check("Break nudges", "After a long unbroken stretch of videos, music or a full-screen game, someone walks down by the clock and points at it.", () => !!st().breakNudges, v => setS("breakNudges", v));
     const breakMin = h("select", { onchange: () => setS("breakMinutes", +breakMin.value) }, [30, 45, 60, 90, 120].map(n => h("option", { value: n }, `after ${n} minutes`)));
@@ -1842,7 +1843,7 @@ PAGES.settings = {
       h("div", { class: "row" }, remText, remWhen, remRepeat, remAdd, h("button", { class: "btn small", onclick: () => icsIn.click() }, "Import a calendar file…"), icsIn),
       remList, dlC, frC, voiceC, aiC, aiBox,
       h("h2", null, "Accessibility & quiet hours"),
-      calmC, cbC, gestC, quietC, quietBox, breakC, h("div", { class: "field" }, h("label", null, "Nudge me"), breakMin), beatC,
+      calmC, cbC, gestC, mangaC, quietC, quietBox, breakC, h("div", { class: "field" }, h("label", null, "Nudge me"), breakMin), beatC,
       h("h2", null, "Your screen"),
       h("p", { class: "sub" }, "They read the window you're using with Windows' accessibility tools and listen to which apps play sound. Everything stays on this PC: nothing is saved or sent anywhere. Some browsers run a little heavier while being read; turn these off if you notice."),
       screen,
@@ -1936,7 +1937,7 @@ PAGES.settings = {
         const list = st().reminders || [];
         remList.replaceChildren(...(list.length ? list.map(r => h("div", { class: "row tight" }, h("span", null, `⏰ ${r.when} · ${r.text}${r.repeat !== "none" ? ` (${r.repeat})` : ""}`),
           h("button", { class: "btn small", onclick: () => send({ t: "reminder", op: "delete", id: r.id }) }, "Remove"))) : [h("p", { class: "hint" }, "No reminders yet.")]));
-      } calmC.update(); cbC.update(); quietC.update(); beatC.update(); gestC.update(); breakC.update();
+      } calmC.update(); cbC.update(); quietC.update(); beatC.update(); gestC.update(); mangaC.update(); breakC.update();
       if (idle(breakMin)) breakMin.value = String(st().breakMinutes || 60);
       quietBox.style.display = st().pauseSchedule ? "" : "none";
       if (idle(qFrom)) qFrom.value = st().pauseFrom || "09:00";

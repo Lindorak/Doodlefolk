@@ -292,7 +292,7 @@ sealed partial class App
             if (v != "now") return;
             a.SimAt(3, "dream", () => { foreach (var f in a._w.Figures) f.Brain.ThinkAboutDreams(); });
             // A dream's next step competes fairly: someone deciding freely, again and again, takes one sooner or later.
-            a.SimRule("dreams get worked on", 10, t => a._w.Figures.All(f => f.Brain.Dream == null || f.Brain.DreamSteps > 0 || f.Brain.DreamOffers < 12),
+            a.SimRule("dreams get worked on", 10, t => a._w.Figures.All(f => f.Brain.Dream == null || f.Brain.DreamSteps > 0 || f.Brain.DreamOffers < 16),
                 () => string.Join("; ", a._w.Figures.Where(f => f.Brain.Dream != null && f.Brain.DreamSteps == 0).Select(f => $"{f.Name}: {f.Brain.DreamTitle}, offered {f.Brain.DreamOffers} times, last {f.Brain.LastDecision}")));
             a.SimAt(a._simDur - 1, "dreams", () => a._simMetrics["dreams"] = string.Join("; ", a._w.Figures.Select(f => f.Brain.DreamTitle).Where(t => t.Length > 0)));
         }),

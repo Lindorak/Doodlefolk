@@ -154,6 +154,8 @@ sealed partial class Brain
 
     // ---------------- snow ----------------
 
+    float _snowHitAt = -99;
+
     void BeginSnowball(Figure t)
     {
         _snowTarget = t;
@@ -182,7 +184,12 @@ sealed partial class Brain
             World.Play(Sfx.Swish, from, 0.3f, 1.3f);
             _snowballs--;
         }
-        if (_snowballs <= 0 && c > 1.4f) Go(G.Idle, rng.Range(0.8f, 2));
+        if (_snowballs <= 0 && c > 1.4f)
+        {
+            // While it's still flying both ways, it's one snowball fight: a breather, then more.
+            if (_t0 - _snowHitAt < 6 && Stamina > 0.25f && rng.NextDouble() < 0.75) _snowballs = rng.Next(1, 3);
+            else Go(G.Idle, rng.Range(0.8f, 2));
+        }
     }
 
     /// <summary>Hit by a snowball.</summary>
@@ -194,7 +201,9 @@ sealed partial class Brain
         if (P.Playfulness > 0.45f) { AddAffinity(by, 0.02f); Cheered(0.05f); }
         else { AddAffinity(by, -0.03f); Annoyance = M.Clamp01(Annoyance + 0.08f); }
         Write("snowball:" + by.Name, V($"Snowball fight with {by.Name}!", $"Epic snowball fight with {by.Name}!!", $"{by.Name} threw a snowball at me. War.", $"{by.Name} hit me with a snowball. It went down my back."), "❄", 1200);
-        // Throw one back.
+        _snowHitAt = _t0;
+        // Throw one back (already at it with them: just one more on the pile).
+        if (_g == G.Snowball && _snowTarget == by) { _snowballs = Math.Min(_snowballs + 1, 4); return; }
         if (P.Playfulness > 0.4f && Stamina > 0.3f && f.Grounded && _g is G.Idle or G.Walk or G.SitFloor or G.Snowball && rng.NextDouble() < 0.65)
             BeginSnowball(by);
     }

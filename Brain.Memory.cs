@@ -82,6 +82,7 @@ sealed partial class Brain
                 if (o != f && o.Name.Length > 1 && text.Contains(o.Name)) { who = o.Name; break; }
         var e = new Episode { Key = key, Text = text, Who = who, X = f.Base.X, Y = f.Base.Y, Feel = FeelOf(mood), Weight = WeightOf(key), When = DateTime.Now, At = _t0, Recalled = _t0 };
         Episodes.Add(e);
+        ThoughtFrom(e);
         if (Episodes.Count > MaxEpisodes)
         {
             // Forget the faintest: unimportant and long ago.

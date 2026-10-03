@@ -56,12 +56,25 @@ sealed partial class Brain
         return 1f / (1 + n * 0.3f * (0.5f + P.Curiosity));
     }
 
+    /// <summary>Things tried that fell through almost at once (couldn't get there, got turned down, it moved): not
+    /// tried again straight away, so nobody flips between trying and giving up.</summary>
+    readonly Dictionary<string, float> _fellThrough = new();
+    static readonly string[] ShortByNature = { "hang out", "sit down", "cheer", "do a", "dance", "wave", "nap" };
+
+    float FellThroughTilt(string label) => _fellThrough.TryGetValue(label, out var until) && _t0 < until ? 0.12f : 1;
+
     void Decide(OptionList opts)
     {
         if (opts.Items.Count == 0) { Go(G.Idle, 1); return; }
+        // How did the last one go? Over in a moment (and not something brief anyway): don't go straight back to it.
+        if (LastDecision.Length > 0 && _t0 - _decidedAt < 2.5f && !ShortByNature.Any(s => ActivityKey(LastDecision).StartsWith(s)))
+        {
+            _fellThrough[LastDecision] = _t0 + 20;
+            if (_fellThrough.Count > 30) foreach (var k in _fellThrough.Where(kv => kv.Value < _t0).Select(kv => kv.Key).ToList()) _fellThrough.Remove(k);
+        }
         // Decisive figures go for what they want most; playful, impulsive ones roll the dice more.
-        float sharp = 1.4f + (1 - P.Playfulness) * 1.1f;
-        var scored = opts.Items.Select(o => (o.label, o.act, s: MathF.Pow(MathF.Max(0, o.weight), sharp) * Novelty(o.label) * LearnedTilt(o.label) * FocusTilt(o.label) * ArchetypeTilt(o.label) * SkillTilt(o.label))).ToList();
+        float sharp = (1.4f + (1 - P.Playfulness) * 1.1f) * MoodSharpness;
+        var scored = opts.Items.Select(o => (o.label, o.act, s: MathF.Pow(MathF.Max(0, o.weight), sharp) * Novelty(o.label) * LearnedTilt(o.label) * FocusTilt(o.label) * ArchetypeTilt(o.label) * SkillTilt(o.label) * FellThroughTilt(o.label))).ToList();
         float total = scored.Sum(x => x.s);
         if (total <= 0) { opts.Items[0].act(); return; }
         Thoughts = scored.GroupBy(x => x.label).Select(g => (g.Key, g.Sum(x => x.s) / total)).OrderByDescending(x => x.Item2).Take(6).ToArray();
@@ -70,6 +83,7 @@ sealed partial class Brain
         foreach (var x in scored) { roll -= x.s; if (roll <= 0) { pick = x; break; } }
         LearnFromLast(pick.label);
         LastDecision = pick.label;
+        StressOf(pick.label);
         World.Audit($"decide\t{f.Name}\t{pick.label}\t{pick.s / total:F2}\t{string.Join("|", Thoughts.Take(4).Select(t => $"{t.label}:{t.share:F2}"))}");
         _decidedAt = _t0;
         Decisions++;

@@ -235,6 +235,7 @@ sealed partial class App
             decision = b.LastDecision, decidedAgo = R(b.DecidedAgo), route = b.RoutePlan,
             habits = b.Habits().Select(x => new { what = x.what, v = R(x.v), tried = x.tried }),
             dream = b.DreamTitle, dreamProgress = b.Dream != null ? R(b.Dream.Progress) : 0, dreamStep = b.DreamStep, dreamsDone = b.DreamsDone.TakeLast(6),
+            moodSum = MathF.Round(b.MoodSum, 1), stress = R(b.Stress), onMind = b.OnTheirMind().Select(t => new { text = t.Text, w = MathF.Round(t.Weight, 1) }),
             remembers = b.Remembers().Select(e => new { text = e.Text, feel = e.Feel, who = e.Who, weight = e.Weight, when = e.When.ToString("yyyy-MM-ddTHH:mm:ss") }),
             gender = f.Gender.ToString(),
             attraction = Enum.GetValues<Attraction>().Where(a => a is Attraction.Girls or Attraction.Boys or Attraction.Nonbinary && f.Attraction.HasFlag(a)).Select(a => a.ToString()),

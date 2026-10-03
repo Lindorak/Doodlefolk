@@ -902,6 +902,8 @@ const SUBPANELS = {
     const dreamHint = h("p", { class: "hint" });
     const habits = h("div", { class: "hint" });
     const remembers = h("ul", { class: "memories" });
+    const moodBox = h("ul", { class: "memories" });
+    const moodLine = h("p", { class: "hint" });
     const route = h("p", { class: "hint" });
     const thoughts = h("div", { class: "thoughts" });
     add(panel, h("div", { class: "split" },
@@ -911,11 +913,12 @@ const SUBPANELS = {
         h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice (faster with someone better nearby, or when it's their dream) and show in how well they do things: aim, swimming speed, bites, building. Unused for days, they get rusty."),
         h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "party" }) }, "🎉 Throw them a party"), bday)),
       h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), dreamLine, dreamHint, decided, thoughts, route, h("h3", null, "Habits they've formed"), habits,
+        h("h3", null, "Mood"), moodLine, moodBox,
         h("h3", null, "What they remember most"), remembers,
         h("p", { class: "hint" }, "Each time they decide, every option gets a score from their needs, mood, likes and personality. Bars show how likely each one was. Things they've done a lot lately score lower, and places they couldn't reach are skipped for a while."))));
     const skillBox = h("div", { class: "thoughts" });
     const bday = h("span", { class: "hint" });
-    let thoughtSig = "", skillSig = "", remSig = "";
+    let thoughtSig = "", skillSig = "", remSig = "", moodSig = "";
     return f => {
       dreamLine.querySelector("label").textContent = f.dream ? "Dream" : "Dream";
       dreamLine.querySelector("i").style.width = Math.round((f.dreamProgress || 0) * 100) + "%";
@@ -928,6 +931,12 @@ const SUBPANELS = {
       habits.textContent = hb.length ? hb.map(x => `${x.v > 0 ? "has grown to love" : "has gone off"} "${x.what}" (${x.v > 0 ? "+" : "−"}${Math.round(Math.abs(x.v) * 25)}%, tried ${x.tried}×)`).join(" · ")
         : "Still finding out what they like: they learn from how each thing they do makes them feel.";
       bday.textContent = [f.birthday ? `Birthday: ${f.birthday}` : "", f.family || ""].filter(Boolean).join(" · ");
+      moodLine.textContent = `Mood ${f.moodSum > 0 ? "+" : ""}${f.moodSum ?? 0}` + (f.stress > 0.6 ? " · stressed out" : f.stress > 0.3 ? " · a bit stressed" : "");
+      const ms = (f.onMind || []).map(t => t.text + t.w).join("|");
+      if (ms !== moodSig) {
+        moodSig = ms;
+        moodBox.replaceChildren(...((f.onMind || []).length ? f.onMind.map(t => h("li", { class: t.w > 0 ? "good" : "bad" }, h("span", null, t.text), h("span", { class: "ago" }, (t.w > 0 ? "+" : "") + t.w))) : [h("li", { class: "none" }, "Nothing much on their mind.")]));
+      }
       const rs = (f.remembers || []).map(e => e.text).join("|");
       if (rs !== remSig) {
         remSig = rs;

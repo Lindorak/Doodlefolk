@@ -232,11 +232,12 @@ sealed partial class Brain
             return;
         }
         _noStep = 0;
-        DreamOffers++;
+        // Passed over while scared, starving or worn out isn't neglect: needs rightly come first then.
+        if (Fear < 0.4f && Hunger < 0.6f && Stamina > 0.35f) DreamOffers++;
         // Keener the fresher the dream and the better they feel; needs still come first.
         // A dream that keeps being put off pulls harder each time (until they get round to it).
         int waited = Math.Max(0, DreamOffers - DreamSteps * 3);
-        float drive = (0.8f + Joy * 0.4f) * (1 + MathF.Min(waited, 12) * 0.18f) * (Hunger > 0.75f || Stamina < 0.2f ? 0.2f : 1);
+        float drive = (0.8f + Joy * 0.4f) * (1 + MathF.Min(waited, 16) * 0.28f) * (Hunger > 0.75f || Stamina < 0.2f ? 0.2f : 1);
         string label = step.label;
         opts.Add(step.weight * drive, () => { _dreamStep = label; DreamSteps++; step.act(); }, label);
     }

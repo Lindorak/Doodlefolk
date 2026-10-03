@@ -33,7 +33,7 @@ sealed partial class Brain
         float bd = maxDist;
         foreach (var b in w.Props)
         {
-            if (!b.Free || (b.PassTarget != null && b.PassTarget != f && b.SinceTouch < 3)) continue;
+            if (!b.Free || (b.PassTarget != null && b.PassTarget != f && b.SinceTouch < 3) || Unreachable(b)) continue;
             float d = Vector2.Distance(b.Pos, f.Base);
             if (d < bd) { bd = d; best = b; }
         }
@@ -72,6 +72,7 @@ sealed partial class Brain
             float y = w.Env.Below(x, b.Pos.Y)?.Y ?? b.Pos.Y + b.Radius;
             return new Vector2(x + side * (b.Radius + 7 * S), y);
         }, 5 * S, run, then, WalkPurpose.Ball);
+        _navAbout = b;   // a ball that can't be reached is left alone for a while
     }
 
     /// <summary>The ball we're going for or bending down to (our own feet only nudge it: we trap it, not kick it on).</summary>

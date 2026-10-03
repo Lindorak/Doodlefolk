@@ -267,6 +267,7 @@ sealed partial class Brain
         EnjoyGift(w);
         UpdateAmbition(w);
         WatchOthers(w, dt);
+        UpdateThoughts(w, dt);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);
@@ -772,10 +773,21 @@ sealed partial class Brain
         f.RequestJump(new Vector2(away * 100 * S, -480 * S), 0.03f);
     }
 
+    readonly List<float> _flees = new();
+
     void RunFromCursor(World w, Vector2 cur)
     {
         var seg = w.Env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
         if (seg == null) return;
+        // Chased again and again: get properly away (a hiding place, another window), or stay put and keep an eye on it.
+        _flees.Add(_t0);
+        _flees.RemoveAll(t => _t0 - t > 15);
+        if (_flees.Count >= 3) { f.Emote("…", 1); Fear = MathF.Max(Fear, 0.5f); Go(G.Watch, rng.Range(4, 8)); return; }
+        if (_flees.Count == 2)
+        {
+            if (w.Items.FirstOrDefault(i => i.Def.Verbs.Contains(Verb.Hide) && i.Free && i.User == null && i.OnGround && !Unreachable(i) && System.Numerics.Vector2.Distance(i.Pos, f.Base) < 700 * S) is { } hide) { UseItem(hide, Verb.Hide, w); return; }
+            if (PickExplore(w.Env, seg, out var getAway)) { getAway(); return; }
+        }
         float away = -MathF.Sign(cur.X - f.Base.X);
         if (away == 0) away = 1;
         bool scared = CursorTrust < 0.25f;

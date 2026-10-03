@@ -239,6 +239,13 @@ sealed class Renderer : IDisposable
 
     public void EndShadowLayer() => _ctx.PopLayer();
 
+    /// <summary>Composite connected translucent strokes once, within their own bounds. Direct2D manages the
+    /// temporary layer; no bitmap, geometry union or managed object is created by this call.</summary>
+    public void BeginOpacityLayer(System.Drawing.RectangleF bounds, float opacity) =>
+        _ctx.PushLayer(new LayerParameters1 { ContentBounds = new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height), MaskTransform = Matrix3x2.Identity, Opacity = opacity, MaskAntialiasMode = AntialiasMode.PerPrimitive }, null!);
+
+    public void EndOpacityLayer() => _ctx.PopLayer();
+
     /// <summary>Draw only above this line (a shadow cast on the window behind stops at the surface its owner stands on).</summary>
     public void PushAbove(float y) => _ctx.PushAxisAlignedClip(new Rect(-1e5f, -1e5f, 2e5f, y + 1e5f), AntialiasMode.Aliased);
     public void PopClip() => _ctx.PopAxisAlignedClip();

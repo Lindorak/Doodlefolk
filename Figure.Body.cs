@@ -111,11 +111,16 @@ sealed partial class Figure
     Vector2 _torsoFront;
 
     /// <summary>The torso: a filled shape with an ink outline (or the classic line when the figure's slim).</summary>
-    void DrawTorso(Renderer r, Color4 body, Color4 outline, float w)
+    void DrawTorsoOutline(Renderer r, Color4 outline, float w)
     {
-        if (Fat <= 0.02f) { r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], body, w); _torsoN = 0; return; }
+        if (Fat <= 0.02f) return;
         BuildTorso(w);
         r.FillPolygon(_torsoOut.AsSpan(0, _torsoN), outline);
+    }
+
+    void DrawTorso(Renderer r, Color4 body, float w)
+    {
+        if (Fat <= 0.02f) { r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], body, w); _torsoN = 0; return; }
         r.FillPolygon(_torso.AsSpan(0, _torsoN), body);
         if (Gfx.Q.Shading)
         {
@@ -129,7 +134,18 @@ sealed partial class Figure
     }
 
     /// <summary>Rounder face: fuller cheeks, then a double chin.</summary>
-    void DrawFullFace(Renderer r, Color4 body, Color4 outline)
+    void DrawFullFaceOutline(Renderer r, Color4 outline)
+    {
+        float k = Fat;
+        if (k <= 0.5f || (FrontView && Action == Act.SitBack)) return;
+        Vector2 h = Jt[J.Head];
+        float R = HeadR;
+        Vector2 fwd = new(FrontView ? 0 : Facing, 0);
+        Vector2 chin = h + fwd * R * 0.3f + new Vector2(0, R * (0.88f + 0.05f * k));
+        r.Oval(chin, R * (0.38f + 0.25f * k) + 0.8f * S, R * (0.16f + 0.12f * k) + 0.8f * S, outline);
+    }
+
+    void DrawFullFace(Renderer r, Color4 body)
     {
         float k = Fat;
         if (k < 0.25f || (FrontView && Action == Act.SitBack)) return;
@@ -140,7 +156,6 @@ sealed partial class Figure
         {
             Vector2 chin = h + fwd * R * 0.3f + new Vector2(0, R * (0.88f + 0.05f * k));
             float rx = R * (0.38f + 0.25f * k), ry = R * (0.16f + 0.12f * k);
-            r.Oval(chin, rx + 0.8f * S, ry + 0.8f * S, outline);
             r.Oval(chin, rx, ry, body);
         }
         // Cheeks fill out the jaw line.

@@ -243,8 +243,49 @@ sealed class Renderer : IDisposable
     public void PushAbove(float y) => _ctx.PushAxisAlignedClip(new Rect(-1e5f, -1e5f, 2e5f, y + 1e5f), AntialiasMode.Aliased);
     public void PopClip() => _ctx.PopAxisAlignedClip();
 
+    // ---------------- ink ----------------
+
+    float _inkL, _inkT, _inkR, _inkB;
+    int _inkDepth;
+
+    /// <summary>Start noting where things get drawn (scene coordinates, clipped or not): a figure's sparkles, rope or
+    /// dream bubble can reach well past its body, and all of it has to be repainted when it moves on.</summary>
+    public (float, float, float, float) BeginInk()
+    {
+        var saved = (_inkL, _inkT, _inkR, _inkB);
+        _inkL = _inkT = float.MaxValue; _inkR = _inkB = float.MinValue;
+        _inkDepth++;
+        return saved;
+    }
+
+    /// <summary>The box round everything drawn since BeginInk (null: nothing was).</summary>
+    public System.Drawing.RectangleF? EndInk((float l, float t, float r, float b) saved)
+    {
+        System.Drawing.RectangleF? box = _inkR >= _inkL ? System.Drawing.RectangleF.FromLTRB(_inkL, _inkT, _inkR, _inkB) : null;
+        _inkDepth--;
+        (_inkL, _inkT, _inkR, _inkB) = saved;
+        if (box is { } b2) Ink(b2.Left, b2.Top, b2.Right, b2.Bottom);   // an outer BeginInk sees this too
+        return box;
+    }
+
+    void Ink(float l, float t, float r, float b)
+    {
+        if (_inkDepth == 0 || !float.IsFinite(l + t + r + b)) return;
+        _inkL = MathF.Min(_inkL, l); _inkT = MathF.Min(_inkT, t); _inkR = MathF.Max(_inkR, r); _inkB = MathF.Max(_inkB, b);
+    }
+
+    void Ink(Vector2 c, float rx, float ry) => Ink(c.X - rx, c.Y - ry, c.X + rx, c.Y + ry);
+
+    void Ink(ReadOnlySpan<Vector2> pts, float pad)
+    {
+        if (_inkDepth == 0 || pts.Length == 0) return;
+        var (mn, mx) = PointBounds(pts);
+        Ink(mn.X - pad, mn.Y - pad, mx.X + pad, mx.Y + pad);
+    }
+
     public void Line(Vector2 a, Vector2 b, Color4 c, float width)
     {
+        if (_inkDepth > 0) Ink(MathF.Min(a.X, b.X) - width, MathF.Min(a.Y, b.Y) - width, MathF.Max(a.X, b.X) + width, MathF.Max(a.Y, b.Y) + width);
         _brush.Color = c;
         _ctx.DrawLine(a, b, _brush, width, _round);
     }
@@ -281,6 +322,7 @@ sealed class Renderer : IDisposable
             _pictures[path] = p;
         }
         if (p.bmp == null || alpha <= 0.003f) return;
+        Ink(dest.Left, dest.Top, dest.Right, dest.Bottom);
         float s = Math.Min(dest.Width / p.w, dest.Height / p.h), w = p.w * s, h = p.h * s;
         float x = dest.X + (dest.Width - w) / 2, y = dest.Y + (dest.Height - h) / 2;
         _ctx.DrawBitmap(p.bmp, new Vortice.RawRectF(x, y, x + w, y + h), Math.Clamp(alpha, 0, 1), Vortice.Direct2D1.InterpolationMode.Linear, null, null);
@@ -288,12 +330,14 @@ sealed class Renderer : IDisposable
 
     public void Oval(Vector2 center, float rx, float ry, Color4 c)
     {
+        Ink(center, rx, ry);
         _brush.Color = c;
         _ctx.FillEllipse(new Ellipse(center, rx, ry), _brush);
     }
 
     public void Ring(Vector2 center, float r, Color4 c, float width)
     {
+        Ink(center, r + width, r + width);
         _brush.Color = c;
         _ctx.DrawEllipse(new Ellipse(center, r, r), _brush, width);
     }
@@ -408,6 +452,7 @@ sealed class Renderer : IDisposable
     void Blit(ID2D1Bitmap1? sprite, Vector2 c, float rx, float ry, float alpha)
     {
         if (sprite == null || alpha <= 0.003f) return;
+        Ink(c, rx, ry);
         _ctx.DrawBitmap(sprite, new Vortice.RawRectF(c.X - rx, c.Y - ry, c.X + rx, c.Y + ry), Math.Clamp(alpha, 0, 1), Vortice.Direct2D1.InterpolationMode.Linear, null, null);
     }
 
@@ -496,6 +541,13 @@ sealed class Renderer : IDisposable
             var (mn, mx) = PointBounds(localPts);
             _shapes[(key, variant)] = entry = (BuildGeometry(localPts), mn, mx);
         }
+        if (_inkDepth > 0)
+        {
+            var a = Vector2.Transform(entry.min, world); var b = Vector2.Transform(entry.max, world);
+            var c2 = Vector2.Transform(new Vector2(entry.min.X, entry.max.Y), world); var d = Vector2.Transform(new Vector2(entry.max.X, entry.min.Y), world);
+            float pad = strokeLocal * MathF.Max(MathF.Abs(world.M11) + MathF.Abs(world.M21), MathF.Abs(world.M12) + MathF.Abs(world.M22));
+            Ink(stackalloc Vector2[] { a, b, c2, d }, pad);
+        }
         var old = _ctx.Transform;
         _ctx.Transform = world * old;
         _brush.Color = fill;
@@ -517,6 +569,7 @@ sealed class Renderer : IDisposable
     public void Polygon(ReadOnlySpan<Vector2> pts, Color4 fill, Color4 stroke, float strokeW)
     {
         if (pts.Length < 3) return;
+        Ink(pts, strokeW);
         using var geo = BuildGeometry(pts);
         _brush.Color = fill;
         _ctx.FillGeometry(geo, _brush, null);
@@ -526,6 +579,7 @@ sealed class Renderer : IDisposable
     public void FillPolygon(ReadOnlySpan<Vector2> pts, Color4 c)
     {
         if (pts.Length < 3) return;
+        Ink(pts, 1);
         using var geo = _factory.CreatePathGeometry();
         using (var sink = geo.Open())
         {
@@ -540,6 +594,7 @@ sealed class Renderer : IDisposable
 
     public void RoundRect(Vector2 center, float w, float h, float radius, Color4 fill, Color4 stroke, float strokeW)
     {
+        Ink(center, w / 2 + strokeW, h / 2 + strokeW);
         var rr = new RoundedRectangle(new RectangleF(center.X - w / 2, center.Y - h / 2, w, h), radius, radius);
         _brush.Color = fill;
         _ctx.FillRoundedRectangle(rr, _brush);
@@ -572,6 +627,7 @@ sealed class Renderer : IDisposable
             if (_layouts.Count > 300) { foreach (var l in _layouts.Values) l.Dispose(); _layouts.Clear(); }
             _layouts[lk] = layout = _dwrite.CreateTextLayout(text, fmt, key * 8, key * 2);
         }
+        Ink(center, MathF.Max(key * 4, text.Length * key * 0.7f), key);
         _brush.Color = c;
         _ctx.DrawTextLayout(new Vector2(center.X - key * 4, center.Y - key), layout, _brush, DrawTextOptions.None);
     }

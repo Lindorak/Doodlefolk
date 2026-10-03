@@ -115,6 +115,10 @@ h3 { font: 16px var(--hand); margin: 14px 0 6px; color: var(--ink-2); }
 .marker { background: linear-gradient(transparent 55%, var(--marker) 55%, var(--marker) 90%, transparent 90%); padding: 0 2px; }
 .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .spacer { flex: 1; }
+.mutebtn { app-region: no-drag; width: 34px; height: 30px; flex: none; border: 1.5px solid transparent; border-radius: 9px; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.mutebtn:hover { border-color: var(--faint); }
+.mutebtn svg { width: 21px; height: 21px; fill: none; stroke: var(--ink-2); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; filter: var(--stroke-filter); }
+.mutebtn.off svg { stroke: var(--accent); }
 
 /* sketchy box: the border is a separate wobbly layer so text stays crisp */
 .sk { position: relative; }

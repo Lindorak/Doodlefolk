@@ -582,10 +582,15 @@ sealed partial class App : ApplicationContext
         foreach (var f in _w.Figures)
         {
             _regNow.Add(FigureRect(f));
+            if (f.InkLast is { } fi) _regNow.Add(ToRect(fi));
             if (f.GrappleBounds() is RectangleF gb) _regNow.Add(ToRect(gb));
         }
         foreach (var p in _w.Props) _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(p.Bounds(_w.Env), _w.Scale) : p.Bounds(_w.Env)));
-        foreach (var pet in _w.Pets) _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(pet.Bounds(), _w.Scale) : pet.Bounds()));
+        foreach (var pet in _w.Pets)
+        {
+            _regNow.Add(ToRect(Gfx.Q.DropShadows ? GrowForDrop(pet.Bounds(), _w.Scale) : pet.Bounds()));
+            if (pet.InkLast is { } pi) _regNow.Add(ToRect(pi));
+        }
         foreach (var pr in _w.Projectiles) _regNow.Add(ToRect(pr.Bounds()));
         foreach (var m in _w.Matches) _regNow.Add(ToRect(m.Bounds()));
         foreach (var it in _w.Items)
@@ -618,7 +623,13 @@ sealed partial class App : ApplicationContext
         _regPrev.Clear(); _regPrev.AddRange(_regNow);
         UpdateLayers();
         if (_regAll.Count == 0) return false;
+        foreach (var m in _w.Matches) m.InkNow = null;
+        foreach (var f in _w.Figures) f.InkNow = null;
+        foreach (var pet in _w.Pets) pet.InkNow = null;
         _r.Frame(_regAll, (Action<RectangleF>)DrawScene);
+        foreach (var f in _w.Figures) f.InkLast = f.InkNow ?? f.InkLast;
+        foreach (var m in _w.Matches) m.InkLast = m.InkNow ?? m.InkLast;
+        foreach (var pet in _w.Pets) pet.InkLast = pet.InkNow ?? pet.InkLast;
         return true;
     }
 
@@ -1069,11 +1080,12 @@ sealed partial class App : ApplicationContext
     NotifyIcon BuildTray()
     {
         // No stock Windows menu: left-click opens the Studio, right-click the hand-drawn quick panel.
-        var tray = new NotifyIcon { Icon = AppIcon, Text = "Doodlefolk", Visible = true };
+        var tray = new NotifyIcon { Icon = AppIcon, Text = "Doodlefolk (middle-click: sound on/off)", Visible = true };
         tray.MouseUp += (_, e) =>
         {
             if (e.Button == MouseButtons.Left) OpenStudio();
             else if (e.Button == MouseButtons.Right) ToggleQuick();
+            else if (e.Button == MouseButtons.Middle) ToggleSound();
         };
         return tray;
     }

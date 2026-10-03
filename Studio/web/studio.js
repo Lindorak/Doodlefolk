@@ -277,8 +277,29 @@ function go(page, id) {
 }
 function fig(id = route.id) { return S && S.figures.find(f => f.id === id); }
 
+/* The speaker button: every sound at once, on or off. */
+function muteUpdate(btn) {
+  if (!btn || !S) return;
+  const on = S.settings.sound !== false;
+  if (btn.dataset.on === String(on)) return;
+  btn.dataset.on = String(on);
+  btn.classList.toggle("off", !on);
+  btn.title = on ? "Sound on: click for quiet" : "Sound off: click to turn it back on";
+  btn.setAttribute("aria-label", on ? "Mute all sound" : "Turn sound on");
+  btn.replaceChildren(s("svg", { viewBox: "0 0 20 20" },
+    s("path", { d: "M3 7.6 H6 L10.2 4.2 V15.8 L6 12.4 H3 Z" }),
+    on ? s("path", { d: "M13 7.4 Q14.8 10 13 12.6 M15.4 5.4 Q18.8 10 15.4 14.6" }) : s("path", { d: "M13.2 7.6 L17.6 12.4 M17.6 7.6 L13.2 12.4" })));
+}
+function muteButton() {
+  const b = h("button", { class: "mutebtn", onclick: () => send({ t: "setting", key: "sound", v: !(S.settings.sound !== false) }) });
+  muteUpdate(b);
+  return b;
+}
+if ($("#mute")) $("#mute").addEventListener("click", () => S && send({ t: "setting", key: "sound", v: !(S.settings.sound !== false) }));
+
 function onState() {
   if (!INIT || !S) return;
+  muteUpdate($("#mute"));
   if (QUICK) { applyTheme(); if (!$("#quick").firstChild) buildQuick(); quickUpdate(); return; }
   if (POP) { applyTheme(); if (pendingPop) buildPop(...pendingPop); else popUpdate(); return; }
   $("#fps").textContent = S.fpsNow ? `${S.fpsNow} fps` : "";
@@ -1991,7 +2012,7 @@ function buildQuick() {
   const root = $("#quick");
   const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
-  const soundC = check("Sound", null, () => S.settings.sound, v => send({ t: "setting", key: "sound", v }));
+  const muteB = muteButton();
   const petModeC = check("Just pets", null, () => S.settings.petMode, v => send({ t: "setting", key: "petMode", v }));
   const count = h("span", { class: "hint" });
   const stopG = h("button", { class: "btn small danger", onclick: () => send({ t: "game", kind: "stop" }) }, "Stop game");
@@ -1999,7 +2020,7 @@ function buildQuick() {
   add(root,
     h("div", { class: "q-head" },
       s("svg", { class: "logo", viewBox: "-14 -30 28 34" }, s("g", { class: "logo-fig" }, s("circle", { cx: 0, cy: -23, r: 4.5 }), s("path", { d: "M0 -18 L0 -6 M0 -15 L-7 -9 M0 -15 L7 -21 M0 -6 L-5 3 M0 -6 L6 2" }))),
-      h("span", { class: "brand-name" }, "Doodlefolk"), h("span", { class: "spacer" }), count),
+      h("span", { class: "brand-name" }, "Doodlefolk"), h("span", { class: "spacer" }), count, muteB),
     h("h3", null, "Draw someone"),
     h("div", { class: "swatches" }, INIT.palette.map((p, i) => h("button", { class: "sw", title: p.name, style: { background: p.hex, color: "#111", "font-size": "11px", "text-shadow": "0 0 2px #fff" }, onclick: () => { send({ t: "spawn", color: i, preset: -1, quiet: true }); toast(`A ${p.name.toLowerCase()} one!`); } }, S.settings.colourBlind ? TEAM_SYM[p.name] || "" : ""))),
     h("h3", null, "Draw something"), summonBox(true),
@@ -2023,13 +2044,13 @@ function buildQuick() {
     h("div", { class: "row tight q-games" },
       [["Cat", false, "🐈"], ["Cat", true, "Kitten"], ["Dog", false, "🐕"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜"], ["Rabbit", false, "🐇"], ["Hamster", false, "🐹"]].map(([k, y, l]) => h("button", { class: "btn small", title: `Adopt a ${y ? (k === "Cat" ? "kitten" : "puppy") : k.toLowerCase()}`, onclick: () => send({ t: "adopt", kind: k, young: y }) }, l)),
       h("button", { class: "btn small", onclick: () => send({ t: "spray" }) }, "💦 Spray bottle")),
-    h("div", { class: "q-checks" }, petModeC, hideC, fightC, soundC),
+    h("div", { class: "q-checks" }, petModeC, hideC, fightC),
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
       h("span", { class: "spacer" }),
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
-    hideC.update(); fightC.update(); soundC.update(); petModeC.update();
+    hideC.update(); fightC.update(); muteUpdate(muteB); petModeC.update();
     const gm = S.game;
     stopG.hidden = !gm;
     gameNote.textContent = !gm ? "" : gm.kind === "HideSeek" ? `Hide & seek: found ${gm.found} of ${gm.players}` : gm.kind === "Tag" ? `Tag: ${gm.players} playing` : `Catch: ${gm.streak} in a row (best ${gm.best})`;

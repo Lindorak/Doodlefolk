@@ -219,9 +219,10 @@ sealed class Match
         Over = true;
     }
 
-    public void Draw(Renderer r)
+    /// <summary>Where the scoreboard sits: over the hoop or net (or between the goals), kept on the screen with room
+    /// above it for the "GOAL!" that floats up.</summary>
+    Vector2 Anchor()
     {
-        if (Players.Count == 0) return;
         var g = Gear[0];
         float s = g.Sc;
         Vector2 at = Kind switch
@@ -230,7 +231,33 @@ sealed class Match
             Sport.Basketball => g.Local(0, 104),
             _ => g.Local(0, Kind == Sport.Soccer ? 46 : 44),
         };
-        Ui.Card(r, at, (Kind == Sport.Basketball ? 28 + Players.Count * 28 : 54) * s, 14 * s, 4 * s, s, 0.95f);
+        if (World.Current?.Env?.Virtual is { } v)
+        {
+            float half = BoardHalfWidth(s) + 30 * s;
+            at.X = Math.Clamp(at.X, v.Left + half, MathF.Max(v.Left + half, v.Right - half));
+            at.Y = MathF.Max(at.Y, v.Top + 46 * s);
+        }
+        return at;
+    }
+
+    float BoardHalfWidth(float s) => (Kind == Sport.Basketball ? 28 + Players.Count * 28 : 54) * s / 2;
+
+    /// <summary>Everywhere the board and its shouts were drawn last frame (see Figure.InkNow).</summary>
+    public System.Drawing.RectangleF? InkNow, InkLast;
+
+    public void Draw(Renderer r)
+    {
+        var saved = r.BeginInk();
+        try { DrawBoard(r); }
+        finally { if (r.EndInk(saved) is { } ink) InkNow = InkNow is { } n ? System.Drawing.RectangleF.Union(n, ink) : ink; }
+    }
+
+    void DrawBoard(Renderer r)
+    {
+        if (Players.Count == 0) return;
+        float s = Gear[0].Sc;
+        Vector2 at = Anchor();
+        Ui.Card(r, at, BoardHalfWidth(s) * 2, 14 * s, 4 * s, s, 0.95f);
         r.Text(ScoreText, at + new Vector2(0, -0.3f * s), 8 * s, Ui.Ink, true);
         if (ShoutT > 0 && Shout != null)
             r.Text(Shout, at + new Vector2(0, -16 * s - (1.6f - ShoutT) * 8 * s), 12 * s, Ui.Accent.A(M.Clamp01(ShoutT * 1.5f)), true);
@@ -238,15 +265,10 @@ sealed class Match
 
     public System.Drawing.RectangleF Bounds()
     {
-        var g = Gear[0];
-        float s = g.Sc;
-        Vector2 at = Kind switch
-        {
-            Sport.Soccer when Gear.Count == 2 => new Vector2((Gear[0].Pos.X + Gear[1].Pos.X) / 2, MathF.Min(Gear[0].Pos.Y, Gear[1].Pos.Y) - 70 * s),
-            Sport.Basketball => g.Local(0, 104),
-            _ => g.Local(0, Kind == Sport.Soccer ? 46 : 44),
-        };
-        float w = (Kind == Sport.Basketball ? 40 + Players.Count * 30 : 80) * s;
-        return System.Drawing.RectangleF.FromLTRB(at.X - w, at.Y - 40 * s, at.X + w, at.Y + 12 * s);
+        float s = Gear[0].Sc;
+        Vector2 at = Anchor();
+        float w = MathF.Max(BoardHalfWidth(s) + 12 * s, 60 * s);   // the card, and a shout wider than it
+        if (InkLast is { } ink) return System.Drawing.RectangleF.Union(System.Drawing.RectangleF.FromLTRB(at.X - w, at.Y - 46 * s, at.X + w, at.Y + 14 * s), ink);
+        return System.Drawing.RectangleF.FromLTRB(at.X - w, at.Y - 46 * s, at.X + w, at.Y + 14 * s);
     }
 }

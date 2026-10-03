@@ -820,6 +820,16 @@ sealed partial class App
         _settings.Save();
     }
 
+    /// <summary>All sound off (effects, music, voices, ambience) or back on: one click from the tray icon or the
+    /// speaker button in the Studio and quick panel.</summary>
+    void ToggleSound()
+    {
+        _settings.SoundOn = !_settings.SoundOn;
+        if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn;
+        _settings.Save();
+        _tray.ShowBalloonTip(1200, "Doodlefolk", _settings.SoundOn ? "Sound on" : "Sound off", ToolTipIcon.None);
+    }
+
     void SettingEdit(JsonElement m)
     {
         var v = m.GetProperty("v");

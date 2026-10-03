@@ -16,7 +16,18 @@ sealed partial class Figure
         (J.ElbowN, J.HandN, false), (J.Neck, J.ElbowF, true), (J.ElbowF, J.HandF, true),
     };
 
+    /// <summary>Everywhere this figure was drawn this frame / last frame (symbols, gear and bubbles included), so
+    /// nothing it leaves behind lingers on screen.</summary>
+    public System.Drawing.RectangleF? InkNow, InkLast;
+
     public void Draw(Renderer r)
+    {
+        var saved = r.BeginInk();
+        try { DrawAll(r); }
+        finally { if (r.EndInk(saved) is { } ink) InkNow = InkNow is { } n ? System.Drawing.RectangleF.Union(n, ink) : ink; }
+    }
+
+    void DrawAll(Renderer r)
     {
         if (Mode == Mode.Spawning) { DrawSketch(r); return; }
         DrawGrapple(r);

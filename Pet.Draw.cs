@@ -9,7 +9,17 @@ namespace Doodlefolk;
 /// heavier ones rounder; and the thought bubble saying what they want.</summary>
 sealed partial class Pet
 {
+    /// <summary>Everywhere this pet was drawn this frame / last frame (see Figure.InkNow).</summary>
+    public System.Drawing.RectangleF? InkNow, InkLast;
+
     public void Draw(Renderer r)
+    {
+        var saved = r.BeginInk();
+        try { DrawAll(r); }
+        finally { if (r.EndInk(saved) is { } ink) InkNow = InkNow is { } n ? System.Drawing.RectangleF.Union(n, ink) : ink; }
+    }
+
+    void DrawAll(Renderer r)
     {
         if (_scuffleWith != null && _st == State.Scuffle)
         {

@@ -98,14 +98,20 @@ sealed partial class App
             }, (f, _) => swim && f != null ? new Vector2(f.Base.X, f.Base.Y - 10 * _w.Scale) : water?.Local(0, 8) ?? Vector2.Zero, null, swim ? 1.1f : 1.4f * wide));
         }
         // Fetching a ball: lying still, rolling away, rolling towards them (slow down, trap it, bend and scoop it up).
-        foreach (var (label, dx, vx) in new[] { ("Still ball", 160f, 0f), ("Rolling away", 120f, 520f), ("Rolling away fast", 90f, 1100f), ("Rolling towards", 520f, -420f) })
+        foreach (var (label, dx, vx, kind) in new[] { ("Still ball", 160f, 0f, PropKind.SoccerBall), ("Rolling away", 120f, 520f, PropKind.SoccerBall), ("Rolling away fast", 90f, 1100f, PropKind.SoccerBall),
+                                                     ("Rolling towards", 520f, -420f, PropKind.SoccerBall), ("Rolling towards fast", 600f, -900f, PropKind.SoccerBall), ("Bouncing away", 100f, 450f, PropKind.Basketball),
+                                                     ("Tennis ball rolling away", 80f, 600f, PropKind.TennisBall), ("Beach ball drifting", 120f, 300f, PropKind.BeachBall) })
         {
             _animJobs.Add(new("Fetch", label, 8f, (f, _) =>
             {
                 foreach (var p in _w.Props.ToList()) _w.RemoveProp(p);
-                var ball = SpawnProp(PropKind.SoccerBall);
-                ball.Pos = new Vector2(f!.Base.X + dx * _w.Scale, f.Base.Y - ball.Radius - 1); ball.Vel = new Vector2(vx * _w.Scale, 0);
+                var ball = SpawnProp(kind);
+                ball.Pos = new Vector2(f!.Base.X + dx * _w.Scale, f.Base.Y - ball.Radius - (kind == PropKind.Basketball ? 120 * _w.Scale : 1)); ball.Vel = new Vector2(vx * _w.Scale, 0);
                 f.Brain.FetchNow(ball, _w);
+                float start = MathF.Abs(ball.Pos.X - f.Base.X);
+                int got0 = Brain.Fetched;
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 7.9, () => Console.WriteLine($"{label}: {(Brain.Fetched > got0 ? "picked up" : "NOT picked up")}, {Brain.ScoopTries} scoops so far")));
             }, (f, _) => f != null ? new Vector2(f.Base.X + 160 * _w.Scale, f.Base.Y - 50 * _w.Scale) : Vector2.Zero, null, 7f));
         }
         // Manga symbols, one at a time (and a couple of pairs).
@@ -178,6 +184,25 @@ sealed partial class App
                 var fig = f;
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => { fig.Brain.Puppet(99); fig.SetAction(peek ? Act.Stand : Act.Curl); }));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 2.2f));
+        }
+        // Sports: a rally over the net (both played for real), seen whole.
+        foreach (var (label, key) in new[] { ("Tennis rally", "tennisnet"), ("Badminton rally", "badmintonnet") })
+        {
+            Item? net = null;
+            _animJobs.Add(new("Sports", label, 8, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                net = SpawnItem(ItemCatalog.Find(key)!);
+                net!.Pos = new Vector2(1300, floor.Y); net.Vel = Vector2.Zero; net.OnGround = true;
+                var mate = new Figure(Palette.All[(_animJob + 3) % Palette.All.Length].Color, "Mate", _w.Scale, Personality.Random(new Random(7)), new Random(7)) { SizeMul = 1 };
+                mate.PlaceAt(floor, 1300 + 200 * _w.Scale);
+                mate.SpawnT = 0.999f;
+                _w.Figures.Add(mate);
+                f!.PlaceAt(floor, 1300 - 200 * _w.Scale);
+                f.SpawnT = 0.999f;
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 0.2, () => fig.Brain.StartMatchWith(net, new List<Figure> { fig, mate }, _w)));
+            }, (_, _) => net != null ? net.Pos + new Vector2(0, -60 * _w.Scale) : Vector2.Zero, null, 4.2f));
         }
         // Juggling with their hands: three, four (a fountain) and five, face on.
         foreach (var (label, skill) in new[] { ("Three", 0.3f), ("Four (fountain)", 0.7f), ("Five", 0.95f) })

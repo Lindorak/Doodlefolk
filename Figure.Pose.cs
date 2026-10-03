@@ -179,6 +179,16 @@ sealed partial class Figure
                 fN = new(4 * S + k * 4 * S, Leg * 0.8f); fF = new(-3 * S - k * 4 * S, Leg * 0.75f);
                 leanT = -0.15f; handW = 26;
             }
+            else if (DiveAt is Vector2 da)
+            {
+                // Flat out: body along the dive, both hands reaching for it, legs trailing.
+                Vector2 d = da - Jt[J.Neck];
+                Vector2 local = M.ClampLength(new Vector2(d.X * Facing, d.Y), Arm * 0.98f);
+                hN = local; hF = local + new Vector2(-2 * S, 3 * S);
+                fN = new(-Leg * 0.55f, Leg * 0.6f); fF = new(-Leg * 0.7f, Leg * 0.5f);
+                leanT = Math.Clamp(MathF.Abs(d.X) / MathF.Max(1, d.Length()) * 1.25f, 0.2f, 1.25f);
+                handW = 60; footW = 24;
+            }
             else if (JumpStylePose(Vel.Y < -150 * S, ref leanT, ref hN, ref hF, ref fN, ref fF)) { }
             else if (Vel.Y < -150 * S)
             {

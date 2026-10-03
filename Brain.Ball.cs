@@ -63,20 +63,63 @@ sealed partial class Brain
         Navigate(() =>
         {
             if (!w.Props.Contains(b) || !b.Free) return null;
-            // Head for where it's going to be (a rolling ball slows as it goes), not where it is now.
-            float gap = MathF.Abs(b.Pos.X - f.Base.X);
-            float eta = Math.Clamp(gap / MathF.Max(f.RunSpeed, 1), 0, 1.2f);
-            float x = b.Pos.X + b.Vel.X * eta * 0.6f;
-            float side = fromSide ?? -MathF.Sign(x - f.Base.X);
+            // Meet it where it'll be by the time we can get there (a rolling ball slows, a bouncing one comes down),
+            // standing off a little on our side of it, so bending down doesn't knock it on with our knees.
+            float speed = MathF.Max(run ? f.RunSpeed : f.WalkSpeed, 1);
+            float stand = b.Radius + f.Arm * 0.55f;
+            var path = BallPath(b, w);
+            Vector2 at = path[^1];
+            for (int i = 0; i < path.Length; i++)
+            {
+                float sd = fromSide ?? -MathF.Sign(path[i].X - f.Base.X);
+                if (MathF.Abs(path[i].X + sd * stand - f.Base.X) / speed <= i * PathStep + 0.05f) { at = path[i]; break; }
+            }
+            float side = fromSide ?? -MathF.Sign(at.X - f.Base.X);
             if (side == 0) side = -f.Facing;
-            float y = w.Env.Below(x, b.Pos.Y)?.Y ?? b.Pos.Y + b.Radius;
-            return new Vector2(x + side * (b.Radius + 7 * S), y);
+            float y = w.Env.Below(at.X, at.Y)?.Y ?? at.Y + b.Radius;
+            return new Vector2(at.X + side * stand, y);
         }, 5 * S, run, then, WalkPurpose.Ball);
         _navAbout = b;   // a ball that can't be reached is left alone for a while
     }
 
-    /// <summary>The ball we're going for or bending down to (our own feet only nudge it: we trap it, not kick it on).</summary>
-    public Prop? Seeking => (_g == G.Walk && _purpose == WalkPurpose.Ball) || _g == G.Scoop ? _ball : null;
+    const float PathStep = 0.1f;
+
+    /// <summary>Where a ball will be every tenth of a second for the next 2.5 s: in the air it falls and bounces
+    /// (Ballistics, the real physics), on the ground it rolls and slows (Prop.Step's rolling resistance).</summary>
+    Vector2[] BallPath(Prop b, World w)
+    {
+        var path = new Vector2[26];
+        path[0] = b.Pos;
+        const float roll = 0.9f;
+        if (b.OnGround || b.Holder != null)
+        {
+            for (int i = 1; i < path.Length; i++) path[i] = new Vector2(b.Pos.X + b.Vel.X * (1 - MathF.Exp(-roll * i * PathStep)) / roll, b.Pos.Y);
+            return path;
+        }
+        float floor = w.Env.Below(b.Pos.X, b.Pos.Y)?.Y ?? b.Pos.Y + 4000;
+        int filled = 1;
+        Vector2 last = b.Pos, lastV = b.Vel;
+        float lastT = 0;
+        bool rolling = false;
+        Ballistics.Fly(b.Pos, b.Vel, b.Grav, Ballistics.DragOf(b.Kind), b.Radius, floor, b.Bounce, S, (path.Length - 1) * PathStep, (t, p, v, n) =>
+        {
+            last = p; lastV = v; lastT = t;
+            while (filled < path.Length && filled * PathStep <= t + 1e-4f) path[filled++] = p;
+            if (n > 0 && v.Y == 0) { rolling = true; return false; }
+            return true;
+        });
+        for (; filled < path.Length; filled++)
+        {
+            float dt = filled * PathStep - lastT;
+            path[filled] = rolling ? new Vector2(last.X + lastV.X * (1 - MathF.Exp(-roll * dt)) / roll, last.Y) : last;
+        }
+        return path;
+    }
+
+    /// <summary>The ball we're going for or bending down to (our own feet only nudge it: we trap it, not kick it on). In
+    /// a game of football or basketball the match ball counts too: running onto it traps it, it doesn't send it flying.</summary>
+    public Prop? Seeking => (_g == G.Walk && _purpose == WalkPurpose.Ball) || _g == G.Scoop ? _ball
+                          : _g == G.Sport && Match is { Racket: false } sm ? sm.Ball : null;
 
     /// <summary>Easing off on the way to a ball: a run becomes a walk, then careful steps, so we arrive beside it
     /// instead of running into it.</summary>
@@ -84,11 +127,22 @@ sealed partial class Brain
     {
         if (_purpose != WalkPurpose.Ball || _ball == null) return speed;
         float gap = MathF.Abs(_ball.Pos.X - f.Base.X) - _ball.Radius;
-        if (gap > 90 * S) return gap > 160 * S ? speed : MathF.Min(speed, f.WalkSpeed * 1.15f);
-        return MathF.Min(speed, f.WalkSpeed * M.Lerp(0.4f, 1, M.Clamp01((gap - 10 * S) / (60 * S))));
+        // Getting away from us faster than we walk: run after it.
+        if (!_run && MathF.Abs(_ball.Vel.X) > f.WalkSpeed * 0.8f && MathF.Sign(_ball.Vel.X) == MathF.Sign(_ball.Pos.X - f.Base.X) && Stamina > 0.2f)
+        {
+            _run = true;
+            speed = f.RunSpeed;
+        }
+        // Easing off is relative to the ball: one rolling away still has to be caught up with.
+        float away = MathF.Max(0, _ball.Vel.X * MathF.Sign(_ball.Pos.X - f.Base.X));
+        float least = MathF.Min(speed, away + f.WalkSpeed * 0.45f);
+        if (gap > 90 * S) return gap > 160 * S ? speed : MathF.Max(least, MathF.Min(speed, f.WalkSpeed * 1.15f));
+        return MathF.Max(least, MathF.Min(speed, f.WalkSpeed * M.Lerp(0.4f, 1, M.Clamp01((gap - 10 * S) / (60 * S)))));
     }
 
     int _scoopMiss;
+    /// <summary>Balls picked up from the ground, and goes at it, ever (for tests).</summary>
+    public static int Fetched, ScoopTries;
 
     /// <summary>For the contact sheets and tests: go and pick up this ball.</summary>
     public void FetchNow(Prop b, World w) => ScoopThen(b, w, () => { });
@@ -97,6 +151,7 @@ sealed partial class Brain
     /// our hands. If it's rolled off, go after it again; after a few tries, let it go.</summary>
     void BeginScoop(Prop b, Figure? throwTo)
     {
+        ScoopTries++;
         Go(G.Scoop, 1.4f);
         _ball = b;
         _passTo = throwTo;
@@ -117,7 +172,7 @@ sealed partial class Brain
         var b = _ball;
         if (b == null || !w.Props.Contains(b) || !b.Free) { Go(G.Idle, 1); return; }
         f.DesiredVX = 0;
-        float reach = f.Arm * 1.25f + b.Radius;
+        float reach = f.Arm * 1.25f + b.Radius * 1.3f;
         bool low = b.Pos.Y > f.Base.Y - f.Leg - b.Radius;
         if (MathF.Abs(b.Pos.X - f.Base.X) > reach || !low || _t > _dur)
         {
@@ -135,14 +190,18 @@ sealed partial class Brain
         }
         FaceTo(b.Pos.X);
         f.SetAction(Act.Scoop);
-        // Both hands to the ball, one each side.
-        f.HoldN = b.Pos + new Vector2(f.Facing * b.Radius * 0.55f, -b.Radius * 0.1f);
-        f.HoldF = b.Pos - new Vector2(f.Facing * b.Radius * 0.55f, b.Radius * 0.1f);
-        float handGap = Vector2.Distance((f.Jt[J.HandN] + f.Jt[J.HandF]) / 2, b.Pos);
-        // Hands on it: it stops rolling; a moment later, up it comes.
-        if (handGap < b.Radius + 6 * S) b.Vel *= 0.6f;
+        // Both hands come down on it from above and behind (not sweeping through it, which pushes it away).
+        f.HoldN = b.Pos + new Vector2(f.Facing * b.Radius * 0.2f, -b.Radius * 0.8f);
+        f.HoldF = b.Pos + new Vector2(-f.Facing * b.Radius * 0.55f, -b.Radius * 0.5f);
+        var hands = (f.Jt[J.HandN] + f.Jt[J.HandF]) / 2;
+        float handGap = Vector2.Distance(hands, b.Pos);
+        // Bending over it, our body doesn't shove it along (it's being picked up, not bumped).
+        if (handGap < b.Radius + 30 * S) { b.Ghost = f; b.GhostUntil = World.Now + 0.15; }
+        // Hands on it: it stops rolling and settles into them; a moment later, up it comes.
+        if (handGap < b.Radius + 10 * S) { b.Vel *= 0.5f; if (MathF.Abs(b.Vel.X) < 60 * S) b.Vel.X += (hands.X - b.Pos.X) * 4; }
         if (_t > 0.45f && handGap < b.Radius + 8 * S)
         {
+            Fetched++;
             _scoopMiss = 0;
             PickUp(b, _passTo);
             var then = _afterScoop;

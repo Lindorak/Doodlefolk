@@ -30,7 +30,7 @@ sealed partial class Brain
         if (_dashT > 0) { _dashT -= dt; if (_dashT <= 0) f.KeepFacing = false; else f.KeepFacing = true; }
         if (_batBall != null) TryBat(w);
         _dodgeCd -= dt;
-        if (_dodgeCd > 0 || !f.Grounded || f.Climbing || f.JumpPending || f.Atk != null || _g is G.Sleep or G.Busy) return;
+        if (_dodgeCd > 0 || !f.Grounded || f.Climbing || f.JumpPending || f.Atk != null || _g is G.Sleep or G.Busy or G.Sport) return;
 
         Threat? best = null;
         foreach (var b in w.Props)

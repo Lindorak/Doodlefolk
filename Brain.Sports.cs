@@ -10,6 +10,7 @@ sealed partial class Brain
     public Match? Match;
     bool _toMatch;
     float _kickAt = -1, _actCd;
+    Vector2 _sportKick;
     Vector2? _shotSpot;
     bool _dunking, _serving;
     float _serveT;
@@ -34,6 +35,8 @@ sealed partial class Brain
 
     /// <summary>Asked to join a game.</summary>
     /// <summary>Already promised elsewhere: a game with you, or a tournament.</summary>
+    /// <summary>Spoken for (an event, a game with you, a tournament): not to be pulled into anything else.</summary>
+    public bool Busy => Engaged;
     bool Engaged => HapRole.Length > 0 || (World.Current.Game is { Over: false } ug && ug.Players.Contains(f)) || (World.Current.Tourney is { Over: false } tn && tn.Entrants.Contains(f));
 
     bool InvitePlay(Figure from, Sport s)
@@ -50,7 +53,10 @@ sealed partial class Brain
         return false;
     }
 
-    void StartMatch(Item gear, World w)
+    /// <summary>A game with exactly these players (the simulation tests), counting into these stats.</summary>
+    public void StartMatchWith(Item gear, List<Figure> roster, World w, MatchStats? stats = null) => StartMatch(gear, w, roster, stats);
+
+    void StartMatch(Item gear, World w, List<Figure>? roster = null, MatchStats? stats = null)
     {
         var kind = Enum.Parse<Sport>(gear.Def.Sport!);
         var gearList = new List<Item> { gear };
@@ -73,10 +79,11 @@ sealed partial class Brain
             ball = w.MakeProp(kindBall);
             made = true;
         }
-        var m = new Match(kind, gearList, ball) { MadeBall = made };
+        var m = new Match(kind, gearList, ball, stats) { MadeBall = made };
         var players = new List<Figure> { f };
+        if (roster != null) players = roster.ToList();
         int want = kind switch { Sport.Soccer => gearList.Count == 2 ? 5 : 3, Sport.Basketball => 3, _ => rng.NextDouble() < 0.3 ? 3 : 1 };
-        foreach (var o in w.Figures.Where(o => o != f && Vector2.Distance(o.Base, gear.Pos) < 1600 * S).OrderByDescending(o => AffinityWith(o)))
+        foreach (var o in w.Figures.Where(o => roster == null && o != f && Vector2.Distance(o.Base, gear.Pos) < 1600 * S).OrderByDescending(o => AffinityWith(o)))
         {
             if (players.Count > want) break;
             if (RelationTo(o) is Relation.Ignore) continue;
@@ -262,56 +269,14 @@ sealed partial class Brain
             if (_actCd > 0) return false;
             f.SetAction(Act.Kick);
             _kickAt = Figure.KickTime * Figure.KickContact;
+            _sportKick = v;
             return false;
         }
         if (f.ActionT < _kickAt) return false;
         _kickAt = -1;
         _actCd = 0.45f;
-        if (Vector2.Distance(b.Pos, f.Jt[J.FootN]) < b.Radius + 14 * S) { b.Kick(v, f); return true; }
+        if (Vector2.Distance(b.Pos, f.Jt[J.FootN]) < b.Radius + 14 * S) { b.Kick(_sportKick, f); return true; }
         return false;
-    }
-
-    void PlaySoccer(Match m, Prop b, World w)
-    {
-        int team = m.Team.GetValueOrDefault(f);
-        var target = m.OneGoal ? m.Gear[0] : m.Gear[1 - team];
-        float toGoal = MathF.Sign(m.Mouth(target, 0).X - b.Pos.X);
-        if (_kickAt >= 0) { f.DesiredVX = 0; float sh = rng.Range(6, 24); KickBall(b, ShotVelocity(m, b, target, sh)); return; }
-
-        if (Keeper(m))
-        {
-            var own = m.OneGoal ? m.Gear[0] : m.Gear[team];
-            float home = m.Mouth(own, 0).X + m.FieldDir(own) * 14 * S;
-            float near = MathF.Abs(b.Pos.X - home);
-            _run = true;
-            // Shuffle out a little toward the ball, but stay near the line.
-            MoveToward(M.ClampIn(b.Pos.X, home - 30 * S, home + 30 * S), 4 * S);
-            FaceTo(b.Pos.X);
-            // High ball coming at the goal: jump for it.
-            bool incoming = MathF.Sign(b.Vel.X) == -m.FieldDir(own) && MathF.Abs(b.Vel.X) > 200 * S;
-            if (incoming && f.Grounded && near < 220 * S && b.Pos.Y < f.Base.Y - f.Height * 0.8f && _actCd <= 0) { f.RequestJump(new Vector2(0, -620 * S), 0.03f); _actCd = 1; }
-            // Ball dribbling in front: boot it away.
-            if (near < 30 * S && b.Vel.LengthSquared() < 300 * 300 * S * S && b.Pos.Y > f.Base.Y - f.Leg)
-                KickBall(b, new Vector2(m.FieldDir(own) * 900 * S, -500 * S));
-            return;
-        }
-
-        // Striker: get behind the ball (on the far side from the goal), then dribble or shoot.
-        float behind = b.Pos.X - toGoal * (b.Radius + 9 * S);
-        bool onRightSide = MathF.Sign(b.Pos.X - f.Base.X) == toGoal || MathF.Abs(b.Pos.X - f.Base.X) < 4 * S;
-        _run = MathF.Abs(behind - f.Base.X) > 60 * S;
-        if (!onRightSide)
-        {
-            // Go around the ball (a little loop) so we don't kick it backwards.
-            MoveToward(b.Pos.X - toGoal * 40 * S, 6 * S);
-            return;
-        }
-        if (!MoveToward(behind, 7 * S)) return;
-        FaceTo(b.Pos.X + toGoal);
-        if (b.Pos.Y < f.Base.Y - f.Leg * 1.2f) return;   // wait for it to come down
-        float dist = MathF.Abs(m.Mouth(target, 0).X - b.Pos.X);
-        if (dist < 300 * S) KickBall(b, ShotVelocity(m, b, target, rng.Range(6, 24)));
-        else KickBall(b, new Vector2(toGoal * (380 + P.Energy * 160) * S, -rng.Range(40, 140) * S));
     }
 
     Vector2 ShotVelocity(Match m, Prop b, Item goal, float h)
@@ -339,6 +304,7 @@ sealed partial class Brain
                     b.Pos = rim + new Vector2(0, -6 * S);
                     b.Release(new Vector2(0, 250 * S));
                     b.LastTouch = f;
+                    m.LastShot = "dunk"; m.Stats.Shot("dunk");
                     f.Emote("!!", 1);
                     _dunking = false;
                 }
@@ -371,6 +337,7 @@ sealed partial class Brain
             b.Holder = null;
             b.Release(v);
             b.LastTouch = f;
+            m.LastShot = dist > 200 * S ? "three" : "jumper"; m.Stats.Shot(m.LastShot);
             _shotSpot = null;
             f.SetAction(Act.Stand);
             return;
@@ -398,89 +365,4 @@ sealed partial class Brain
     bool ClosestTo(Match m, Prop b) =>
         m.Players.Where(p => p.Brain.Match == m).OrderBy(p => MathF.Abs(p.Base.X - b.Pos.X)).FirstOrDefault() == f;
 
-    void PlayRacket(Match m, Prop b, World w)
-    {
-        int team = m.Team.GetValueOrDefault(f);
-        int side = m.Side(team);
-        bool badminton = m.Kind == Sport.Badminton;
-        var net = m.Net;
-        float netTop = net.Local(0, net.Def.H).Y;
-        FaceTo(m.NetX);
-        f.KeepFacing = true;
-        // Serving: our team serves and we're the server (closest to home).
-        var mates = m.Players.Where(p => m.Team.GetValueOrDefault(p) == team).OrderBy(p => p.Id).ToList();
-        bool server = m.ServeTeam == team && mates.LastOrDefault() == f;
-        bool ballOurSide = MathF.Sign(b.Pos.X - m.NetX) == side;
-        bool served = b.SinceTouch < 30 && b.LastTouch != null;
-        if (server && !served && b.Holder == null && b.Vel.LengthSquared() < 1 && !_serving)
-        {
-            // Hold the ball up and serve.
-            _serving = true;
-            _serveT = 0.6f;
-        }
-        if (_serving)
-        {
-            f.DesiredVX = 0;
-            _serveT -= World.Dt;
-            b.Pinned = true;
-            b.PinTarget = f.Jt[J.Neck] + new Vector2(side * -8 * S, -14 * S);
-            if (_serveT <= 0)
-            {
-                b.Pinned = false;
-                Hit(m, b, side, netTop, badminton, true);
-                _serving = false;
-            }
-            return;
-        }
-        // Where will it come down on our side?
-        float landX = PredictLanding(b, m.CourtFloor, badminton);
-        bool coming = ballOurSide || MathF.Sign(b.Vel.X) == side;
-        float myX = coming && b.LastTouch != f && Responsible(m, landX, team) ? landX + side * 6 * S : HomeX(m);
-        myX = side < 0 ? MathF.Min(myX, m.NetX - 14 * S) : MathF.Max(myX, m.NetX + 14 * S);
-        _run = MathF.Abs(myX - f.Base.X) > 40 * S;
-        MoveToward(myX, 4 * S);
-        // Swing when it's in reach of the racket.
-        Vector2 head = f.Jt[J.Neck] + new Vector2(-side * f.Arm * 0.6f, -f.Arm * 0.5f);
-        float reach = f.Arm + (f.Weapon?.Def.Reach ?? 10) * S * 0.7f;
-        if (coming && b.LastTouch != f && _actCd <= 0 && Vector2.Distance(b.Pos, head) < reach && b.Pos.Y < f.Base.Y - 8 * S)
-            Hit(m, b, side, netTop, badminton, false);
-        else if (coming && f.Grounded && _actCd <= 0 && MathF.Abs(b.Pos.X - f.Base.X) < 30 * S && b.Pos.Y < f.Base.Y - f.Height * 1.5f && b.Vel.Y > 0 && b.Pos.Y > f.Base.Y - f.Height * 2.4f)
-            f.RequestJump(new Vector2(0, -520 * S), 0.03f);   // jump smash
-    }
-
-    bool Responsible(Match m, float landX, int team) =>
-        m.Players.Where(p => m.Team.GetValueOrDefault(p) == team).OrderBy(p => MathF.Abs(p.Base.X - landX)).FirstOrDefault() == f;
-
-    void Hit(Match m, Prop b, int side, float netTop, bool badminton, bool serve)
-    {
-        f.SetAction(Act.Swat);
-        _actCd = 0.35f;
-        // Aim somewhere on their side, clearing the net comfortably.
-        // Better players place it deeper and more surely; beginners all over the place.
-        float rs = Sk(SkillKind.Racket);
-        float depth = rng.Range(serve ? 90 : 50, 230) * S * (0.75f + rs * 0.35f) + rng.Range(-60, 60) * (1 - rs) * S;
-        Vector2 target = new(m.NetX - side * MathF.Max(25 * S, depth), m.CourtFloor);
-        Practice(SkillKind.Racket, 0.008f);
-        float clear = MathF.Max(b.Pos.Y - netTop, 0) + (badminton ? 45 : 25) * S + rng.Range(0, 30) * S;
-        if (!SolveLob(b.Pos, target, b.Grav, clear, 900 * S, 1500 * S, out var v)) v = new Vector2(-side * 500 * S, -600 * S);
-        if (badminton) v *= 1.45f;   // the shuttle's drag eats a lot of it
-        b.Pinned = false;
-        b.Kick(v, f);
-        b.LastTouch = f;
-        if (rng.NextDouble() < 0.05) f.Emote(P.Playfulness > 0.5f ? "!" : "hm", 0.6f);
-    }
-
-    static float PredictLanding(Prop b, float floor, bool drag)
-    {
-        Vector2 p = b.Pos, v = b.Vel;
-        float g = b.Grav, k = drag ? 2.4f : 0.15f;
-        for (int i = 0; i < 240; i++)
-        {
-            v.Y += g / 60f;
-            v *= 1 - k / 60f;
-            p += v / 60f;
-            if (p.Y + b.Radius >= floor && v.Y > 0) break;
-        }
-        return p.X;
-    }
 }

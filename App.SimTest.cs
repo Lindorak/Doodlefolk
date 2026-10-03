@@ -270,6 +270,13 @@ sealed partial class App
                     a.SimCheck("a granted wish gets used", used, $"{what}: never touched in {footTime:0}s free; {to?.Name} is {to?.Brain.Activity}, last chose {to?.Brain.LastDecision}; gift at {gift?.Pos ?? giftBall?.Pos}, on ground {gift?.OnGround ?? giftBall?.OnGround}, free {gift?.Free ?? giftBall?.Free}, they're at {to?.Base}");
             });
         }),
+        new("Sports", new[] { "none", "soccer", "basketball", "tennis", "badminton" }, (a, v) =>
+        {
+            if (v == "none") return;
+            a.SimAt(3, "a game of " + v, () => a.SimSport(v));
+            // Another game whenever one finishes, counting into the same stats.
+            a.SimEvery(2, 6, "keep playing", t => { if (t < a._simDur - 25 && a._simGear.Count > 0 && !a._w.Matches.Any() && a._w.Happening == null) a.SimSport(v); });
+        }),
         new("Moving", new[] { "none", "furniture" }, (a, v) =>
         {
             if (v != "furniture") return;
@@ -516,8 +523,48 @@ sealed partial class App
         }
     }
 
+    readonly List<Item> _simGear = new();
+    List<Figure> _simRoster = new();
+    MatchStats? _simStats;
+
+    /// <summary>A game on the floor with a full roster, so we can see how well they play.</summary>
+    void SimSport(string sport)
+    {
+        var floor = _w.Env.Platforms.Where(p => p.X2 - p.X1 > 1000).OrderByDescending(p => p.Y).FirstOrDefault();
+        if (floor == null) return;
+        float cx = (floor.X1 + floor.X2) / 2;
+        Item? Place(string key, float x, bool flip)
+        {
+            if (Put(key) is not { } it) return null;
+            it.Pos = new Vector2(x, floor.Y); it.Vel = Vector2.Zero; it.OnGround = true; it.GroundHwnd = floor.Hwnd; it.Flip = flip;
+            return it;
+        }
+        if (_simGear.Count == 0 || _simGear.Any(g => !_w.Items.Contains(g)))
+        {
+            _simGear.Clear();
+            switch (sport)
+            {
+                case "soccer": _simGear.AddRange(new[] { Place("goal", cx - 400, true), Place("goal", cx + 400, false) }.OfType<Item>()); break;
+                case "basketball": if (Place("hoop", cx + 250, false) is { } h) _simGear.Add(h); break;
+                default: if (Place(sport == "tennis" ? "tennisnet" : "badmintonnet", cx, false) is { } n) _simGear.Add(n); break;
+            }
+        }
+        if (_simGear.Count == 0) return;
+        int need = sport switch { "soccer" => 6, "basketball" => 3, _ => 2 };
+        _simRoster.RemoveAll(f => !_w.Figures.Contains(f) || f.Dead || f.Brain.Busy);
+        foreach (var f in _w.Figures.Where(f => f.Mode == Mode.Control && f.Visitor == VisitorKind.None && !f.Dead && !_simRoster.Contains(f) && !f.Brain.Busy))
+            if (_simRoster.Count < need) _simRoster.Add(f);
+        while (_simRoster.Count < need && _w.Figures.Count < World.MaxFigures && Spawn(null) is { } nf) { nf.SpawnT = 0.999f; _simRoster.Add(nf); }
+        if (_simRoster.Count < need) return;
+        int i = 0;
+        foreach (var f in _simRoster) { if (f.Brain.Match == null && MathF.Abs(f.Base.Y - floor.Y) > 4) f.PlaceAt(floor, cx - 200 + 130 * i); i++; }
+        _simStats ??= new MatchStats();
+        _simRoster[0].Brain.StartMatchWith(_simGear[0], _simRoster, _w, _simStats);
+    }
+
     void SimFinish()
     {
+        if (_simStats != null) _simMetrics["sport"] = _simStats.Summary();
         if (_testEnd > 0) return;
         _testEnd = 1;
         SimCheck("no errors while running", _frameErrors == 0, string.Join(" | ", _errorTexts.Distinct().Take(5)));

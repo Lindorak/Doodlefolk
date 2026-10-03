@@ -5,6 +5,30 @@ namespace Doodlefolk;
 
 enum Sport { Soccer, Basketball, Tennis, Badminton }
 
+/// <summary>What happened in a match (for the simulation tests, and anything that wants to comment on it).</summary>
+sealed class MatchStats
+{
+    /// <summary>Racket sports: how many hits in each point, and the point being played.</summary>
+    public readonly List<int> Rallies = new();
+    public int RallyHits;
+    /// <summary>How points ended ("landed", "out", ...), and shots taken / made by type ("jumper", "dunk", "shot"...).</summary>
+    public readonly Dictionary<string, int> Ends = new(), Shots = new(), Made = new();
+    public int Serves, Passes, Touches, Saves, Steals, Blocks, Rebounds, DribbleBeats, Fumbles;
+
+    public void Hit() => RallyHits++;
+    public void PointOver(string how) { Rallies.Add(RallyHits); RallyHits = 0; Add(Ends, how); }
+    public void Shot(string kind) => Add(Shots, kind);
+    public void Scored(string kind) => Add(Made, kind);
+    static void Add(Dictionary<string, int> d, string k) => d[k] = d.GetValueOrDefault(k) + 1;
+
+    public double RallyAvg => Rallies.Count > 0 ? Rallies.Average() : 0;
+    public object Summary() => new
+    {
+        points = Rallies.Count, rallyAvg = Math.Round(RallyAvg, 2), rallyMax = Rallies.DefaultIfEmpty(0).Max(), ends = Ends, shots = Shots, made = Made,
+        serves = Serves, passes = Passes, touches = Touches, saves = Saves, steals = Steals, blocks = Blocks, rebounds = Rebounds, dribbleBeats = DribbleBeats, fumbles = Fumbles,
+    };
+}
+
 /// <summary>A game in progress around some sports gear: who's playing on which side, the ball, the score, and
 /// the referee (it decides when a goal, basket or point happens). Players' brains do the actual playing.</summary>
 sealed class Match
@@ -26,12 +50,23 @@ sealed class Match
     bool _ballWasDown;
     float _stuckT;
 
-    public Match(Sport kind, List<Item> gear, Prop ball) { Kind = kind; Gear = gear; Ball = ball; }
+    public Match(Sport kind, List<Item> gear, Prop ball, MatchStats? stats = null) { Kind = kind; Gear = gear; Ball = ball; Stats = stats ?? new(); }
+    public readonly MatchStats Stats;
+    /// <summary>Basketball: the kind of the last shot taken ("jumper", "three", "layup", "dunk").</summary>
+    public string LastShot = "jumper";
     /// <summary>The ball was brought out for this match: it's put away again afterwards.</summary>
     public bool MadeBall;
 
     public int Target => Kind switch { Sport.Soccer => 3, Sport.Basketball => 9, _ => 5 };
     public bool OneGoal => Kind == Sport.Soccer && Gear.Count == 1;
+    public bool Racket => Kind is Sport.Tennis or Sport.Badminton;
+    /// <summary>Racket sports: the ball waits in the server's hand until they serve.</summary>
+    public bool AwaitServe;
+    int _bounces;
+    /// <summary>How far each half of the court reaches from the net.</summary>
+    public float CourtHalf => MathF.Min(300 * Ball.S, Court != null ? MathF.Max(60 * Ball.S, MathF.Min(NetX - Court.X1, Court.X2 - NetX)) : 300 * Ball.S);
+    /// <summary>A player hit it: a fresh flight (no bounces yet).</summary>
+    public void Touched() { _bounces = 0; AwaitServe = false; }
     public static int MinPlayers(Sport s) => s is Sport.Tennis or Sport.Badminton ? 2 : 1;
 
     public string Name => Kind switch { Sport.Soccer => Prop.KindName(PropKind.SoccerBall) == "Football" ? "football" : "soccer", Sport.Basketball => "basketball", Sport.Tennis => "tennis", _ => "badminton" };
@@ -106,6 +141,9 @@ sealed class Match
                 Ball.Pos = KickOff();
                 Ball.Vel = default;
                 Ball.OnGround = false;
+                Ball.LastTouch = null;
+                _bounces = 0;
+                if (Racket) { AwaitServe = true; Ball.Pinned = true; Ball.PinTarget = Ball.Pos; }
             }
             return true;
         }
@@ -123,6 +161,7 @@ sealed class Match
             {
                 Score[1 - hitter]++;
                 ServeTeam = 1 - hitter;
+                Stats.PointOver("out");
                 Celebrate(1 - hitter, "OUT!", w);
             }
             else { Shout = "OUT!"; ShoutT = 1.2f; World.Play(Sfx.Whistle, b.Pos, 0.5f); }
@@ -141,6 +180,7 @@ sealed class Match
                         int scoring = OneGoal ? 0 : 1 - g;      // the team defending goal g is team g
                         Score[scoring]++;
                         Scorer = b.LastTouch;
+                        Stats.Scored("goal");
                         Celebrate(scoring, "GOAL!", w);
                         Reset(w, 2.2f);
                         break;
@@ -150,7 +190,7 @@ sealed class Match
                 if (OneGoal && Pause <= 0)
                 {
                     _stuckT = b.OnGround && b.Vel.LengthSquared() < 30 * 30 * s * s && b.LastTouch != null && Team.GetValueOrDefault(b.LastTouch!) == 1 ? _stuckT + dt : 0;
-                    if (_stuckT > 0.5f) { Score[1]++; Celebrate(1, "SAVE!", w); Reset(w, 1.5f); _stuckT = 0; }
+                    if (_stuckT > 0.5f) { Score[1]++; Stats.Saves++; Celebrate(1, "SAVE!", w); Reset(w, 1.5f); _stuckT = 0; }
                 }
                 break;
             case Sport.Basketball:
@@ -166,6 +206,7 @@ sealed class Match
                         int pts = dist > 200 * s ? 3 : 2;
                         Points[who] += pts;
                         Scorer = who;
+                        Stats.Scored(LastShot);
                         Shout = pts == 3 ? "THREE!" : b.SinceBounce > 1 ? "SWISH!" : "SCORE!";
                         World.Play(Sfx.Swish, b.Pos, 0.6f); World.Play(Sfx.TaDa, b.Pos, 0.4f);
                         ShoutT = 1.5f;
@@ -178,16 +219,31 @@ sealed class Match
             }
             default:
             {
-                // A rally point when the ball lands on a side (or dies in the net).
+                // Each time it comes down: on the hitter's own side (it didn't clear the net), out past the end of the
+                // court, a fair first bounce (tennis lets it bounce once), or a winner.
                 bool down = b.OnGround || (b.SinceBounce < 0.02f && b.Pos.Y > CourtFloor - 30 * s);
-                if (down && !_ballWasDown && b.Holder == null && !b.Pinned)
+                bool rolled = Kind == Sport.Tennis && _bounces == 1 && b.OnGround;   // bounced in, then died: a winner
+                if ((down && !_ballWasDown || rolled) && b.Holder == null && !b.Pinned && !AwaitServe)
                 {
-                    int sideTeam = b.Pos.X < NetX ? 0 : 1;
-                    int winner = 1 - sideTeam;
-                    Score[winner]++;
-                    ServeTeam = winner;
-                    Celebrate(winner, "POINT!", w);
-                    Reset(w, 1.6f);
+                    int landTeam = b.Pos.X < NetX ? 0 : 1;
+                    int hitter = b.LastTouch != null && Team.TryGetValue(b.LastTouch, out int ht) ? ht : -1;
+                    bool longOut = MathF.Abs(b.Pos.X - NetX) > CourtHalf + 8 * s;
+                    int winner = -1;
+                    string how = "";
+                    if (hitter < 0) { winner = 1 - ServeTeam; how = "fault"; }
+                    else if (landTeam == hitter) { winner = 1 - hitter; how = "net"; }
+                    else if (_bounces == 0 && longOut) { winner = 1 - hitter; how = "out"; }
+                    else if (Kind == Sport.Tennis && _bounces == 0) _bounces = 1;
+                    else { winner = hitter; how = "winner"; }
+                    if (winner >= 0)
+                    {
+                        Score[winner]++;
+                        Stats.PointOver(how);
+                        ServeTeam = winner;
+                        Celebrate(winner, how is "out" ? "OUT!" : how is "net" ? "NET!" : "POINT!", w);
+                        Reset(w, 1.6f);
+                        _bounces = 0;
+                    }
                 }
                 _ballWasDown = down;
                 break;

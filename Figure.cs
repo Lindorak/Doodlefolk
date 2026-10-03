@@ -210,6 +210,8 @@ sealed partial class Figure
     public float Blush;
     /// <summary>Holding hands this frame: where the near / far hand should reach (set by the brain, cleared after posing).</summary>
     public Vector2? HoldN, HoldF;
+    /// <summary>Diving for something (a keeper's save): stretched out toward it while in the air.</summary>
+    public Vector2? DiveAt;
     /// <summary>A hat worn for the day (party hat, Halloween costume) instead of its usual one.</summary>
     public string? HatOverride, HatColourOverride;
     /// <summary>Hide-and-seek: crouched behind something (drawn behind it), or blending into the window (faint).</summary>

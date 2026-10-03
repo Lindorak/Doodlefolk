@@ -35,6 +35,9 @@ sealed class Prop
     public Figure? PassTarget;
     /// <summary>A figure currently juggling it: their body doesn't collide with it.</summary>
     public Figure? Juggler;
+    /// <summary>Someone going round the ball (it passes behind them) until GhostUntil.</summary>
+    public Figure? Ghost;
+    public double GhostUntil;
 
     public Prop(PropKind kind, float scale)
     {
@@ -88,6 +91,10 @@ sealed class Prop
         ThrownByUser = by == null;
         SinceTouch = 0;
     }
+
+    /// <summary>Hit with a racket (or thrown): it leaves at exactly this velocity, whatever it weighs. (A kick is
+    /// different: the same foot sends a light ball faster.)</summary>
+    public void Strike(Vector2 vel, Figure? by) => Kick(vel * MathF.Sqrt(Mass), by);
 
     public void Release(Vector2 vel)
     {
@@ -251,7 +258,7 @@ sealed class Prop
         float r = Radius;
         foreach (var f in w.Figures)
         {
-            if (f.Mode == Mode.Spawning || f.Carrying == this || f == Juggler) continue;
+            if (f.Mode == Mode.Spawning || f.Carrying == this || f == Juggler || (f == Ghost && World.Now < GhostUntil)) continue;
             if (f == LastTouch && SinceTouch < 0.25f) continue;
             // Nearest point on the figure's body.
             float best = float.MaxValue;

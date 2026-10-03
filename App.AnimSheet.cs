@@ -365,7 +365,7 @@ sealed partial class App
         }
         for (int i = _animLater.Count - 1; i >= 0; i--) if (t >= _animLater[i].at) { var a = _animLater[i].act; _animLater.RemoveAt(i); a(); }
         var job = _animJobs[_animJob];
-        if (!_animStarted && t >= _animJobStart - 0.1) { _animStarted = true; job.Start(_animFig, _animPet); _animJobStart = t; _animNextShot = t + 0.05; }
+        if (!_animStarted && t >= _animJobStart - 0.1) { _animStarted = true; _animFig?.Brain.Puppet(9999); job.Start(_animFig, _animPet); _animJobStart = t; _animNextShot = t + 0.05; }
         if (!_animStarted || t < _animNextShot || _animFrame >= Shots) return;
         _animNextShot = _animJobStart + 0.05 + job.Duration * (_animFrame + 1) / Shots;
         var c = job.Focus(_animFig, _animPet);

@@ -241,10 +241,18 @@ sealed partial class Figure
                 tiltT += sway * 0.12f;
                 break;
             case 1:   // raise the roof
-                hN = new(Arm * 0.3f, -Arm * (0.55f + 0.35f * MathF.Max(0, down))); hF = new(-Arm * 0.15f, -Arm * (0.55f + 0.35f * MathF.Max(0, down)));
-                eN = eF = new(0.5f, 1);
+            {
+                float edge = FidgetLength(Fidget.Groove) * 0.18f;
+                float env = M.Smooth(t / edge) * M.Smooth((FidgetDur - t) / edge);
+                hN = Vector2.Lerp(hN, new(Arm * 0.3f, -Arm * (0.55f + 0.35f * MathF.Max(0, down))), env);
+                hF = Vector2.Lerp(hF, new(-Arm * 0.15f, -Arm * (0.55f + 0.35f * MathF.Max(0, down))), env);
+                float reachArc = MathF.Sin(env * MathF.PI) * Arm * 0.45f;
+                hN.X += reachArc; hF.X -= reachArc;
+                eN = new(-_hN.Y, _hN.X * Facing);
+                eF = new(-_hF.Y, _hF.X * Facing);
                 hipT -= MathF.Max(0, down) * 1.5f * S;
                 break;
+            }
             case 2:   // disco point: up to the sky, down to the floor
             {
                 bool up = ((int)(t * 2.2f)) % 2 == 0;

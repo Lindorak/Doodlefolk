@@ -908,7 +908,7 @@ const SUBPANELS = {
       h("div", null, h("h2", { style: { marginTop: 0 } }, "Right now"), status, rows.map(r => r.el),
         h("h3", null, "Health"), h("div", { class: "meter" }, h("label", null, "HP"), h("div", { class: "bar" }, hpI), hpN),
         h("button", { class: "btn small", style: { marginTop: "8px" }, onclick: () => send({ t: "fig", id, op: "heal" }) }, "🩹 Patch them up"),
-        h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice: juggling, climbing, fighting, ball games, dancing and drawing all get better the more they do them."),
+        h("h3", null, "Skills"), skillBox, h("p", { class: "hint" }, "Skills grow with practice (faster with someone better nearby, or when it's their dream) and show in how well they do things: aim, swimming speed, bites, building. Unused for days, they get rusty."),
         h("div", { class: "row" }, h("button", { class: "btn small", onclick: () => send({ t: "fig", id, op: "party" }) }, "🎉 Throw them a party"), bday)),
       h("div", null, h("h2", { style: { marginTop: 0 } }, "What's on their mind"), dreamLine, dreamHint, decided, thoughts, route, h("h3", null, "Habits they've formed"), habits,
         h("h3", null, "What they remember most"), remembers,

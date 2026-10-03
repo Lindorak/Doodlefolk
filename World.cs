@@ -59,6 +59,9 @@ sealed partial class World
     public static bool Calm, ColourBlind;
     /// <summary>Figures speak only in gestures and symbols (setting).</summary>
     public static bool Gestures;
+    /// <summary>The town's skipping record (most in a row) and who holds it.</summary>
+    public int SkipRecord;
+    public string SkipRecordBy = "";
     /// <summary>Manga symbols round their heads (anger veins, sweat drops, steam...).</summary>
     public static bool Manga = true;
     /// <summary>How often you're busy (typing away) at this hour, learned over the weeks (0..1).</summary>

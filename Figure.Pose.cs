@@ -198,6 +198,7 @@ sealed partial class Figure
         WeaponArms(ref hN, ref handW, ref eN);
         CarryArms(ref hN, ref hF, ref eN, ref eF, ref handW);
         GrapplePose(ref hN, ref hF, ref eN, ref eF, ref handW, ref leanT);
+        SkipArms(ref hN, ref hF, ref eN, ref eF, ref handW);
         HoldHands(ref hN, ref hF, ref handW);
 
         if (LookAt is Vector2 la && Action != Act.Lie)

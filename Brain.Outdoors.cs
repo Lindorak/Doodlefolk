@@ -174,7 +174,7 @@ sealed partial class Brain
             if (f.Base.X > water.Pos.X + half) _swimDir = -1;
             else if (f.Base.X < water.Pos.X - half) _swimDir = 1;
             FaceTo(f.Base.X + _swimDir * 100);
-            f.DesiredVX = _swimDir * f.WalkSpeed * 0.75f;
+            f.DesiredVX = _swimDir * f.WalkSpeed * (0.5f + Sk(SkillKind.Swimming) * 0.6f);
             if (rng.NextDouble() < World.Dt * 0.15) _swimPause = rng.Range(2, 5);
         }
         f.SetAction(Act.Stand);
@@ -185,7 +185,7 @@ sealed partial class Brain
             f.Diving = M.MoveTowards(f.Diving, _diveT > 0.5f ? 1 : 0, World.Dt * 2.2f);
             if (_diveT <= 0) { f.Diving = 0; w.Fx.Splash(f.Base + new Vector2(0, -2 * S), S, rng, 1.1f); f.Emote(V("pah!", "WOO!", "…", "phew!", "up for air"), 0.9f); }
         }
-        else if (_diveSoon && _t > 1.5f || _swimPause <= 0 && rng.NextDouble() < World.Dt * 0.05 * (0.4f + P.Bravery))
+        else if (_diveSoon && _t > 1.5f || _swimPause <= 0 && rng.NextDouble() < World.Dt * 0.05 * (0.3f + P.Bravery * 0.6f + Sk(SkillKind.Swimming)))
         {
             _diveSoon = false;
             _diveT = rng.Range(2.2f, 4.5f);
@@ -193,6 +193,7 @@ sealed partial class Brain
             World.Play(Sfx.Squirt, f.Base, 0.3f, 0.7f);
         }
         Wet = 1;
+        Practice(SkillKind.Swimming, World.Dt * 0.0025f, true);
         Boredom = MathF.Max(0, Boredom - World.Dt * 0.01f);
         Cheered(World.Dt * 0.01f * (1 + Hot(w) * 2));
         if (World.StaminaOn) Stamina = MathF.Max(0, Stamina - World.Dt * 0.004f);
@@ -255,10 +256,11 @@ sealed partial class Brain
         if (f.Bite && _t > _biteEnd)
         {
             f.Bite = false;
-            _biteAt = _t + rng.Range(10, 30);
-            if (rng.NextDouble() < 0.45 + P.Bravery * 0.1)
+            _biteAt = _t + rng.Range(10, 30) * (1.15f - Sk(SkillKind.Fishing) * 0.5f);
+            if (rng.NextDouble() < 0.35 + P.Bravery * 0.08 + Sk(SkillKind.Fishing) * 0.4f)
             {
                 _caught++;
+                Practice(SkillKind.Fishing, 0.04f);
                 w.Fx.Splash(f.Bobber, S, rng, 1.2f);
                 var (kind, cm) = Fishes.Catch(rng, DateTime.Now, w.Weather.Raining, Hobby == Hobby.Collecting ? 0.5f : 0);
                 string what = kind.Name.ToLowerInvariant(), size = Fishes.Size(kind, cm);

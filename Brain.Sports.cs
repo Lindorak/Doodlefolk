@@ -313,9 +313,10 @@ sealed partial class Brain
 
     Vector2 ShotVelocity(Match m, Prop b, Item goal, float h)
     {
-        float miss = 1.4f - Sk(SkillKind.Ball);
+        float miss = 1.45f - (Sk(SkillKind.Kicking) * 0.7f + Sk(SkillKind.Ball) * 0.3f);
         Vector2 aim = goal.Local(-6, h) + new Vector2(rng.Range(-6, 6) * miss * S, rng.Range(-6, 6) * miss * S);
-        Practice(SkillKind.Ball, 0.006f);
+        Practice(SkillKind.Kicking, 0.008f);
+        Practice(SkillKind.Ball, 0.003f);
         return SolveLob(b.Pos, aim, b.Grav, 10 * S, 500 * S, 1600 * S, out var v) ? v : new Vector2(MathF.Sign(aim.X - b.Pos.X) * 900 * S, -350 * S);
     }
 
@@ -358,8 +359,9 @@ sealed partial class Brain
             if (f.ActionT < Figure.ThrowTime * Figure.ThrowRelease) return;
             // Shoot: a lob at the rim; worse aim from far away.
             float dist = MathF.Abs(rim.X - f.Base.X);
-            float skill = 0.3f + Sk(SkillKind.Ball) * 0.45f + f.Tastes.Of(Thing.Basketballs) * 0.2f;
-            Practice(SkillKind.Ball, 0.008f);
+            float skill = 0.25f + Sk(SkillKind.Shooting) * 0.55f + f.Tastes.Of(Thing.Basketballs) * 0.15f;
+            Practice(SkillKind.Shooting, 0.01f);
+            Practice(SkillKind.Ball, 0.003f);
             Vector2 aim = rim + new Vector2(rng.Range(-1, 1) * (1 - skill) * (6 + dist / (25 * S)) * S, -3 * S);
             if (!SolveLob(f.HoldPoint, aim, b.Grav, 30 * S + dist * 0.25f, 900 * S, 1800 * S, out var v)) v = new Vector2(MathF.Sign(rim.X - f.Base.X) * 500 * S, -900 * S);
             f.Carrying = null;
@@ -451,8 +453,11 @@ sealed partial class Brain
         f.SetAction(Act.Swat);
         _actCd = 0.35f;
         // Aim somewhere on their side, clearing the net comfortably.
-        float depth = rng.Range(serve ? 90 : 50, 230) * S;
-        Vector2 target = new(m.NetX - side * depth, m.CourtFloor);
+        // Better players place it deeper and more surely; beginners all over the place.
+        float rs = Sk(SkillKind.Racket);
+        float depth = rng.Range(serve ? 90 : 50, 230) * S * (0.75f + rs * 0.35f) + rng.Range(-60, 60) * (1 - rs) * S;
+        Vector2 target = new(m.NetX - side * MathF.Max(25 * S, depth), m.CourtFloor);
+        Practice(SkillKind.Racket, 0.008f);
         float clear = MathF.Max(b.Pos.Y - netTop, 0) + (badminton ? 45 : 25) * S + rng.Range(0, 30) * S;
         if (!SolveLob(b.Pos, target, b.Grav, clear, 900 * S, 1500 * S, out var v)) v = new Vector2(-side * 500 * S, -600 * S);
         if (badminton) v *= 1.45f;   // the shuttle's drag eats a lot of it

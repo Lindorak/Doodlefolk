@@ -140,6 +140,13 @@ sealed partial class Brain
         if (it == _gift) { _gift = null; _giftAt = -1; }
         if (_verb is Verb.Wield or Verb.Shoot or Verb.Create or Verb.Shelter or Verb.Lasso) { Equipped(it); return; }
         if (_verb == Verb.Collect) { _item = null; Collected(it, w); Go(G.Cheer, 1); return; }
+        if (_verb == Verb.Skip)
+        {
+            _item = null;
+            if (it.Def.Key == "longrope") GoLongRope(it, w);
+            else { _rope = it; it.Holder = f; _turnA = _turnB = _jumper = null; _skipTurner = false; _doubleDutch = false; StartSkipping(w); }
+            return;
+        }
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {

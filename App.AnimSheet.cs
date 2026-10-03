@@ -135,6 +135,32 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => fig.Brain.HaulNow(t, t.Pos.X + 260 * _w.Scale, _w)));
             }, (f, _) => thing != null ? new Vector2(thing.Pos.X, thing.Pos.Y - 40 * _w.Scale) : Vector2.Zero, null, 3.4f));
         }
+        // Skipping rope: a beginner, an expert (double-unders), and long rope with two turners.
+        foreach (var (label, skill, longRope) in new[] { ("Beginner", 0.15f, false), ("Expert", 0.9f, false), ("Long rope", 0.3f, true), ("Double Dutch", 0.8f, true) })
+        {
+            Item? rope = null;
+            _animJobs.Add(new("Skipping", label, longRope ? 6 : 4, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                f!.Brain.Skills[SkillKind.Skipping] = skill;
+                rope = SpawnItem(ItemCatalog.Find(longRope ? "longrope" : "jumprope")!);
+                rope!.Pos = new Vector2(f.Base.X, floor.Y); rope.Vel = Vector2.Zero; rope.OnGround = true;
+                if (longRope)
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var m = new Figure(Palette.All[(_animJob + 3 + i) % Palette.All.Length].Color, "Turner" + i, _w.Scale, Personality.Random(new Random(9 + i)), new Random(9 + i)) { SizeMul = 1 };
+                        m.Traits.Sociability = 1; m.Traits.Energy = 1;
+                        m.PlaceAt(floor, f.Base.X + (i == 0 ? -70 : 70) * _w.Scale);
+                        m.SpawnT = 0.999f;
+                        _w.Figures.Add(m);
+                        m.Brain.AddAffinity(f, 1); f.Brain.AddAffinity(m, 1);
+                        m.Brain.Skills[SkillKind.Skipping] = 0.1f;
+                        m.Brain.Reset();
+                    }
+                var fig = f; var it = rope;
+                _animLater.Add((_tFrame / (double)TFps + (longRope ? 1.6 : 0.1), () => fig.Brain.UseNow(it, Verb.Skip, _w)));
+            }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 1.6f));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {

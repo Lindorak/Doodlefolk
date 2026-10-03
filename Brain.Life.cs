@@ -3,7 +3,7 @@ using Vortice.Mathematics;
 
 namespace Doodlefolk;
 
-enum SkillKind { Juggling, Climbing, Fighting, Ball, Dancing, Drawing }
+enum SkillKind { Juggling, Climbing, Fighting, Ball, Dancing, Drawing, Shooting, Kicking, Racket, Swimming, Fishing, Building, Singing, Skipping }
 enum Holiday { None, Halloween, Christmas, NewYear, Valentine }
 
 /// <summary>Everyday life: skills that grow with practice, favourite (and avoided) places, birthdays and holidays,
@@ -26,6 +26,13 @@ sealed partial class Brain
             SkillKind.Fighting => 0.1f + P.Aggression * 0.2f,
             SkillKind.Ball => 0.12f + P.Playfulness * 0.15f,
             SkillKind.Dancing => 0.1f + P.Playfulness * 0.12f + P.Sociability * 0.08f,
+            // Sport by sport, starting from how good they are with a ball at all.
+            SkillKind.Shooting or SkillKind.Kicking or SkillKind.Racket => 0.06f + P.Playfulness * 0.08f + P.Energy * 0.05f + Sk(SkillKind.Ball) * 0.35f,
+            SkillKind.Swimming => 0.1f + P.Energy * 0.12f + P.Bravery * 0.1f,
+            SkillKind.Fishing => 0.1f + (1 - P.Energy) * 0.12f + P.Curiosity * 0.05f,
+            SkillKind.Building => 0.1f + P.Curiosity * 0.08f + P.Energy * 0.06f,
+            SkillKind.Singing => 0.08f + P.Sociability * 0.12f + P.Playfulness * 0.05f,
+            SkillKind.Skipping => 0.08f + P.Energy * 0.12f + P.Playfulness * 0.06f,
             _ => 0.1f + P.Curiosity * 0.15f,
         };
         Skills[k] = v;
@@ -41,10 +48,12 @@ sealed partial class Brain
             if (_practisedAt.TryGetValue(k, out var at) && f.Age - at < 0.5f) return;
             _practisedAt[k] = f.Age;
         }
-        amount *= PracticeBoost(k);
+        amount *= PracticeBoost(k) * PracticeCompany(k);
+        LastPractised[k] = DateTime.Now;
+        if (_rusty.Remove(k)) { f.Emote(V("rusty…", "I'M RUSTY! Ha!", "…out of practice.", "I've forgotten how…", "the hands remember, slowly"), 1.2f); Write("rusty:" + k, V($"A bit rusty at {SkillName(k)}. Haven't done it in ages.", $"So rusty at {SkillName(k)}! Back to practice!", $"Rusty at {SkillName(k)}. Annoying.", $"I've got rusty at {SkillName(k)}…"), "☁", 3600); }
         float before = Sk(k), after = MathF.Min(1, before + amount * (1 - before));
         Skills[k] = after;
-        string what = k switch { SkillKind.Ball => "ball games", SkillKind.Drawing => "drawing", _ => k.ToString().ToLowerInvariant() };
+        string what = SkillName(k);
         if (before < 0.5f && after >= 0.5f)
         {
             f.Emote("★", 1.2f);
@@ -55,6 +64,73 @@ sealed partial class Brain
             f.Emote("★★", 1.4f);
             Write("master:" + k, V($"I'm great at {what} now!", $"{what} MASTER!!!", $"Best at {what}. Obviously.", $"I'm actually good at {what}. Huh.", $"{what} feels like breathing now."), "★", 1e9f);
         }
+    }
+
+    public static string SkillName(SkillKind k) => k switch
+    {
+        SkillKind.Ball => "ball control", SkillKind.Shooting => "shooting hoops", SkillKind.Kicking => "kicking goals", SkillKind.Racket => "racket games",
+        _ => k.ToString().ToLowerInvariant(),
+    };
+
+    /// <summary>When each skill was last practised (saved): skills nobody uses get rusty.</summary>
+    public readonly Dictionary<SkillKind, DateTime> LastPractised = new();
+    readonly HashSet<SkillKind> _rusty = new();
+
+    /// <summary>Back after a while: anything not practised for days has slipped (towards their natural talent, never
+    /// below it), and they notice the next time they try.</summary>
+    public void Rust(DateTime now)
+    {
+        foreach (var k in Skills.Keys.ToList())
+        {
+            if (!LastPractised.TryGetValue(k, out var last)) continue;
+            double days = (now - last).TotalDays;
+            if (days < 3) continue;
+            float talent = TalentFor(k), v = Skills[k];
+            if (v <= talent + 0.02f) continue;
+            float slip = (v - talent) * MathF.Min(0.35f, 0.025f * (float)(days - 3));
+            if (slip < 0.005f) continue;
+            Skills[k] = v - slip;
+            if (slip > 0.04f) _rusty.Add(k);
+        }
+    }
+
+    float TalentFor(SkillKind k)
+    {
+        bool had = Skills.Remove(k, out var keep);
+        float t = Sk(k);
+        Skills.Remove(k);
+        if (had) Skills[k] = keep;
+        return t;
+    }
+
+    /// <summary>Practising alongside someone better (or watching them) helps.</summary>
+    float PracticeCompany(SkillKind k)
+    {
+        var w = World.Current;
+        if (w == null) return 1;
+        float mine = Skills.GetValueOrDefault(k, 0.3f);
+        foreach (var o in w.Figures)
+            if (o != f && o.Mode == Mode.Control && Vector2.Distance(o.Base, f.Base) < 320 * S && o.Brain.Skills.GetValueOrDefault(k) > mine + 0.15f) return 1.3f;
+        return 1;
+    }
+
+    /// <summary>Confidence: they lean towards what they're good at (and a little away from what they're bad at).</summary>
+    float SkillTilt(string label)
+    {
+        string k = ActivityKey(label);
+        SkillKind? s = k switch
+        {
+            _ when k.StartsWith("play ball") || k.StartsWith("practise with") => SkillKind.Ball,
+            _ when k.StartsWith("practise juggling") || k.StartsWith("juggle") => SkillKind.Juggling,
+            _ when k.StartsWith("go fishing") => SkillKind.Fishing,
+            _ when k.StartsWith("go for") && label.Contains("swim", StringComparison.OrdinalIgnoreCase) || k.StartsWith("swim") => SkillKind.Swimming,
+            _ when k.StartsWith("dance") || k.StartsWith("practise dancing") => SkillKind.Dancing,
+            _ when k.StartsWith("explore") || k.StartsWith("practise climbing") => SkillKind.Climbing,
+            _ when k.StartsWith("help build") || k.StartsWith("build") => SkillKind.Building,
+            _ when k.StartsWith("skip") => SkillKind.Skipping,
+            _ => null,
+        };
+        return s is SkillKind sk && Skills.TryGetValue(sk, out var v) ? 0.85f + v * 0.45f : 1;
     }
 
     // ---------------- places ----------------

@@ -41,6 +41,7 @@ sealed partial class Brain
         if (key.Length == 0) return;
         // Picking up fighting from others only happens to those with some fight in them already.
         if ((key.StartsWith("start a") || key.StartsWith("fight") || key.StartsWith("spar")) && P.Aggression < 0.5f) return;
+        if (SkillOf(key) is SkillKind watched && model.Brain.Sk(watched) > Sk(watched) + 0.2f) Practice(watched, 0.004f);
         float old = Learned.GetValueOrDefault(key);
         // Small steps, smaller the keener they already are; curious, sociable figures copy more.
         float nudge = 0.035f * best * (0.5f + P.Curiosity * 0.5f + P.Sociability * 0.3f) * (1 - MathF.Max(0, old));
@@ -53,6 +54,15 @@ sealed partial class Brain
             Write("copied:" + key, V($"I want to {what} like {model.Name} does.", $"{model.Name} makes it look SO fun ({what})! My turn!", $"Fine. {model.Name} made \"{what}\" look alright.", $"I've been watching {model.Name}… I want to {what} too.", $"{model.Name} showed me how to {what}, without a word."), "♪", 1e9f);
         }
     }
+
+    static SkillKind? SkillOf(string key) => key switch
+    {
+        _ when key.StartsWith("practise juggling") || key.StartsWith("juggle") => SkillKind.Juggling,
+        _ when key.StartsWith("play ball") || key.StartsWith("practise with") => SkillKind.Ball,
+        _ when key.StartsWith("dance") || key.StartsWith("practise dancing") => SkillKind.Dancing,
+        _ when key.StartsWith("go fishing") => SkillKind.Fishing,
+        _ => null,
+    };
 
     /// <summary>For the Studio: habits picked up from watching someone.</summary>
     public IEnumerable<(string what, string from)> CopiedHabits() => _copiedFrom.Select(kv => (kv.Key, kv.Value));

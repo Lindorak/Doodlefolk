@@ -11,7 +11,7 @@ sealed partial class Brain
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
         Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch, Scoop,
-        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit, Haul,
+        Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit, Haul, Skip,
     }
 
     readonly Figure f;
@@ -85,6 +85,7 @@ sealed partial class Brain
         if (_ball != null && _ball.Juggler == f && g != G.Juggle) _ball.Juggler = null;
         if (_g is G.Fight or G.CursorFight && g != _g) EndFight();
         if (_g == G.Haul && g != G.Haul) LeaveHaul();
+        if (_g == G.Skip && g != G.Skip) LeaveSkip();
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
@@ -111,6 +112,8 @@ sealed partial class Brain
         SweetheartId = o.SweetheartId;
         Diary.AddRange(o.Diary);
         foreach (var (k, v) in o.Skills) Skills[k] = v;
+        foreach (var (k, v) in o.LastPractised) LastPractised[k] = v;
+        SkipBest = o.SkipBest;
         Born = o.Born;
         _places.AddRange(o._places);
         Memories.AddRange(o.Memories);
@@ -398,6 +401,7 @@ sealed partial class Brain
             case G.Carry: DoCarry(w); break;
             case G.Scoop: DoScoop(w); break;
             case G.Haul: DoHaul(w); break;
+            case G.Skip: DoSkip(w); break;
             case G.Throw: DoThrow(w); break;
             case G.Catch: DoCatch(w); break;
             case G.Fight: DoFight(w); break;
@@ -832,6 +836,7 @@ sealed partial class Brain
         GardenOptions(w, opts);
         TownOptions(w, opts);
         RedecorateOptions(w, opts);
+        SkipOptions(w, opts);
         HelpBuildOptions(w, opts);
         OutdoorOptions(w, opts);
         BoostOptions(w, opts);

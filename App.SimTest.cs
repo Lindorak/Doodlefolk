@@ -85,7 +85,7 @@ sealed partial class App
         new("Things", new[] { "few", "lots" }, (a, v) =>
         {
             string[] few = { "bed", "couch", "table", "radio", "box" };
-            string[] lots = { "chair", "armchair", "lamp", "campfire", "pond", "pool", "bike", "skateboard", "gokart", "stage", "shopstall", "foodcart", "fairylights", "lantern", "pizza", "cake", "book", "beanbag", "throne", "tent", "petbed", "goal", "hoop" };
+            string[] lots = { "chair", "armchair", "lamp", "campfire", "pond", "pool", "bike", "skateboard", "gokart", "stage", "shopstall", "foodcart", "fairylights", "lantern", "pizza", "cake", "book", "beanbag", "throne", "tent", "petbed", "goal", "hoop", "jumprope", "longrope" };
             foreach (var k in v == "lots" ? few.Concat(lots) : few) a.Put(k);
             if (v == "lots") foreach (var k in Enum.GetValues<PropKind>()) a.SpawnProp(k);
         }),

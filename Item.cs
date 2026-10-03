@@ -232,6 +232,7 @@ sealed partial class Item
 
     public void Draw(Renderer r, bool over, double time)
     {
+        if (Def.Verbs.Contains(Verb.Skip) && Holder is { SkipPhase: >= 0 }) return;   // drawn as the turning rope instead
         float k = 1;
         if (Def.Verbs.Contains(Verb.Eat)) k = MathF.Sqrt(MathF.Max(0.15f, BitesLeft / (float)Def.Bites));
         if (Def.Verbs.Contains(Verb.Read) && Open) { if (!over) DrawOpenBook(r); return; }

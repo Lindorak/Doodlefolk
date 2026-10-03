@@ -71,6 +71,7 @@ sealed partial class Brain
             Fun("radio", Thing.Dancing, 0.3f, i => i.Def.Verbs.Contains(Verb.Dance), 2500, "some music?");
             Fun("book", Thing.Reading, 0.3f, i => i.Def.Verbs.Contains(Verb.Read), 2000, "a good book?");
             Fun("trampoline", Thing.Tricks, 0.35f, i => i.Def.Verbs.Contains(Verb.Bounce), 2500, "a trampoline!?");
+            Fun("jumprope", Thing.Tricks, 0.25f, i => i.Def.Verbs.Contains(Verb.Skip), 2500, "a skipping rope?");
             Fun("armchair", Thing.Sitting, 0.35f, i => i.Def.Verbs.Contains(Verb.Sit), 1500, "somewhere to sit?");
             if (P.Aggression > 0.55f && f.Weapon == null) Fun("sword", Thing.Fighting, 0.3f, i => i.Def.Weapon && i.Holder == null, 1500, "a sword...");
         }

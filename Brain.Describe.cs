@@ -57,6 +57,7 @@ sealed partial class Brain
                 G.Victory => "Celebrating a win",
                 G.CursorFight => "Boxing your cursor",
                 G.Scoop => "Picking up the ball",
+                G.Skip => _skipTurner ? "Turning the long rope" : _turnA != null ? (_doubleDutch ? "Double Dutch!" : "Jumping in the long rope") : $"Skipping rope ({_skipStreak})",
                 G.Haul => _haulIt != null ? (_haulMate != null ? $"Carrying the {_haulIt.Def.Name.ToLowerInvariant()} with {_haulMate.Name}" : $"Moving the {_haulIt.Def.Name.ToLowerInvariant()}") : "Moving furniture",
                 G.Revive => "Helping a friend up",
                 G.Hunt => "Chasing your cursor",

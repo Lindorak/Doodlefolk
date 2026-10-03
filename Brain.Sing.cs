@@ -53,6 +53,7 @@ sealed partial class Brain
             return;
         }
         string line = lines[_songLine];
+        Practice(SkillKind.Singing, 0.02f);
         // The tune: a step up or down the scale per line, from the song and the line, so it's always the same tune.
         int h = Math.Abs((s.Id * 7919 + _songLine * 104729 + line.Length * 31) % Pentatonic.Length);
         f.SingPitch = MathF.Pow(2, (Pentatonic[h] - 4) / 12f);

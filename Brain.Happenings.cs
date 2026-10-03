@@ -54,7 +54,7 @@ sealed partial class Brain
             ("juggle", Sk(SkillKind.Juggling) + f.Tastes.Of(Thing.Juggling) * 0.3f),
             ("acrobatics", Sk(SkillKind.Climbing) + P.Energy * 0.3f),
             ("comedy", P.Playfulness * 0.6f + P.Sociability * 0.3f),
-            ("song", P.Sociability * 0.5f + Sk(SkillKind.Dancing) * 0.3f),
+            ("song", P.Sociability * 0.3f + Sk(SkillKind.Singing) * 0.8f),
         };
         return skills.OrderByDescending(s => s.v + rng.NextDouble() * 0.2).First().act;
     }

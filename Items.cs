@@ -29,6 +29,7 @@ enum Verb
     Ride,       // bike, skateboard, go-kart: hop on and ride along
     Swim,       // pond, pool: splash about
     Fish,       // pond: sit at the edge with a rod
+    Skip,       // skipping rope: skip (or, a long rope, turn it for a friend)
 }
 
 enum Ammo { Dart, Water, Snow }
@@ -579,6 +580,19 @@ static class ItemCatalog
             Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi" }, W = 64, H = 42, Color = M.Hex(0x43A047),
             Shapes = new[] { P(1, -30, 0, 0, 42, 30, 0), POver(0, -32, 0, -6, 0, 0, 40, -2, 40), POver(2, 6, 0, 32, 0, 2, 40, 0, 40), L(0, 40, 0, 46, 6, 1.4f) },
             Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.6f, Likes = new[] { Thing.Napping, Thing.Exploring }, Mass = 2,
+        });
+        // A skipping rope, coiled (wooden handles); and a long rope for two to turn.
+        Add(new ItemDef
+        {
+            Key = "jumprope", Name = "Skipping rope", Words = new[] { "skipping rope", "jump rope", "skip rope", "jumping rope", "jumprope", "skipping" }, W = 18, H = 6, Color = M.Hex(0xE53935),
+            Shapes = new[] { E(0, 2.6f, 6.5f, 2.4f, 0), E(0, 2.6f, 4.6f, 1.4f, 1), C(0, 1.1f, -6, 2.6f, -3, 0.6f, 1, 0.8f, 4.5f, 2.2f, 6, 3.5f), O(-9, 0.3f, -6.2f, 5.6f, 1.2f, 3), O(6.2f, 0.3f, 9, 5.6f, 1.2f, 3), L(-7.6f, 1.2f, -7.6f, 4.8f, 4, 0.5f), L(7.6f, 1.2f, 7.6f, 4.8f, 4, 0.5f) },
+            Verbs = new[] { Verb.Skip }, Carry = true, Mass = 0.3f, Likes = new[] { Thing.Tricks },
+        });
+        Add(new ItemDef
+        {
+            Key = "longrope", Name = "Long rope", Words = new[] { "long rope", "double dutch", "long skipping rope", "long jump rope", "big rope" }, W = 24, H = 7, Color = M.Hex(0x1E88E5),
+            Shapes = new[] { E(0, 3.3f, 10, 3.2f, 0), E(0, 3.3f, 7.4f, 2.2f, 1), E(0, 3.3f, 4.6f, 1.3f, 0), O(-12, 0.3f, -9, 6, 1.2f, 3), O(9, 0.3f, 12, 6, 1.2f, 3) },
+            Verbs = new[] { Verb.Skip }, Carry = true, Mass = 0.5f, Likes = new[] { Thing.Tricks },
         });
         Add(new ItemDef
         {

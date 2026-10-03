@@ -65,7 +65,8 @@ sealed partial class Brain
         f.SetAction(Act.Tap);
         if ((int)(_t / 0.6f) != (int)((_t - World.Dt) / 0.6f)) World.Play(Sfx.Clank, f.Jt[J.HandN], 0.18f, 1.4f, 0.2);
         // Each builder adds; the more hands, the faster.
-        site.Growth += World.Dt / 120f;
+        site.Growth += World.Dt / 120f * (0.7f + Sk(SkillKind.Building) * 0.8f);
+        Practice(SkillKind.Building, World.Dt * 0.002f, true);
         // Builders are paid for their time (and helpers chip in for free).
         if (Job == Job.Builder) { _earnT += World.Dt; if (_earnT > 15) { _earnT = 0; Coins++; } }
         Stamina = MathF.Max(0, Stamina - World.Dt * 0.004f);

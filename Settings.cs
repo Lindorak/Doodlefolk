@@ -22,6 +22,7 @@ sealed class SavedFigure
     public string? Sweetheart { get; set; }
     public List<DiaryEntry> Diary { get; set; } = new();
     public Dictionary<string, float> Skills { get; set; } = new();
+    public Dictionary<string, DateTime> SkillsUsed { get; set; } = new();
     public DateTime? Born { get; set; }
     public List<string> Parents { get; set; } = new();
     public float Grown { get; set; } = 1;
@@ -37,6 +38,7 @@ sealed class SavedFigure
     public List<Episode> Episodes { get; set; } = new();
     public Ambition? Dream { get; set; }
     public List<string> DreamsDone { get; set; } = new();
+    public int SkipBest { get; set; }
     public string Job { get; set; } = "";
     public int? Coins { get; set; }
     public float AgeBank { get; set; }

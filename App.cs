@@ -924,10 +924,13 @@ sealed partial class App : ApplicationContext
         f.Brain.Diary.Clear();
         f.Brain.Diary.AddRange(s.Diary);
         f.Brain.Dream = s.Dream;
+        f.Brain.SkipBest = s.SkipBest;
         f.Brain.DreamsDone.Clear(); f.Brain.DreamsDone.AddRange(s.DreamsDone);
         f.Brain.Episodes.Clear();
         foreach (var e in s.Episodes.TakeLast(96)) { e.At = e.Recalled = -(float)(DateTime.Now - e.When).TotalSeconds; f.Brain.Episodes.Add(e); }
         foreach (var (k, v) in s.Skills) if (Enum.TryParse<SkillKind>(k, out var sk)) f.Brain.Skills[sk] = Math.Clamp(v, 0, 1);
+        foreach (var (k, v) in s.SkillsUsed) if (Enum.TryParse<SkillKind>(k, out var sk)) f.Brain.LastPractised[sk] = v;
+        f.Brain.Rust(DateTime.Now);
         if (s.Born is DateTime born) f.Brain.Born = born;
         f.Brain.Grown = Math.Clamp(s.Grown, 0, 1);
         f.Brain.AdultSize = s.AdultSize > 0 ? s.AdultSize : f.SizeMul;
@@ -998,8 +1001,8 @@ sealed partial class App : ApplicationContext
             Sweetheart = f.Brain.Sweetheart(_w)?.Name,
             Diary = f.Brain.Diary.TakeLast(150).ToList(),
             Episodes = f.Brain.Episodes.ToList(),
-            Dream = f.Brain.Dream, DreamsDone = f.Brain.DreamsDone.ToList(),
-            Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)),
+            Dream = f.Brain.Dream, DreamsDone = f.Brain.DreamsDone.ToList(), SkipBest = f.Brain.SkipBest,
+            Skills = f.Brain.Skills.ToDictionary(k => k.Key.ToString(), k => MathF.Round(k.Value, 3)), SkillsUsed = f.Brain.LastPractised.ToDictionary(k => k.Key.ToString(), k => k.Value),
             Born = f.Brain.Born,
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).Union(f.Brain.ParentNames).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,

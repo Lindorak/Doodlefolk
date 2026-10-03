@@ -228,7 +228,7 @@ sealed partial class App
             hunter = f.Hunter,
             family = FamilyLine(f), weightWord = f.WeightWord,
             job = (int)b.Job >= 0 ? b.Job.ToString() : "None", coins = b.Coins, stage = World.LifePace > 0 || b.Baby ? b.LifeStage : "", ageYears = World.LifePace > 0 || b.ParentIds.Count > 0 ? (int)b.AgeYears : 0, retired = b.IsElder,
-            skills = Enum.GetValues<SkillKind>().Select(k => new { name = k == SkillKind.Ball ? "Ball games" : k.ToString(), v = MathF.Round(b.Sk(k), 2) }),
+            skills = Enum.GetValues<SkillKind>().Select(k => new { name = char.ToUpperInvariant(Brain.SkillName(k)[0]) + Brain.SkillName(k)[1..], v = MathF.Round(b.Sk(k), 2) }),
             birthday = b.Born.ToString("d MMMM"),
             thoughts = b.Thoughts.Select(t => new { label = t.label, share = R(t.share) }),
             diary = b.Diary.AsEnumerable().Reverse().Take(80).Select(d => new { at = d.At.ToString("yyyy-MM-ddTHH:mm:ss"), text = d.Text, mood = d.Mood }),

@@ -62,7 +62,36 @@ sealed partial class Brain
     readonly Dictionary<string, (int fails, float until)> _fellThrough = new();
     static readonly string[] ShortByNature = { "hang out", "sit down", "cheer", "do a", "dance", "wave", "nap" };
 
-    float FellThroughTilt(string label) => _fellThrough.TryGetValue(label, out var ft) && _t0 < ft.until ? ft.fails switch { 1 => 0.7f, 2 => 0.35f, _ => 0.05f } : 1;
+    float FellThroughTilt(string label)
+    {
+        if (!_fellThrough.TryGetValue(label, out var ft) || _t0 >= ft.until) return 1;
+        int tries = TriesFor(label);
+        return ft.fails >= tries ? 0.05f : 1 - 0.65f * ft.fails / tries;   // a little less keen each time; given up once out of tries
+    }
+
+    /// <summary>Grit: how long they keep at something before giving up (brave, energetic, stubborn figures longest).</summary>
+    float Grit => Math.Clamp(0.35f * P.Bravery + 0.25f * P.Energy + 0.2f * P.Aggression + 0.2f * (1 - P.Playfulness) + A switch
+    {
+        Archetype.Genki or Archetype.Tsundere => 0.2f,
+        Archetype.Kuudere or Archetype.Yandere => 0.1f,
+        Archetype.Dandere => -0.2f,
+        _ => 0,
+    }, 0, 1);
+
+    /// <summary>How many quick failures before giving up on this: grit, plus how much it matters (a challenge they've
+    /// set themselves, their dream, a real need, their beloved), minus a sting (being turned down, for the shy).</summary>
+    int TriesFor(string label)
+    {
+        string k = ActivityKey(label);
+        float matters = 0;
+        if (Dream != null && label == _dreamStep) matters += 1.5f;
+        if (k.StartsWith("explore") || k.StartsWith("practise") || k.StartsWith("skip") || k.StartsWith("climb") || k.StartsWith("ride") || k.StartsWith("swing") || k.StartsWith("play ball") || k.StartsWith("lasso")) matters += 1.2f;
+        if (k.StartsWith("eat") || k.StartsWith("go to bed") || k.StartsWith("have a") || k.StartsWith("catch their")) matters += MathF.Max(Hunger, MathF.Max(Sleepy, 1 - Stamina)) * 2.5f;
+        if (k.StartsWith("hang out with") || k.StartsWith("go and see") || k.StartsWith("spend time"))
+            matters += A == Archetype.Yandere ? 1.5f : P.Sociability < 0.35f ? -1 : 0;
+        if (k.StartsWith("hunt") || k.StartsWith("start a")) matters += P.Aggression;
+        return Math.Clamp((int)MathF.Round(1 + Grit * 3 + matters), 1, 6);
+    }
 
     void Decide(OptionList opts)
     {
@@ -73,8 +102,12 @@ sealed partial class Brain
             if (_t0 - _decidedAt < 2.5f)
             {
                 int fails = (_fellThrough.TryGetValue(LastDecision, out var ft) && _t0 < ft.until + 30 ? ft.fails : 0) + 1;
-                _fellThrough[LastDecision] = (fails, _t0 + (fails >= 3 ? 60 : fails == 2 ? 15 : 6));
-                if (fails == 3) f.Emote(V("forget it", "ugh, FINE!", "never mind.", "…maybe later", "not today"), 1.2f);
+                int tries = TriesFor(LastDecision);
+                // Out of tries: a break from it (shorter for the gritty, who'll be back); otherwise a moment before the next go.
+                float rest = fails >= tries ? 40 + 120 * (1 - Grit) : 4 + fails * 3;
+                _fellThrough[LastDecision] = (fails, _t0 + rest);
+                if (fails == tries) f.Emote(Grit > 0.6f ? V("I'll be back.", "NOT DONE YET!", "later. definitely later.", "one day…", "another time") : V("forget it", "ugh, FINE!", "never mind.", "…maybe later", "not today"), 1.2f);
+                else if (fails >= 2 && Grit > 0.6f && rng.NextDouble() < 0.5) f.Emote(V("again!", "ONE MORE TIME!", "again.", "try again…", "once more"), 0.9f);
             }
             else _fellThrough.Remove(LastDecision);   // it worked: start afresh
             if (_fellThrough.Count > 30) foreach (var k in _fellThrough.Where(kv => kv.Value.until + 30 < _t0).Select(kv => kv.Key).ToList()) _fellThrough.Remove(k);

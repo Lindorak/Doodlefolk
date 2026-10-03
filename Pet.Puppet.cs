@@ -13,8 +13,17 @@ sealed partial class Pet
                                                             : p is not (Pose.Perch or Pose.Fluff)))
         .Select(p => p.ToString());
 
-    public void PuppetAs(string pose) { _puppetPose = Enum.Parse<Pose>(pose); _puppetPace = 0; }
-    public void PuppetWalk(float pace) { _puppetPose = Pose.Stand; _puppetPace = pace; }
+    public void PuppetAs(string pose)
+    {
+        _puppetPose = Enum.Parse<Pose>(pose); _puppetPace = 0;
+        // Cat/dog curled art uses the same sleeping state as a real nap.
+        if (Kind is PetKind.Cat or PetKind.Dog) _st = _puppetPose == Pose.Curl ? State.Sleep : State.Idle;
+    }
+    public void PuppetWalk(float pace)
+    {
+        _puppetPose = Pose.Stand; _puppetPace = pace;
+        if (Kind is PetKind.Cat or PetKind.Dog) _st = State.Idle;
+    }
 
     /// <summary>True while puppeted (the mind does nothing else).</summary>
     bool PuppetStep(World w, float dt)
@@ -22,6 +31,7 @@ sealed partial class Pet
         if (_puppetPose is not { } pose) return false;
         _t += dt; _t0 += dt;
         _pose = pose;
+        if (_st == State.Sleep) _sleepZ += dt;
         if (_puppetPace > 0) MoveTo(w, Pos + new Vector2(Facing * 2000 * S, 0), _puppetPace);
         else Vel.X = 0;
         return true;

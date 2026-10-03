@@ -155,6 +155,8 @@ sealed partial class Figure
                 default:
                     if (speed > 8 * S) WalkPose(speed, run, ref hipT, ref leanT, ref tiltT, ref handW, ref hN, ref hF, ref eN, ref eF);
                     else IdlePose(br, ref hipT, ref leanT, ref tiltT, ref pdxT, ref handW, ref hN, ref hF, ref eN, ref eF);
+                    // Follow the smoothed wrist; later action overrides can still pick their own bend.
+                    eN = eF = Vector2.Zero;
                     break;
             }
         }
@@ -233,8 +235,11 @@ sealed partial class Figure
         M.Spring(ref _lean, ref _leanV, leanT * Facing, leanW, 0.9f, dt);
         M.Spring(ref _tilt, ref _tiltV, tiltT, 12, 0.8f, dt);
         M.Spring(ref _pdx, ref _pdxV, pdxT * Facing, 4, 1, dt);
-        M.Spring(ref _hN, ref _hNV, W(hN), handW, 0.8f, dt);
-        M.Spring(ref _hF, ref _hFV, W(hF), handW, 0.8f, dt);
+        bool flailHands = (eN == Vector2.Zero || eF == Vector2.Zero) && Style.Run == RunStyle.Flailer;
+        if (eN == Vector2.Zero && flailHands) SpringFlailHand(ref _hN, ref _hNV, W(hN), handW, dt);
+        else M.Spring(ref _hN, ref _hNV, W(hN), handW, 0.8f, dt);
+        if (eF == Vector2.Zero && flailHands) SpringFlailHand(ref _hF, ref _hFV, W(hF), handW, dt);
+        else M.Spring(ref _hF, ref _hFV, W(hF), handW, 0.8f, dt);
 
         if (feetFree && !_feetFree)
         {
@@ -268,6 +273,8 @@ sealed partial class Figure
         Vector2 neck = pelvis + M.Dir(_lean) * Torso * (1 + StretchNow());
         Vector2 head = neck + M.Dir(_lean + _tilt) * (HeadR + NeckGap);
 
+        if (eN == Vector2.Zero) eN = _hN.LengthSquared() > 1e-8f ? new(-_hN.Y, _hN.X * Facing) : new(-1, 0.25f);
+        if (eF == Vector2.Zero) eF = _hF.LengthSquared() > 1e-8f ? new(-_hF.Y, _hF.X * Facing) : new(-1, 0.25f);
         var (elN, handN) = M.IK(neck, neck + M.ClampLength(_hN, Arm * 0.995f), UpperArm, ForeArm, W(eN));
         var (elF, handF) = M.IK(neck, neck + M.ClampLength(_hF, Arm * 0.995f), UpperArm, ForeArm, W(eF));
 
@@ -301,6 +308,29 @@ sealed partial class Figure
         TurnBlend(dt);
         ApplyFlip();
         WeightPose(dt);
+    }
+
+    void SpringFlailHand(ref Vector2 hand, ref Vector2 velocity, Vector2 target, float spring, float dt)
+    {
+        float minimum = Arm * 0.35f;
+        if (hand.LengthSquared() >= minimum * minimum && target.LengthSquared() >= minimum * minimum && Vector2.Dot(hand, target) >= 0)
+        {
+            M.Spring(ref hand, ref velocity, target, spring, 0.8f, dt);
+            return;
+        }
+        // A rotating arm blended with a hanging arm can pass through the shoulder.
+        // Spring around it in polar space only while that transition needs clearance.
+        float radius = MathF.Max(hand.Length(), 1e-4f);
+        float angle = MathF.Atan2(hand.Y, hand.X);
+        float cross = hand.X * target.Y - hand.Y * target.X;
+        float targetAngle = angle + MathF.Atan2(cross, Vector2.Dot(hand, target));
+        float radialVelocity = Vector2.Dot(hand, velocity) / radius;
+        float angularVelocity = (hand.X * velocity.Y - hand.Y * velocity.X) / (radius * radius);
+        M.Spring(ref radius, ref radialVelocity, MathF.Max(target.Length(), minimum), spring, 0.8f, dt);
+        M.Spring(ref angle, ref angularVelocity, targetAngle, spring, 0.8f, dt);
+        Vector2 direction = new(MathF.Cos(angle), MathF.Sin(angle));
+        hand = direction * radius;
+        velocity = direction * radialVelocity + new Vector2(-direction.Y, direction.X) * (angularVelocity * radius);
     }
 
     Vector2 SwatDir()

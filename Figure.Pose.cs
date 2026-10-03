@@ -12,6 +12,8 @@ sealed partial class Figure
     Vector2 _fNRel, _fNRelV, _fFRel, _fFRelV;  // free foot offsets from the pelvis (in air / sitting)
     bool _feetFree;
     bool _celebrateArmClearance;
+    bool _flexFarActive;
+    float _flexFarBend = 1, _flexFarBendV;
     readonly Foot _fN = new(), _fF = new();
 
     void ResetPose()
@@ -24,6 +26,7 @@ sealed partial class Figure
         _fF.Pos = new(Base.X - Facing * 5.5f * S, Base.Y); _fF.Stepping = false;
         _feetFree = false;
         _celebrateArmClearance = false;
+        _flexFarActive = false; _flexFarBend = 1; _flexFarBendV = 0;
         Pose(1 / 120f);
         Array.Copy(Jt, _jtPrev, J.Count);
     }
@@ -282,10 +285,14 @@ sealed partial class Figure
         Vector2 neck = pelvis + M.Dir(_lean) * Torso * (1 + StretchNow());
         Vector2 head = neck + M.Dir(_lean + _tilt) * (HeadR + NeckGap);
 
+        bool followFar = eF == Vector2.Zero;
+        bool flexFar = Action == Act.Cheer && Style.Celebrate == CelebrateStyle.Flex && followFar;
+        if (!followFar) _flexFarActive = false;
         if (eN == Vector2.Zero) eN = _hN.LengthSquared() > 1e-8f ? new(-_hN.Y, _hN.X * Facing) : new(-1, 0.25f);
         if (eF == Vector2.Zero) eF = _hF.LengthSquared() > 1e-8f ? new(-_hF.Y, _hF.X * Facing) : new(-1, 0.25f);
         var (elN, handN) = M.IK(neck, neck + M.ClampLength(_hN, Arm * 0.995f), UpperArm, ForeArm, W(eN));
         var (elF, handF) = M.IK(neck, neck + M.ClampLength(_hF, Arm * 0.995f), UpperArm, ForeArm, W(eF));
+        if (flexFar || _flexFarActive) FlexFarArm(neck, flexFar, dt, ref elF, ref handF);
 
         Vector2 footN, footF;
         if (feetFree)
@@ -340,6 +347,42 @@ sealed partial class Figure
         Vector2 direction = new(MathF.Cos(angle), MathF.Sin(angle));
         hand = direction * radius;
         velocity = direction * radialVelocity + new Vector2(-direction.Y, direction.X) * (angularVelocity * radius);
+    }
+
+    void FlexFarArm(Vector2 neck, bool flex, float dt, ref Vector2 elbow, ref Vector2 hand)
+    {
+        if (!_flexFarActive)
+        {
+            Vector2 priorHand = Jt[J.HandF] - Jt[J.Neck], priorElbow = Jt[J.ElbowF] - Jt[J.Neck];
+            _flexFarBend = (priorHand.X * priorElbow.Y - priorHand.Y * priorElbow.X) * Facing < 0 ? -1 : 1;
+            _flexFarBendV = 0; _flexFarActive = true;
+        }
+        float target = flex ? -1 : 1;
+        M.Spring(ref _flexFarBend, ref _flexFarBendV, target, 18, 0.8f, dt);
+        if (MathF.Abs(_flexFarBend - target) < 1e-4f && MathF.Abs(_flexFarBendV) < 1e-3f)
+        {
+            _flexFarBend = target; _flexFarBendV = 0;
+        }
+        if (_flexFarBend <= -1)
+        {
+            (elbow, hand) = M.IK(neck, hand, UpperArm, ForeArm, W(new(-1, 0.2f)));
+            return;
+        }
+        if (_flexFarBend >= 1)
+        {
+            if (!flex) _flexFarActive = false;
+            return;
+        }
+        Vector2 offset = hand - neck;
+        float reach = MathF.Max(offset.Length(), 1e-4f);
+        Vector2 direction = offset / reach;
+        float cosine = Math.Clamp(Vector2.Dot(direction, elbow - neck) / UpperArm, -1, 1);
+        float bend = MathF.Acos(cosine) * _flexFarBend;
+        // Reverse the far elbow through straight reach, keeping both bones their native length.
+        elbow = neck + M.Rotate(direction, bend * Facing) * UpperArm;
+        float across = UpperArm * MathF.Sin(bend);
+        reach = UpperArm * MathF.Cos(bend) + MathF.Sqrt(MathF.Max(0, ForeArm * ForeArm - across * across));
+        hand = neck + direction * reach;
     }
 
     Vector2 SwatDir()

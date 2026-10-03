@@ -31,6 +31,8 @@ def generate():
     run_style='enum RunStyle '+between(body_style,'enum RunStyle ','\n')+'\n'
     flail_spring='    void SpringFlailHand('+between(pose,'    void SpringFlailHand(','    Vector2 SwatDir()')
     geometry='        Vector2 pelvis = '+between(pose,'        Vector2 pelvis = ','        Vector2 footN, footF;')
+    assert geometry.count('Action == Act.Cheer') == 1 and geometry.count('Style.Celebrate == CelebrateStyle.Flex') == 1, 'Review the fixture Flex bindings'
+    geometry=geometry.replace('Action == Act.Cheer', '_isCheer').replace('Style.Celebrate == CelebrateStyle.Flex', '_isFlex')
     knees='        var (knN, fNEnd) = '+between(pose,'        var (knN, fNEnd) = ','        UpdateHoldPoint(')
     joints='static class J\n{'+between(fig,'static class J\n{','\n}')+'\n}'
     envelope='static float Envelope'+between(fidgets,'static float Envelope','\n')

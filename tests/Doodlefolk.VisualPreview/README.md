@@ -35,6 +35,8 @@ locomotion or personality-driven idle behavior to the fixture.
 The celebration clearance branch is also retained, with `Action == Act.Cheer` bound to
 the fixture's explicit false `_isCheer` input and its clearance state initially false.
 This keeps the source slice compilable without adding celebration behavior to ScratchHead.
+The Flex branch and native helper are retained too, with its style comparison bound to
+the fixture's false `_isFlex` input and bend state initialized to the normal idle side.
 The source manifest records source hashes and the complete changed equation blocks.
 The pose fixture uses fixed planted feet and the production reach limit with no step bob.
 Both versions have the same scale, facing, neutral rig, 1.4 s fidget, 120 Hz timestep,

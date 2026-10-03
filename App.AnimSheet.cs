@@ -78,10 +78,19 @@ sealed partial class App
         Net("Swish (close)", "hoop", 0.4f, 0.75f, new(-4, 64), (h, _) => Ball(PropKind.Basketball, h.Local(-4, 84), new(0, 300)));
         Net("Off the rim", "hoop", 1.2f, 1.3f, new(-4, 66), (h, _) => Ball(PropKind.Basketball, h.Local(-14, 100), new(40, 0)));
         Net("Goal (high)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 22), new(1500, -120)));
-        Net("Goal (close)", "goal", 0.6f, 0.45f, new(6, 14), (g, _) => Ball(PropKind.SoccerBall, g.Local(-22, 14), new(1600, -60)));
+        Net("Goal (close)", "goal", 0.6f, 0.9f, new(10, 9), (g, _) => Ball(PropKind.SoccerBall, g.Local(-22, 14), new(1600, -60)));
         Net("Goal (low)", "goal", 1.2f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-40, 5), new(1700, 0)));
         Net("Goal (rolled in)", "goal", 2.0f, 1.6f, new(4, 16), (g, _) => Ball(PropKind.SoccerBall, g.Local(-30, 5), new(500, 0)));
-        Net("Walk into it", "goal", 2.4f, 1.6f, new(4, 16), (g, f) => { f.PlaceAt(_w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero), g.Local(-24, 0).X); f.Facing = 1; f.DesiredVX = f.WalkSpeed; });
+        Net("Walk into it", "goal", 2.4f, 1.6f, new(4, 16), (g, f) =>
+        {
+            f.PlaceAt(_w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero), g.Local(-24, 0).X);
+            f.SpawnT = 0.999f;
+            var walker = f;
+            _animLater.Add((_tFrame / (double)TFps + 0.15, () =>
+            {
+                walker.Brain.Puppet(99); walker.Facing = 1; walker.DesiredVX = walker.WalkSpeed;
+            }));
+        });
         // Water: level with the window's edge, its depth below; swimmers in it up to the shoulders, a dive out of sight.
         foreach (var (label, key, swim, dive, wide) in new[] { ("Pond", "pond", false, false, 1f), ("Pond (swim)", "pond", true, false, 1f), ("Pond (dive)", "pond", true, true, 1f),
                                                               ("Pool (swim)", "pool", true, false, 1f), ("Pool (dive)", "pool", true, true, 1f), ("Pond, wider", "pond", false, false, 1.8f) })

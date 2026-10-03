@@ -253,7 +253,7 @@ sealed partial class Figure
                 // Double biceps: upper arms out, forearms up.
                 hN = new(Arm * 0.45f, -Arm * (0.38f + 0.06f * b));
                 hF = new(-Arm * 0.42f, -Arm * (0.36f + 0.06f * b));
-                eN = new(1, 0.2f); eF = new(-1, 0.2f);
+                eN = eF = Vector2.Zero;
                 leanT = -0.05f;
                 hipT = StandHip * 0.97f;
                 break;

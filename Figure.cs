@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 namespace Doodlefolk;
 
 enum Mode { Spawning, Control, Ragdoll, GetUp }
-enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm, Scoop, Juggle }
+enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm, Scoop, Juggle, JumpShot, Layup, Block }
 
 /// <summary>Joint indices. N = near side (drawn in front), F = far side (drawn behind, slightly darker).</summary>
 static class J
@@ -322,6 +322,7 @@ sealed partial class Figure
         TickMoves(dt);
         TickCombat(dt);
         StepJuggle(dt);
+        StepHoops(dt);
         TickWeapon(dt);
         Array.Copy(Jt, _jtPrev, J.Count);
         switch (Mode)
@@ -422,6 +423,13 @@ sealed partial class Figure
         }
         else
         {
+            if (HangT > 0)
+            {
+                // Hanging off the rim: held where we are, then let go and drop.
+                HangT -= dt;
+                Vel = HangT > 0 ? Vector2.Zero : new Vector2(0, 60 * S);
+                return;
+            }
             Vel.Y = MathF.Min(Vel.Y + Gravity * dt, 3800 * S);
             float py = Base.Y;
             Base += Vel * dt;

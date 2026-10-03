@@ -179,6 +179,7 @@ sealed partial class Figure
                 fN = new(4 * S + k * 4 * S, Leg * 0.8f); fF = new(-3 * S - k * 4 * S, Leg * 0.75f);
                 leanT = -0.15f; handW = 26;
             }
+            else if (HoopsPose(ref hN, ref hF, ref fN, ref fF, ref leanT, ref handW)) { }
             else if (DiveAt is Vector2 da)
             {
                 // Flat out: body along the dive, both hands reaching for it, legs trailing.

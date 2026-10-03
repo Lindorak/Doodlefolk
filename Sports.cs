@@ -13,7 +13,7 @@ sealed class MatchStats
     public int RallyHits;
     /// <summary>How points ended ("landed", "out", ...), and shots taken / made by type ("jumper", "dunk", "shot"...).</summary>
     public readonly Dictionary<string, int> Ends = new(), Shots = new(), Made = new();
-    public int Serves, Passes, Touches, Saves, Steals, Blocks, Rebounds, DribbleBeats, Fumbles;
+    public int Serves, Passes, Touches, Saves, Steals, Blocks, BlockJumps, Rebounds, DribbleBeats, Fumbles;
 
     public void Hit() => RallyHits++;
     public void PointOver(string how) { Rallies.Add(RallyHits); RallyHits = 0; Add(Ends, how); }
@@ -25,7 +25,7 @@ sealed class MatchStats
     public object Summary() => new
     {
         points = Rallies.Count, rallyAvg = Math.Round(RallyAvg, 2), rallyMax = Rallies.DefaultIfEmpty(0).Max(), ends = Ends, shots = Shots, made = Made,
-        serves = Serves, passes = Passes, touches = Touches, saves = Saves, steals = Steals, blocks = Blocks, rebounds = Rebounds, dribbleBeats = DribbleBeats, fumbles = Fumbles,
+        serves = Serves, passes = Passes, touches = Touches, saves = Saves, steals = Steals, blocks = Blocks, blockJumps = BlockJumps, rebounds = Rebounds, dribbleBeats = DribbleBeats, fumbles = Fumbles,
     };
 }
 
@@ -54,6 +54,8 @@ sealed class Match
     public readonly MatchStats Stats;
     /// <summary>Basketball: the kind of the last shot taken ("jumper", "three", "layup", "dunk").</summary>
     public string LastShot = "jumper";
+    /// <summary>Basketball: a basket was just made, so whoever gets it next takes it back out past the arc first.</summary>
+    public bool TakeItBack;
     /// <summary>The ball was brought out for this match: it's put away again afterwards.</summary>
     public bool MadeBall;
 
@@ -207,6 +209,7 @@ sealed class Match
                         Points[who] += pts;
                         Scorer = who;
                         Stats.Scored(LastShot);
+                        TakeItBack = true;
                         Shout = pts == 3 ? "THREE!" : b.SinceBounce > 1 ? "SWISH!" : "SCORE!";
                         World.Play(Sfx.Swish, b.Pos, 0.6f); World.Play(Sfx.TaDa, b.Pos, 0.4f);
                         ShoutT = 1.5f;

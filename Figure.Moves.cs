@@ -124,6 +124,9 @@ sealed partial class Figure
         return Vector2.Lerp(strike, planted, M.Smooth((k - 0.58f) / 0.42f));
     }
 
+    Vector2 _ignoreF, _ignoreF2;
+    float _ignoreL;
+
     float CarryRadius => Carrying?.Radius ?? (CarryingItem != null ? MathF.Max(CarryingItem.Def.W, CarryingItem.Def.H) * CarryingItem.Sc * 0.4f : 4 * S);
     Vector2 HoldLocal => new(MathF.Min(CarryRadius + 4 * S, Arm * 0.75f), Torso * 0.38f);
 
@@ -131,6 +134,8 @@ sealed partial class Figure
     void CarryArms(ref Vector2 hN, ref Vector2 hF, ref Vector2 eN, ref Vector2 eF, ref float handW)
     {
         if ((Carrying == null && CarryingItem == null) || Action is Act.Throw or Act.Eat or Act.Read) return;
+        if (Action is Act.JumpShot or Act.Layup) { HoopsPose(ref hN, ref hF, ref _ignoreF, ref _ignoreF2, ref _ignoreL, ref handW); return; }
+        if (DribbleArms(ref hN, ref hF, ref eN, ref eF, ref handW)) return;
         float r = CarryRadius;
         hN = HoldLocal + new Vector2(-0.2f * r, -0.75f * r);
         hF = HoldLocal + new Vector2(-0.2f * r, 0.75f * r);
@@ -141,7 +146,9 @@ sealed partial class Figure
     void UpdateHoldPoint(Vector2 neck, Vector2 handN, Vector2 handF, float dt)
     {
         Vector2 prev = HoldPoint;
-        HoldPoint = Action == Act.Throw ? (handN + handF) * 0.5f + new Vector2(0, -CarryRadius * 0.3f)
+        if (DribbleHold(neck, dt, out var dh)) HoldPoint = dh;
+        else if (ShotHold(neck, out var sh)) HoldPoint = sh;
+        else HoldPoint = Action == Act.Throw ? (handN + handF) * 0.5f + new Vector2(0, -CarryRadius * 0.3f)
                   : Action == Act.Eat ? handN
                   : Action == Act.Read ? (handN + handF) * 0.5f + new Vector2(0, -2 * S)
                   : neck + W(HoldLocal);

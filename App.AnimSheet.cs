@@ -204,6 +204,42 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.2, () => fig.Brain.StartMatchWith(net, new List<Figure> { fig, mate }, _w)));
             }, (_, _) => net != null ? net.Pos + new Vector2(0, -60 * _w.Scale) : Vector2.Zero, null, 4.2f));
         }
+        // A basketball game (three of them) and a three-a-side football match, seen whole.
+        foreach (var (label, sport) in new[] { ("Basketball game", "basketball"), ("Football game", "soccer") })
+        {
+            Item? court = null;
+            _animJobs.Add(new("Sports", label, 12, (f, _) =>
+            {
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                var roster = new List<Figure> { f! };
+                int n = sport == "soccer" ? 6 : 3;
+                for (int i = 1; i < n; i++)
+                {
+                    var mate = new Figure(Palette.All[(_animJob + i * 2) % Palette.All.Length].Color, "Mate" + i, _w.Scale, Personality.Random(new Random(i * 11)), new Random(i * 11)) { SizeMul = 1 };
+                    mate.SpawnT = 0.999f;
+                    _w.Figures.Add(mate);
+                    roster.Add(mate);
+                }
+                List<Item> gear = new();
+                if (sport == "soccer")
+                {
+                    foreach (var (x, flip) in new[] { (900f, true), (1700f, false) })
+                    {
+                        var g = SpawnItem(ItemCatalog.Find("goal")!)!;
+                        g.Pos = new Vector2(x, floor.Y); g.Vel = Vector2.Zero; g.OnGround = true; g.Flip = flip; gear.Add(g);
+                    }
+                }
+                else
+                {
+                    var h = SpawnItem(ItemCatalog.Find("hoop")!)!;
+                    h.Pos = new Vector2(1500, floor.Y); h.Vel = Vector2.Zero; h.OnGround = true; gear.Add(h);
+                }
+                court = gear[0];
+                for (int i = 0; i < roster.Count; i++) { roster[i].PlaceAt(floor, 1000 + i * 110); roster[i].SpawnT = 0.999f; }
+                var fig = f!;
+                _animLater.Add((_tFrame / (double)TFps + 0.2, () => fig.Brain.StartMatchWith(gear[0], roster, _w)));
+            }, (_, _) => court != null ? (sport == "soccer" ? new Vector2(1300, court.Pos.Y - 60 * _w.Scale) : court.Pos + new Vector2(-150 * _w.Scale, -80 * _w.Scale)) : Vector2.Zero, null, sport == "soccer" ? 5f : 3.2f));
+        }
         // Juggling with their hands: three, four (a fountain) and five, face on.
         foreach (var (label, skill) in new[] { ("Three", 0.3f), ("Four (fountain)", 0.7f), ("Five", 0.95f) })
             Fig("Juggling", label, 2.2f, f => { f.Brain.Skills[SkillKind.Juggling] = skill; f.Brain.StartHandJuggle(_w, 60); f.JugCatch = () => true; }, 1.0f);

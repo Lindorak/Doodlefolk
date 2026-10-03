@@ -14,7 +14,7 @@ sealed partial class Figure
     readonly Vector2[] _pony = new Vector2[4], _ponyOld = new Vector2[4];
     readonly Vector2[] _scarf = new Vector2[3], _scarfOld = new Vector2[3];
     bool _clothInit;
-    readonly Vector2[] _lookBuf = new Vector2[48];
+    readonly Vector2[] _lookBuf = new Vector2[96];
 
     bool FrontView => Action is Act.SitFront or Act.SitBack or Act.Juggle && Grounded && Mode == Mode.Control;
 

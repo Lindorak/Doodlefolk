@@ -37,7 +37,7 @@ sealed partial class Item
     public double Born;
 
     public IntPtr Handle => (IntPtr)(-1000 - Id);
-    public float Sc => _s * SizeMul;
+    public float Sc => _s * SizeMul * Def.Scale;
     /// <summary>Stretch (resizable things like the fish tank): width and height, separately.</summary>
     public float ScaleX = 1, ScaleY = 1;
     public bool Resizable => Def.Key == "fishtank" || IsWater;

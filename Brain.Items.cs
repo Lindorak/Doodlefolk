@@ -248,6 +248,7 @@ sealed partial class Brain
                     if (MathF.Abs(f.Base.X - c.X) > 6 * S) f.Mount(c, it.Handle);
                 }
                 if (SleptEnough && _t > 10) done = true;
+                if (_wakeAt > 0 && _t0 >= _wakeAt) { _wakeAt = -1; f.Emote(V("mm…?", "WHAT?! WHO?!", "…what.", "w-was that…?", "a dream?"), 1.3f); done = true; }
                 break;
             case Verb.Bounce:
                 if (f.Grounded && !f.JumpPending)

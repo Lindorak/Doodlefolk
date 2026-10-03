@@ -55,6 +55,42 @@ sealed class Look
         return new('c', pts.ToArray(), c, w);
     }
 
+    // ---------------- the afro ----------------
+    // A big round cloud of hair, much wider and taller than the head, sitting up and back on it, with a soft bumpy
+    // edge (one outline, so no seams inside) and a few curls drawn in; the front piece covers the scalp but leaves the
+    // face clear.
+    const float AfroCx = -0.28f, AfroCy = 0.62f, AfroRx = 1.95f, AfroRy = 1.78f;
+
+    static (float x, float y) AfroEdge(float deg)
+    {
+        float a = deg * MathF.PI / 180;
+        float lobe = MathF.Pow(MathF.Abs(MathF.Sin(a * 6.5f)), 0.55f);   // thirteen soft bumps round the edge
+        float k = 0.93f + 0.07f * lobe;
+        return (AfroCx + MathF.Cos(a) * AfroRx * k, AfroCy + MathF.Sin(a) * AfroRy * k);
+    }
+
+    static Shape[] AfroBack()
+    {
+        var pts = new List<float>();
+        for (int i = 0; i < 64; i++) { var (x, y) = AfroEdge(i * 360f / 64); pts.Add(x); pts.Add(y); }
+        var shapes = new List<Shape> { new('p', pts.ToArray(), 0) };
+        // Curls: little darker hooks scattered through it (the ones over the head are hidden by it; that's fine).
+        (float x, float y)[] at = { (-1.55f, 1.3f), (-0.9f, 1.85f), (-1.8f, 0.4f), (-1.35f, -0.35f), (0.1f, 2.05f), (0.85f, 1.7f), (-0.4f, 1.55f), (-1.2f, 0.9f) };
+        foreach (var (cx, cy) in at)
+            shapes.Add(new('c', new[] { cx - 0.14f, cy + 0.08f, cx - 0.05f, cy + 0.17f, cx + 0.1f, cy + 0.12f, cx + 0.12f, cy - 0.02f, cx + 0.02f, cy - 0.1f }, 2, 0.12f));
+        return shapes.ToArray();
+    }
+
+    static Shape[] AfroFront()
+    {
+        // Along the cloud's edge from just above the forehead, over the top and round the back, then the hairline:
+        // down the back of the head to the nape, and forward over the ear to the forehead.
+        var pts = new List<float>();
+        for (int i = 0; i <= 30; i++) { var (x, y) = AfroEdge(38 + i * (232f - 38) / 30); pts.Add(x); pts.Add(y); }
+        pts.AddRange(new[] { -0.95f, -0.35f, -0.55f, -0.2f, -0.2f, 0.25f, 0.2f, 0.55f, 0.62f, 0.72f, 0.95f, 0.95f });
+        return new[] { new Shape('p', pts.ToArray(), 0) };
+    }
+
     public static void AddHats(IEnumerable<LookPart> hats) => Hats = Hats.Concat(hats).ToArray();
 
     public static LookPart[] Hats =
@@ -98,7 +134,7 @@ sealed class Look
         new("bun", "Bun", new[] { Dome(0, 0.1f, 1.06f, 1.04f, 25, 205, 0), E(-0.72f, 1.0f, 0.45f, 0.45f, 0) }),
         new("long", "Long", new[] { Dome(0, 0.1f, 1.06f, 1.04f, 20, 200, 0) },
             new[] { P(0, 0.3f, 1.0f, -0.5f, 1.08f, -1.08f, 0.5f, -1.25f, -0.7f, -1.05f, -2.0f, -0.25f, -2.0f, -0.45f, -0.5f, -0.1f, 0.2f) }),
-        new("afro", "Afro", new[] { Dome(-0.1f, 0.35f, 1.5f, 1.3f, 15, 200, 0) }, new[] { E(-0.15f, 0.35f, 1.55f, 1.4f, 0) }),
+        new("afro", "Afro", AfroFront(), AfroBack()),
         new("curly", "Curly", new[] { E(-0.75f, 0.7f, 0.42f, 0.42f, 0), E(-0.25f, 1.0f, 0.44f, 0.44f, 0), E(0.35f, 0.95f, 0.42f, 0.42f, 0), E(-1.0f, 0.15f, 0.38f, 0.38f, 0), E(0.75f, 0.65f, 0.32f, 0.32f, 0) }),
         new("bob", "Bob", new[] { Dome(0, 0.1f, 1.08f, 1.05f, 15, 205, 0) },
             new[] { P(0, 0.95f, 0.1f, 0.85f, 0.9f, 0, 1.2f, -0.95f, 0.9f, -1.2f, -0.1f, -1.1f, -0.95f, -0.35f, -0.95f, -0.2f, 0) }),

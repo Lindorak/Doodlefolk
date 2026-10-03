@@ -89,7 +89,7 @@ sealed partial class Brain
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
-        if (g == G.Sleep && _g != G.Sleep) { _nightSleep = BedtimeNow; dur = MathF.Max(dur, SleepLength()); }
+        if (g == G.Sleep && _g != G.Sleep) { _nightSleep = BedtimeNow; _wakeAt = -1; dur = MathF.Max(dur, SleepLength()); }
         _g = g;
         _t = 0;
         _dur = dur;
@@ -739,6 +739,7 @@ sealed partial class Brain
     void DoSleep()
     {
         if (!f.Grounded) { Go(G.Idle, 0.5f); return; }
+        if (RousedNow()) return;
         f.DesiredVX = 0;
         f.SetAction(_t < 1.2f ? Act.SitFloor : Act.Lie);
         if (_t > 1.2f && f.CurrentEmote != "z") f.Emote("z", 3);

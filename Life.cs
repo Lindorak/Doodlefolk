@@ -38,8 +38,54 @@ sealed partial class Brain
     bool _nightSleep;
 
     /// <summary>Their own bedtime and getting-up time (hours of the day), from who they are.</summary>
-    public float Bedtime => 21.5f + ((f.Id * 37) % 7) * 0.4f + (1 - P.Energy) * 0.6f - (Baby ? 2.5f : 0) - (IsElder ? 1 : 0);
-    public float WakeHour => 6f + ((f.Id * 53) % 6) * 0.45f + (1 - P.Energy) * 0.5f + (Baby ? 0.5f : 0) - (IsElder ? 0.5f : 0);
+    public float Bedtime => 21.5f + ((f.Id * 37) % 7) * 0.4f + (1 - P.Energy) * 0.6f - (Baby ? 2.5f : 0) - (IsElder ? 1 : 0) + DayWobble(1) * 1.0f;
+    public float WakeHour => 6f + ((f.Id * 53) % 6) * 0.45f + (1 - P.Energy) * 0.5f + (Baby ? 0.5f : 0) - (IsElder ? 0.5f : 0) + DayWobble(2) * 1.2f;
+
+    /// <summary>Nobody keeps exactly the same hours every day: a wobble of up to half an hour or so, different each
+    /// day and for each of them.</summary>
+    float DayWobble(int salt)
+    {
+        uint h = (uint)(f.Id * 7919 + DateTime.Now.DayOfYear * 104729 + salt * 31337);
+        h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+        return (h & 1023) / 1023f - 0.5f;
+    }
+
+    double _wakeAt = -1;
+
+    /// <summary>Something that might wake a sleeper (you coming back, thunder…): light sleepers more than deep ones,
+    /// and each in their own time, not all at once.</summary>
+    public void Rouse(float strength)
+    {
+        if (!Asleep || _wakeAt > 0) return;
+        float depth = M.Clamp01(0.35f + _t / 1800f) * (0.7f + Sleepy * 0.5f);   // deeper the longer they've been out
+        float light = 0.5f + (1 - P.Bravery) * 0.3f + Fear * 0.4f;
+        if (rng.NextDouble() < strength * light * (1.1f - depth)) _wakeAt = _t0 + rng.Range(0.4f, 9f);
+    }
+
+    /// <summary>Roused: up, groggy (at their night they'll likely go back to bed).</summary>
+    bool RousedNow()
+    {
+        if (_wakeAt < 0 || _t0 < _wakeAt) return false;
+        _wakeAt = -1;
+        f.Emote(V("mm…?", "WHAT?! WHO?!", "…what.", "w-was that…?", "a dream?"), 1.3f);
+        Go(G.Idle, rng.Range(2, 5));
+        return true;
+    }
+
+    /// <summary>Back to sleep after the app was closed in the night: into their bed (or the nearest free one), else
+    /// where they are.</summary>
+    public void ResumeSleep(World w)
+    {
+        _nightSleep = BedtimeNow;
+        bool Bedlike(Item i) => i.Def.Verbs.Any(v => v is Verb.Lie or Verb.Hammock) && i.Free && i.OnGround && i.User == null;
+        var bed = Home(w) is { } home && Bedlike(home) ? home : w.Items.Where(Bedlike).OrderBy(i => System.Numerics.Vector2.Distance(i.Pos, f.Base)).FirstOrDefault();
+        if (bed != null && w.Env.SupportAt(bed.Pos.X, bed.Pos.Y, bed.GroundHwnd) is { } under)
+        {
+            f.PlaceAt(under, bed.Pos.X);
+            UseItem(bed, bed.Def.Verbs.Contains(Verb.Lie) ? Verb.Lie : Verb.Hammock, w);
+        }
+        else Go(G.Sleep, SleepLength());
+    }
 
     /// <summary>Their night, by the clock.</summary>
     public bool BedtimeNow => Life.Between(Life.Hour, Bedtime % 24, WakeHour);
@@ -80,7 +126,7 @@ sealed partial class Brain
     float SleepLength() => _nightSleep || BedtimeNow ? Life.Span(MathF.Max(0.2f, Life.HoursUntil(WakeHour)) * 3600) : Life.Span(rng.Range(15, 40) * 60);
 
     /// <summary>Lying down on something: the night (at their bedtime), else a nap.</summary>
-    float SleepLengthFor() { _nightSleep = BedtimeNow; return SleepLength(); }
+    float SleepLengthFor() { _nightSleep = BedtimeNow; _wakeAt = -1; return SleepLength(); }
 
     /// <summary>Is it time to get up? (Morning came; or a nap's done and they're rested.)</summary>
     bool SleptEnough => _nightSleep ? !BedtimeNow && Sleepy < 0.3f : Sleepy < 0.12f;

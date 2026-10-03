@@ -24,8 +24,9 @@ sealed partial class Figure
     const float Dwell = 1.2f;   // of each hand's two-throw cycle, how long it holds the bag
 
     /// <summary>Throws a second: brisk for three, a touch quicker with more.</summary>
-    float JugRate => 3.6f + (Juggling - 3) * 0.35f;
-    float JugApex => Arm * (0.95f + 0.35f * (Juggling - 3));
+    float JugRate => 2.9f + (Juggling - 3) * 0.3f;   // higher throws take longer to come down
+    /// <summary>How far above the hands a throw goes: up to about twice their own height off the ground (higher with more).</summary>
+    float JugApex => Height * (1.2f + 0.12f * (Juggling - 3));
 
     public void StartJuggling(int n)
     {
@@ -81,7 +82,10 @@ sealed partial class Figure
             air = true; hand = -1;
             float s = (float)(since / flight);
             var p = Vector2.Lerp(JugThrowPt(from), JugCatchPt(to), s);
-            p.Y -= 4 * JugApex * s * (1 - s);
+            // Every throw a little different: roughly the same height, never exactly.
+            uint hb = (uint)((long)b * 2654435761L + Id * 97);
+            float vary = 0.88f + 0.24f * ((hb >> 8) & 1023) / 1023f;
+            p.Y -= 4 * JugApex * vary * s * (1 - s);
             return JugWorld(p);
         }
         air = false; hand = to;

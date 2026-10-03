@@ -15,6 +15,9 @@ sealed class SavedFigure
     public float? Trust { get; set; }
     public bool Hunter { get; set; }
     public Look? Look { get; set; }
+    /// <summary>Asleep when the app was closed (put back to bed on opening, not all woken at once), and how sleepy.</summary>
+    public bool Asleep { get; set; }
+    public float? Sleepy { get; set; }
     public Gender? Gender { get; set; }
     public Attraction? Attraction { get; set; }
     /// <summary>Romantic feelings toward other saved figures, by name, and who they're dating.</summary>

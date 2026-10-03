@@ -264,7 +264,7 @@ sealed partial class Brain
             Write("back", V($"You were gone for {span}. Missed you!", $"You came back after {span}!! YAY!", $"You left for {span}. Didn't notice. Much.", $"You were away {span}. I waited by the window.", $"You were gone {span}. The desktop felt bigger."), "♥", 1800);
         }
         else if (UserFondness < -0.3f && _g != G.Sleep) { f.Emote(rng.NextDouble() < 0.5 ? "oh. it's you." : "…", 1.4f); }
-        else if (_g == G.Sleep && rng.NextDouble() < 0.4) { f.Emote("!", 1); Go(G.Idle, 1.5f); }
+        else if (Asleep) Rouse(0.6f);   // you're back: the light sleepers stir, one by one
     }
 
     /// <summary>Grudges fade over tens of minutes (faster for forgiving souls); friendships barely fade at all.</summary>

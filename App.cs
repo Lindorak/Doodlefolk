@@ -935,6 +935,7 @@ sealed partial class App : ApplicationContext
     /// <summary>Likes, dislikes and feelings about the user carried by a saved figure.</summary>
     static void ApplySaved(Figure f, SavedFigure s)
     {
+        if (s.Sleepy is float sl) f.Brain.Sleepy = Math.Clamp(sl, 0, 1);
         if (s.Tastes != null) f.Tastes = s.Tastes.Clone();
         f.Hunter = s.Hunter;
         if (s.Gender is Gender g) f.Gender = g;
@@ -1023,7 +1024,7 @@ sealed partial class App : ApplicationContext
             Born = f.Brain.Born,
             Parents = _w.Figures.Where(o => f.Brain.ParentIds.Contains(o.Id)).Select(o => o.Name).Union(f.Brain.ParentNames).ToList(),
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
-            Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
+            Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight, Asleep = f.Brain.Asleep, Sleepy = MathF.Round(f.Brain.Sleepy, 3),
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
             Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Archetype = f.Archetype == Archetype.None ? "" : f.Archetype.ToString(), Collection = f.Brain.Collection.ToList(),
             Learned = f.Brain.Learned.ToDictionary(kv => kv.Key, kv => MathF.Round(kv.Value, 3)), Tried = new(f.Brain.Tried),
@@ -1064,6 +1065,8 @@ sealed partial class App : ApplicationContext
             }
         }
         RestoreItems(_settings.Items);
+        // Whoever was asleep when the app closed is still asleep (in their bed), not all woken at once.
+        foreach (var (f, s) in made) if (s.Asleep) f.Brain.ResumeSleep(_w);
         RestoreClubs();
         RestoreAway();
         RestorePets();

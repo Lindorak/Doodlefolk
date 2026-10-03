@@ -141,7 +141,8 @@ sealed partial class Brain
     public void OnThunder(World w)
     {
         w.Sticker("storm");
-        if (f.Mode != Mode.Control || _g == G.Sleep) return;
+        if (f.Mode != Mode.Control) return;
+        if (Asleep) { Rouse(0.7f); return; }   // it can wake a light sleeper (each in their own time)
         if (P.Bravery < 0.45f)
         {
             Fear = M.Clamp01(Fear + 0.35f);

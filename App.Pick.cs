@@ -33,6 +33,7 @@ sealed partial class App
         {
             var f = _w.Figures[i];
             if (f.Mode == Mode.Spawning || f.Dead || f.HidingBehind != hiding) continue;
+            if (f.BehindWindow is { } win && win.Contains(c.X, c.Y)) continue;   // that bit's behind the window: the click is the window's
             if (f.DistanceTo(c, out int j) <= 0) return (f, j);
         }
         return (null, -1);

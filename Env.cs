@@ -172,6 +172,24 @@ sealed class Env
             Platforms.Add(new Platform { Hwnd = IntPtr.Zero, Y = w.Bottom, PrevY = w.Bottom, X1 = w.Left, X2 = w.Right, Solid = true });
     }
 
+    /// <summary>The window in front that this stretch of a window's top disappears behind at one end (side -1: left,
+    /// +1: right), if it stands well above it (somewhere to tuck in behind, out of sight).</summary>
+    public System.Drawing.RectangleF? FrontWindowAt(Platform seg, int side, float clearance)
+    {
+        if (seg.Hwnd == IntPtr.Zero || seg.Item != null) return null;
+        int i = _wins.FindIndex(w => w.hwnd == seg.Hwnd);
+        if (i <= 0) return null;
+        float edge = side > 0 ? seg.X2 : seg.X1;
+        for (int j = 0; j < i; j++)
+        {
+            var o = _wins[j].rect;
+            float near = side > 0 ? o.Left : o.Right;
+            if (MathF.Abs(near - edge) < 2 && o.Top <= seg.Y - clearance && o.Bottom > seg.Y)
+                return System.Drawing.RectangleF.FromLTRB(o.Left, o.Top, o.Right, o.Bottom);
+        }
+        return null;
+    }
+
     void Subtract(float a, float b)
     {
         _next.Clear();

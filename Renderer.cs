@@ -216,6 +216,24 @@ sealed class Renderer : IDisposable
 
     /// <summary>Drop shadows are drawn solid inside one translucent layer, so where parts overlap (joints, a cushion on
     /// a couch, two figures) the shadow stays one even shade instead of doubling up.</summary>
+    readonly Stack<ID2D1GeometryGroup> _excluded = new();
+
+    /// <summary>Draw everywhere except inside this rectangle (until PopExclude).</summary>
+    public void PushExclude(System.Drawing.RectangleF r)
+    {
+        using var all = _factory.CreateRectangleGeometry(new Rect(-100000, -100000, 200000, 200000));
+        using var hole = _factory.CreateRectangleGeometry(new Rect(r.X, r.Y, r.Width, r.Height));
+        var mask = _factory.CreateGeometryGroup(Vortice.Direct2D1.FillMode.Alternate, new ID2D1Geometry[] { all, hole });
+        _ctx.PushLayer(new LayerParameters1 { ContentBounds = new Rect(-100000, -100000, 200000, 200000), GeometricMask = mask, MaskAntialiasMode = AntialiasMode.Aliased, MaskTransform = Matrix3x2.Identity, Opacity = 1 }, null);
+        _excluded.Push(mask);
+    }
+
+    public void PopExclude()
+    {
+        _ctx.PopLayer();
+        if (_excluded.Count > 0) _excluded.Pop().Dispose();
+    }
+
     public void BeginShadowLayer(float opacity) =>
         _ctx.PushLayer(new LayerParameters1 { ContentBounds = new Rect(-100000, -100000, 200000, 200000), MaskTransform = Matrix3x2.Identity, Opacity = opacity, MaskAntialiasMode = AntialiasMode.PerPrimitive }, null);
 

@@ -43,7 +43,7 @@ sealed partial class Brain
         _hideTries = 0;
         _hidden = false;
         _hideBehind = null;
-        f.HidingBehind = false;
+        f.HidingBehind = false; f.BehindWindow = null; _hideWindow = null;
         f.Camo = 0;
         switch (g.Kind)
         {
@@ -83,6 +83,30 @@ sealed partial class Brain
             float score = d + rng.Range(0, 700) * S;
             if (score < bestScore) { bestScore = score; best = it; }
         }
+        // A corner where this window's top disappears behind a window in front: tuck in there.
+        (Platform seg, int side, System.Drawing.RectangleF win, float score)? corner = null;
+        foreach (var p in env.Platforms)
+        {
+            foreach (int side in new[] { -1, 1 })
+            {
+                if (env.FrontWindowAt(p, side, f.Height * 0.6f) is not { } win) continue;
+                if (w.Figures.Any(o => o != f && o.BehindWindow is { } ob && ob == win && MathF.Abs(o.Base.Y - p.Y) < 4)) continue;
+                float x = side > 0 ? p.X2 : p.X1;
+                float d = Vector2.Distance(new Vector2(x, p.Y), f.Base);
+                if (d > 2400 * S) continue;
+                float score = d * 0.8f + rng.Range(0, 700) * S;
+                if (corner == null || score < corner.Value.score) corner = (p, side, win, score);
+            }
+        }
+        if (corner is { } cn && (best == null || cn.score < bestScore) && (seg == null || SameSegment(cn.seg, seg) || w.Nav.FindPath(seg, f.Base.X, cn.seg, cn.side > 0 ? cn.seg.X2 - 6 * S : cn.seg.X1 + 6 * S, MyMover, MoveCost, 300) != null))
+        {
+            _hideBehind = null;
+            _hideWindow = cn.win; _hideSide = cn.side;
+            float x = cn.side > 0 ? cn.seg.X2 - 5 * S : cn.seg.X1 + 5 * S;
+            var a = Anchor.On(env, cn.seg, x);
+            Navigate(() => a.Resolve(env), 4 * S, true, HideNow, WalkPurpose.Other);
+            return;
+        }
         if (best != null)
         {
             var b = best.Bounds();
@@ -112,10 +136,15 @@ sealed partial class Brain
         HideNow();
     }
 
+    System.Drawing.RectangleF? _hideWindow;
+    int _hideSide;
+
     void HideNow()
     {
         _hidden = true;
         f.HidingBehind = _hideBehind != null;
+        f.BehindWindow = _hideWindow;
+        if (_hideWindow != null) { f.Facing = -_hideSide; f.KeepFacing = true; }
         _peekAt = _t0 + rng.Range(6, 14);
         Go(G.Game, 600);
     }
@@ -123,7 +152,8 @@ sealed partial class Brain
     public void FoundByUser(World w, UserGame g)
     {
         _hidden = false;
-        f.HidingBehind = false;
+        f.HidingBehind = false; f.BehindWindow = null; _hideWindow = null;
+        f.BehindWindow = null; _hideWindow = null; f.KeepFacing = false;
         f.Camo = 0;
         _hideBehind = null;
         int n = g.Found.Count;
@@ -154,13 +184,31 @@ sealed partial class Brain
         f.DesiredVX = 0;
         if (_hideBehind is { } it)
         {
-            if (!w.Items.Contains(it) || it.Holder != null || MathF.Abs(it.Pos.X - f.Base.X) > it.Bounds().Width) { _hidden = false; _hideBehind = null; f.HidingBehind = false; return; }
+            if (!w.Items.Contains(it) || it.Holder != null || MathF.Abs(it.Pos.X - f.Base.X) > it.Bounds().Width) { _hidden = false; _hideBehind = null; f.HidingBehind = false; f.BehindWindow = null; _hideWindow = null; return; }
             // Duck down behind it; every so often (when you're far off) peek over the top.
             bool peek = _t0 > _peekAt && Vector2.Distance(w.Cursor, f.Base) > 450 * S;
             if (_t0 > _peekAt + 1.1f) _peekAt = _t0 + rng.Range(7, 15);
             float h = it.Bounds().Height / f.Height;
             f.SetAction(peek ? Act.Stand : h > 0.75f ? Act.Stand : h > 0.45f ? Act.SitFloor : Act.Curl);
             f.LookAt = w.Cursor;
+        }
+        else if (_hideWindow is { } win)
+        {
+            // Tucked in where this window's top goes behind the one in front: still there? (It may have moved or closed.)
+            var env = w.Env;
+            var seg = env.SupportAt(f.Base.X, f.Base.Y, f.GroundHwnd);
+            var now = seg != null ? env.FrontWindowAt(seg, _hideSide, f.Height * 0.5f) : null;
+            if (seg == null || now is not { } nw || MathF.Abs(nw.X - win.X) > 3 || MathF.Abs(nw.Y - win.Y) > 3) { _hidden = false; f.BehindWindow = null; _hideWindow = null; f.KeepFacing = false; return; }
+            _hideWindow = nw; f.BehindWindow = nw;
+            float edge = _hideSide > 0 ? seg.X2 : seg.X1;
+            f.DesiredVX = MathF.Abs(edge - f.Base.X) > 1.5f * S ? MathF.Sign(edge - f.Base.X) * f.WalkSpeed * 0.4f : 0;
+            // Crouched facing into the window (out of sight), now and then (when you're far off) peeking round the edge.
+            bool peek = _t0 > _peekAt && Vector2.Distance(w.Cursor, f.Base) > 450 * S;
+            if (_t0 > _peekAt + 1.4f) _peekAt = _t0 + rng.Range(7, 15);
+            f.KeepFacing = true;
+            f.Facing = peek ? -_hideSide : _hideSide;
+            f.SetAction(peek ? Act.Stand : Act.Curl);
+            f.LookAt = peek ? w.Cursor : null;
         }
         else
         {
@@ -304,7 +352,7 @@ sealed partial class Brain
     {
         _hidden = false;
         _hideBehind = null;
-        f.HidingBehind = false;
+        f.HidingBehind = false; f.BehindWindow = null; _hideWindow = null;
         f.Camo = 0;
     }
 

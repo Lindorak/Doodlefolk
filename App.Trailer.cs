@@ -193,7 +193,7 @@ sealed partial class App
 
     void TrailerTick(double t)
     {
-        if (_simRun) return;
+        if (_simRun || _animSheet) return;   // the trailer's own script and pretend windows
         while (_tScriptAt < _tScript.Count && t >= _tScript[_tScriptAt].at)
         {
             try { _tScript[_tScriptAt].act(); }

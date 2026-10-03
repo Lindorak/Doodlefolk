@@ -203,6 +203,8 @@ sealed partial class Figure
     public string? HatOverride, HatColourOverride;
     /// <summary>Hide-and-seek: crouched behind something (drawn behind it), or blending into the window (faint).</summary>
     public bool HidingBehind;
+    /// <summary>Tucked in behind a window in front (hide-and-seek): the part of them inside it isn't drawn.</summary>
+    public System.Drawing.RectangleF? BehindWindow;
     /// <summary>Club colours: worn as a bandana.</summary>
     public Color4? ClubColour;
     /// <summary>0 lean … 0.3 fit … 0.5 chubby … 0.75 fat … 1 obese. Changes with eating and exercise (a setting).</summary>

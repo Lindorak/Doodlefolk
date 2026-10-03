@@ -161,6 +161,24 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + (longRope ? 1.6 : 0.1), () => fig.Brain.UseNow(it, Verb.Skip, _w)));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 1.6f));
         }
+        // Hide-and-seek behind a window: tucked into the corner where one window's top goes behind another.
+        foreach (var (label, peek) in new[] { ("Behind a window", false), ("Peeking round a window", true) })
+        {
+            _animJobs.Add(new("Hiding", label, 3, (f, _) =>
+            {
+                _w.Env.Staged!.Clear();
+                _w.Env.Staged.Add(((IntPtr)0x7F000301, new Native.RECT { Left = 1150, Top = 600, Right = 1700, Bottom = 1050 }));   // in front
+                _w.Env.Staged.Add(((IntPtr)0x7F000302, new Native.RECT { Left = 600, Top = 800, Right = 1300, Bottom = 1050 }));   // behind
+                _w.Env.Refresh(_overlay.Handle);
+                var top = _w.Env.Platforms.First(p => p.Hwnd == (IntPtr)0x7F000302);
+                f!.PlaceAt(top, top.X2 - 1);
+                f.SpawnT = 0.999f;
+                f.BehindWindow = new RectangleF(1150, 600, 550, 450);
+                f.Facing = peek ? -1 : 1; f.KeepFacing = true;
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 0.6, () => { fig.Brain.Puppet(99); fig.SetAction(peek ? Act.Stand : Act.Curl); }));
+            }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 2.2f));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {
@@ -206,6 +224,18 @@ sealed partial class App
         var px = new byte[Tile * Tile * 4];
         _r.Capture(area, a =>
         {
+            // Pretend windows (back to front), so things behind them can be judged.
+            if (_w.Env.Staged is { Count: > 0 } wins)
+                for (int k = wins.Count - 1; k >= 0; k--)
+                {
+                    var rc = wins[k].Item2;
+                    var wr = new RectangleF(rc.Left, rc.Top, rc.Right - rc.Left, rc.Bottom - rc.Top);
+                    _r.FillPolygon(new[] { new Vector2(wr.Left, wr.Top), new Vector2(wr.Right, wr.Top), new Vector2(wr.Right, wr.Bottom), new Vector2(wr.Left, wr.Bottom) }, new Color4(0.93f, 0.95f, 0.98f, 1));
+                    _r.FillPolygon(new[] { new Vector2(wr.Left, wr.Top), new Vector2(wr.Right, wr.Top), new Vector2(wr.Right, wr.Top + 26 * _w.Scale), new Vector2(wr.Left, wr.Top + 26 * _w.Scale) }, new Color4(0.78f, 0.84f, 0.93f, 1));
+                    _r.Line(new Vector2(wr.Left, wr.Top), new Vector2(wr.Right, wr.Top), Ui.Pencil.A(0.8f), 1.5f * _w.Scale);
+                    _r.Line(new Vector2(wr.Left, wr.Top), new Vector2(wr.Left, wr.Bottom), Ui.Pencil.A(0.8f), 1.5f * _w.Scale);
+                    _r.Line(new Vector2(wr.Right, wr.Top), new Vector2(wr.Right, wr.Bottom), Ui.Pencil.A(0.8f), 1.5f * _w.Scale);
+                }
             foreach (var pl in _w.Env.Platforms) _r.Line(new Vector2(pl.X1, pl.Y + 1), new Vector2(pl.X2, pl.Y + 1), Ui.Pencil.A(0.7f), 1.5f * _w.Scale);
             DrawScene(a);
         }, new Color4(0.985f, 0.975f, 0.94f, 1), Tile / span, px, Tile, Tile);

@@ -25,6 +25,18 @@ sealed class Seasons
 
     public void Gust(double now) { _gustUntil = now + 22; _nextGust = now + 400; }
 
+    /// <summary>Falling leaves, blossom and fireflies at all (Studio → Weather &amp; time).</summary>
+    public static bool Enabled = true;
+    /// <summary>How long a leaf lies where it lands: a quarter of an hour if things pile up, else a moment.</summary>
+    static float LieFor => Weather.Piles ? 900 : 3;
+
+    /// <summary>Sweep every fallen leaf away now.</summary>
+    public void ClearFallen(float S)
+    {
+        foreach (var b in _fallen) Dirty.Add(Box(b.Pos, S));
+        _fallen.Clear();
+    }
+
     public void Step(World w, float dt, double now)
     {
         Now = Override ?? FromDate(DateTime.Now);
@@ -33,7 +45,8 @@ sealed class Seasons
         float S = w.Scale;
         var env = w.Env;
         var v = env.Virtual;
-        bool leafy = Now is Season.Autumn or Season.Spring;
+        bool leafy = Enabled && Now is Season.Autumn or Season.Spring;
+        if (!Enabled && _fallen.Count > 0) ClearFallen(S);
         if (leafy && w.Celebrations && now > _nextGust) { _gustUntil = now + rng.Range(15, 28); _nextGust = now + rng.Range(150, 360); }
         // A gust: leaves (or petals) come in from above, a few at a time.
         if (leafy && now < _gustUntil && _air.Count < 30 && rng.NextDouble() < dt * 0.9)
@@ -71,7 +84,8 @@ sealed class Seasons
         {
             var b = _fallen[i];
             b.Age += dt;
-            if (b.Age > 900) { Dirty.Add(Box(b.Pos, S)); _fallen.RemoveAt(i); continue; }
+            if (b.Age > LieFor) { Dirty.Add(Box(b.Pos, S)); _fallen.RemoveAt(i); continue; }
+            if (!Weather.Piles) Dirty.Add(Box(b.Pos, S));   // fading as we watch
             foreach (var f in w.Figures)
             {
                 if (f.Mode != Mode.Control || MathF.Abs(f.Vel.X) < f.WalkSpeed * 1.2f) continue;
@@ -91,7 +105,7 @@ sealed class Seasons
         if (!leafy && _air.Count == 0 && _fallen.Count > 0 && rng.NextDouble() < dt * 0.05) { Dirty.Add(Box(_fallen[0].Pos, S)); _fallen.RemoveAt(0); }
 
         // Fireflies on summer nights, drifting low over the floors.
-        bool flies = Now == Season.Summer && w.Night > 0.3f && w.Celebrations;
+        bool flies = Enabled && Now == Season.Summer && w.Night > 0.3f && w.Celebrations;
         if (flies && _flies.Count < 12 && rng.NextDouble() < dt * 0.5)
         {
             var floors = env.Platforms.Where(p => p.X2 - p.X1 > 120 * S).ToList();
@@ -119,7 +133,8 @@ sealed class Seasons
     /// <summary>Leaves lying on surfaces (under figures).</summary>
     public void DrawFallen(Renderer r, float S, Func<RectangleF, bool> dirty)
     {
-        foreach (var b in _fallen) if (dirty(Box(b.Pos, S))) Leaf(r, b, S, M.Clamp01((900 - b.Age) / 60));
+        float fade = MathF.Min(60, LieFor * 0.6f);
+        foreach (var b in _fallen) if (dirty(Box(b.Pos, S))) Leaf(r, b, S, M.Clamp01((LieFor - b.Age) / fade));
     }
 
     /// <summary>Leaves in the air and fireflies (in front of everything).</summary>

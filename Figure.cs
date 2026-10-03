@@ -527,7 +527,12 @@ sealed partial class Figure
         if (_fF.Stepping && _fF.T < 0.75f) _fF.To.X = M.Lerp(_fF.To.X, tF + LeadAt(_fF.T), 0.2f);
 
         bool landed = Advance(_fN, dt) | Advance(_fF, dt);
-        if (landed && !idle) World.Play(Sfx.Step, Base, (run > 0.5f ? 0.07f : 0.035f) * (0.6f + SizeMul * 0.4f) * (1 + st.Stomp), 1.15f / MathF.Sqrt(SizeMul), 0.035);
+        if (landed && !idle)
+        {
+            float snowy = World.Current?.Weather is { } wx && World.Current.Env is { } env ? wx.Footprint(env, (_fN.Stepping ? _fF : _fN).Pos, S) : 0;
+            if (snowy > 1.5f * S) World.Play(Sfx.Crunch, Base, (run > 0.5f ? 0.09f : 0.05f) * (0.6f + SizeMul * 0.4f), 1.05f / MathF.Sqrt(SizeMul), 0.035);
+            else World.Play(Sfx.Step, Base, (run > 0.5f ? 0.07f : 0.035f) * (0.6f + SizeMul * 0.4f) * (1 + st.Stomp), 1.15f / MathF.Sqrt(SizeMul), 0.035);
+        }
         if (landed && !idle)
         {
             // Heavy-footed (or angry) walkers stomp: the body drops on each footfall.

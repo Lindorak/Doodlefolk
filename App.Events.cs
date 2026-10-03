@@ -40,7 +40,9 @@ sealed partial class App
         _w.DayNight = _settings.DayNight;
         _w.UpdateClock();
         RealWeatherFrame(now);
-        _w.Weather.Step(_w, dt, now, _settings.WeatherMode == "real" ? (_settings.WeatherLat == null ? "sometimes" : "off") : _settings.WeatherMode);
+        Weather.Piles = _settings.WeatherPiles;
+        Seasons.Enabled = _settings.NatureOn && _settings.SeasonBits;
+        _w.Weather.Step(_w, dt, now, !_settings.NatureOn ? "off" : _settings.WeatherMode == "real" ? (_settings.WeatherLat == null ? "sometimes" : "off") : _settings.WeatherMode);
         // Snowmen melt once the snow's gone.
         if (!_w.Weather.Snowing)
             foreach (var it in _w.Items.Where(i => i.Def.Key == "snowman" && i.Holder == null).ToList())

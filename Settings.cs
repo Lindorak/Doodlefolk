@@ -160,6 +160,12 @@ sealed class Settings
     public bool Notifications { get; set; } = true;
     /// <summary>How often weather happens: off, rare, sometimes, often. And whether night makes them sleepy.</summary>
     public string WeatherMode { get; set; } = "sometimes";
+    /// <summary>All weather and seasonal touches (snow, rain, leaves, petals, fireflies) at all.</summary>
+    public bool NatureOn { get; set; } = true;
+    /// <summary>Falling leaves and blossom, and fireflies on summer nights.</summary>
+    public bool SeasonBits { get; set; } = true;
+    /// <summary>Snow and leaves stay where they land (off: they fall, then melt or fade as they touch down).</summary>
+    public bool WeatherPiles { get; set; } = true;
     public bool DayNight { get; set; } = true;
     /// <summary>Birthday parties and holiday dress-up.</summary>
     public bool Celebrations { get; set; } = true;

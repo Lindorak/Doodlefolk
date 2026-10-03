@@ -12,7 +12,7 @@ enum Sfx
     Pew, Squirt, DartHit, Boing, Clank, Whirr, Munch, Snore, Scribble, Thud,
     Pip, Chime, Grumble, Laugh, Tune, TaDa, Whistle, Swish,
     Thunder, Splat, Bark, Meow, Purr,
-    Hiss, Growl, Chirp, Squawk, Whine, Spray, Yowl, Lap, Squeak, Crackle, Sneeze, Bubble,
+    Hiss, Growl, Chirp, Squawk, Whine, Spray, Yowl, Lap, Squeak, Crackle, Sneeze, Bubble, Crunch,
 }
 
 /// <summary>Dynamic sound effects, synthesized at start-up (no sound files): every effect is a few short
@@ -284,6 +284,13 @@ sealed partial class Sound : IDisposable
         void Add(Sfx s, params float[][] v) => _bank[s] = v;
 
         Add(Sfx.Step, Noise(0.05f, 0.18f, 0.5f), Noise(0.045f, 0.22f, 0.45f), Noise(0.055f, 0.15f, 0.5f));
+        // Snow underfoot: a short burst of tiny squeaky crackles, packed down.
+        float[] Crunch(int seed)
+        {
+            var cr = new Random(seed);
+            return Lp(Make(0.11f, (t, p) => (cr.NextDouble() < 0.18 ? ((float)cr.NextDouble() * 2 - 1) * 0.9f : ((float)cr.NextDouble() * 2 - 1) * 0.15f) * Env(p, 0.15f) * 0.6f), 0.55f);
+        }
+        Add(Sfx.Crunch, Crunch(1), Crunch(2), Crunch(3));
         Add(Sfx.Jump, Make(0.12f, (t, p) => Rnd() * Env(p, 0.3f) * 0.18f + Sine(t, 300 + 600 * p) * Env(p) * 0.1f));
         Add(Sfx.Land, Lp(Make(0.14f, (t, p) => (Rnd() * 0.6f + Sine(t, 70) * 0.6f) * Env(p)), 0.12f));
         Add(Sfx.Thud, Lp(Make(0.2f, (t, p) => (Rnd() * 0.5f + Sine(t, 55 - 20 * p) * 0.8f) * Env(p)), 0.1f));

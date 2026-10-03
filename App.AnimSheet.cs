@@ -179,6 +179,28 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.6, () => { fig.Brain.Puppet(99); fig.SetAction(peek ? Act.Stand : Act.Curl); }));
             }, (f, _) => f != null ? new Vector2(f.Base.X, f.Base.Y - 30 * _w.Scale) : Vector2.Zero, null, 2.2f));
         }
+        // Snow: lying in drifts on a window top (rounded off at the ends), footprints as someone walks through, melting by a fire.
+        foreach (var (label, walk, fire) in new[] { ("Lying on a window", false, false), ("Walking through", true, false), ("Melting by a fire", false, true) })
+        {
+            _animJobs.Add(new("Snow", label, fire ? 8 : 3.5f, (f, _) =>
+            {
+                float S = _w.Scale;
+                _w.Weather.ClearCover();
+                _w.Env.Staged!.Clear();
+                _w.Env.Staged.Add(((IntPtr)0x7F000311, new Native.RECT { Left = 700, Top = 800, Right = 1500, Bottom = 1050 }));
+                _w.Env.Refresh(_overlay.Handle);
+                var top = _w.Env.Platforms.First(p => p.Hwnd == (IntPtr)0x7F000311);
+                f!.PlaceAt(top, walk ? top.X1 + 120 * S : top.X1 + 260 * S);
+                f.SpawnT = 0.999f;
+                _w.Weather.Dust(top, top.X1, top.X2, 130, _w.Rng, S);
+                if (fire)
+                {
+                    var c = SpawnItem(ItemCatalog.Find("campfire")!);
+                    c!.Pos = new Vector2(top.X1 + 200 * S, top.Y); c.Vel = Vector2.Zero; c.OnGround = true;
+                }
+                if (walk) { f.Facing = 1; f.DesiredVX = f.WalkSpeed; }
+            }, (f, _) => f != null ? new Vector2(walk ? f.Base.X : 1100, f.Base.Y - 20 * _w.Scale) : Vector2.Zero, null, walk ? 1.2f : 2.4f));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {

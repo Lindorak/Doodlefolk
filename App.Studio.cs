@@ -186,7 +186,7 @@ sealed partial class App
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
             sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, voiceStyle = _settings.VoiceStyle, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
-            weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
+            weather = _settings.WeatherMode, natureOn = _settings.NatureOn, seasonBits = _settings.SeasonBits, weatherPiles = _settings.WeatherPiles, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
             petMode = _settings.PetMode, petCare = _settings.PetCare, petBathroom = _settings.PetBathroom, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, visitors = _settings.Visitors, unlockedHats = _settings.UnlockedHats, cratesWaiting = _settings.CratesWaiting,
             dex = new
             {
@@ -395,8 +395,13 @@ sealed partial class App
                     break;
                 }
                 case "sky":
-                    if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk)) _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
+                    if (Enum.TryParse<WeatherKind>(Str(m, "kind"), true, out var sk))
+                    {
+                        if (sk != WeatherKind.Clear && !_settings.NatureOn) { _settings.NatureOn = true; _settings.Save(); }   // asked for it: weather's back on
+                        _w.Weather.Start(sk, _clock.Elapsed.TotalSeconds, _w.Rng, _w);
+                    }
                     break;
+                case "sweep": SweepNature(); break;
                 case "spawn":
                 {
                     Personality? traits = m.TryGetProperty("preset", out var pr) && pr.GetInt32() is int pi && pi >= 0 && pi < Personality.Presets.Length
@@ -830,6 +835,16 @@ sealed partial class App
         _tray.ShowBalloonTip(1200, "Doodlefolk", _settings.SoundOn ? "Sound on" : "Sound off", ToolTipIcon.None);
     }
 
+    /// <summary>Snow that's piled up and fallen leaves, all swept away (with a puff where the snow was).</summary>
+    void SweepNature()
+    {
+        foreach (var p in _w.Env.Platforms)
+            if (_w.Weather.SnowOn(p) > 1) _w.Fx.Dust(new System.Numerics.Vector2((p.X1 + p.X2) / 2, p.Y), _w.Scale, 6, 0.6f, _w.Rng);
+        _w.Weather.ClearCover();
+        _w.Seasons.ClearFallen(_w.Scale);
+        ForceFullRedraw();
+    }
+
     void SettingEdit(JsonElement m)
     {
         var v = m.GetProperty("v");
@@ -868,6 +883,12 @@ sealed partial class App
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;
             case "celebrations": _settings.Celebrations = v.GetBoolean(); break;
+            case "natureOn":
+                _settings.NatureOn = v.GetBoolean();
+                if (!_settings.NatureOn) { _w.Weather.StopNow(_w); SweepNature(); }
+                break;
+            case "seasonBits": _settings.SeasonBits = v.GetBoolean(); break;
+            case "weatherPiles": _settings.WeatherPiles = v.GetBoolean(); break;
             case "babies": _settings.Babies = v.GetBoolean(); break;
             case "petMode": SetPetMode(v.GetBoolean()); break;
             case "petCare": _settings.PetCare = v.GetString() ?? "normal"; break;

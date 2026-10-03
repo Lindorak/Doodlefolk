@@ -1823,6 +1823,10 @@ PAGES.settings = {
     const jobsC = check("Jobs and coins", "Figures work (shopkeeper, chef, builder, entertainer, teacher), earn coins and spend them at the shop, the food cart and on tips. Put out a shop stall, food cart, stage or chalkboard from Things.", () => st().jobs !== false, v => setS("jobs", v));
     const paceChips = [["off", "Don't age"], ["slow", "A year a day"], ["fast", "A year an hour"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("lifePace", k); } }, l); c.key = k; return c; });
     const babies = check("Babies", "Sweethearts who've been together a long while can have a little one, who grows up over a few hours.", () => st().babies !== false, v => setS("babies", v));
+    const natureC = check("Weather and seasons", "Rain, storms and snow, falling leaves, blossom and fireflies. Off: none of it, and anything lying around is swept away.", () => st().natureOn !== false, v => setS("natureOn", v));
+    const seasonBitsC = check("Falling leaves, blossom and fireflies", "Autumn leaves and spring petals drift down now and then; fireflies on summer nights.", () => st().seasonBits !== false, v => setS("seasonBits", v));
+    const pilesC = check("Snow and leaves pile up", "Snow settles in drifts (with footprints!) and leaves lie where they land. Off: they still fall, but melt or fade away as they touch down.", () => st().weatherPiles !== false, v => setS("weatherPiles", v));
+    const sweepB = h("button", { class: "btn small", title: "Melts every bit of lying snow and sweeps up the fallen leaves, right now", onclick: () => { send({ t: "sweep" }); toast("All swept away."); } }, "🧹 Clear away snow and leaves");
     const celebrations = check("Birthdays and holidays", "Parties on their birthdays; costumes at Halloween, hats at Christmas, fireworks at New Year.", () => st().celebrations !== false, v => setS("celebrations", v));
     const dayNight = check("Day and night", "Late at night they get sleepy; in the morning they say good morning. Follows your clock.", () => st().dayNight !== false, v => setS("dayNight", v));
     const screen = [
@@ -1857,9 +1861,11 @@ PAGES.settings = {
       h("h2", null, "Behaviour"), checks,
       h("h2", null, "Weather & time"),
       h("p", { class: "sub" }, "Now and then a shower, a storm or (in winter) snow. Or pick \"your real weather\" and type your town: the sky follows the actual weather there, and they feel the heat and the cold. Only then is anything looked up online (Open-Meteo, free and keyless): the place name once, then just its map coordinates every 20 minutes."),
+      natureC,
       h("div", { class: "row" }, weatherChips),
       realBox, wxStatus,
       h("div", { class: "row", style: { marginTop: "8px" } }, ["Rain", "Storm", "Snow", "Clear"].map(k => h("button", { class: "btn small", onclick: () => send({ t: "sky", kind: k }) }, { Rain: "☂ Make it rain", Storm: "⚡ Storm", Snow: "❄ Make it snow", Clear: "☀ Clear skies" }[k]))),
+      seasonBitsC, pilesC, h("div", { class: "row" }, sweepB),
       dayNight, celebrations, babies,
       h("div", { class: "field" }, h("label", null, "Hemisphere"), h("div", { class: "row tight" }, hemiChips)),
       h("p", { class: "hint" }, "Which way round the seasons (and the pond's fish) go. Automatic uses your real-weather town if you've set one, otherwise northern."),
@@ -1927,7 +1933,7 @@ PAGES.settings = {
       ambOn.update(); ambFollow.update(); lofiC.update(); focusLofiC.update(); ambRows.forEach(r => r.update());
       ambBox.style.display = amb().on ? "" : "none";
       weatherChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().weather || "sometimes")); });
-      dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update(); ghostsC.update();
+      natureC.update(); seasonBitsC.update(); pilesC.update(); dayNight.update(); celebrations.update(); babies.update(); petMode.update(); staminaC.update(); weightC.update(); petHelpC.update(); breedC.update(); lassoC.update(); jobsC.update(); visitC.update(); reqC.update(); albumC.update(); ghostsC.update();
       streamC.update(); streamBox.style.display = sm().on ? "" : "none"; cmdChecks.forEach(c => c.update()); bubblesC.update();
       if (idle(chanIn) && document.activeElement !== chanIn) chanIn.value = sm().channel || "";
       streamLine.textContent = (sm().status || "") + ((sm().viewers || []).length ? ` In town from chat: ${sm().viewers.join(", ")}.` : "");
@@ -2016,6 +2022,7 @@ function buildQuick() {
   const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
   const muteB = muteButton();
+  const natureQ = check("Weather", null, () => S.settings.natureOn !== false, v => send({ t: "setting", key: "natureOn", v }));
   const petModeC = check("Just pets", null, () => S.settings.petMode, v => send({ t: "setting", key: "petMode", v }));
   const count = h("span", { class: "hint" });
   const stopG = h("button", { class: "btn small danger", onclick: () => send({ t: "game", kind: "stop" }) }, "Stop game");
@@ -2046,14 +2053,15 @@ function buildQuick() {
     h("h3", null, "Pets"),
     h("div", { class: "row tight q-games" },
       [["Cat", false, "🐈"], ["Cat", true, "Kitten"], ["Dog", false, "🐕"], ["Dog", true, "Puppy"], ["Parrot", false, "🦜"], ["Rabbit", false, "🐇"], ["Hamster", false, "🐹"]].map(([k, y, l]) => h("button", { class: "btn small", title: `Adopt a ${y ? (k === "Cat" ? "kitten" : "puppy") : k.toLowerCase()}`, onclick: () => send({ t: "adopt", kind: k, young: y }) }, l)),
-      h("button", { class: "btn small", onclick: () => send({ t: "spray" }) }, "💦 Spray bottle")),
-    h("div", { class: "q-checks" }, petModeC, hideC, fightC),
+      h("button", { class: "btn small", onclick: () => send({ t: "spray" }) }, "💦 Spray bottle"),
+      h("button", { class: "btn small", title: "Melt the lying snow and sweep up fallen leaves", onclick: () => { send({ t: "sweep" }); toast("All swept away."); } }, "🧹 Sweep up")),
+    h("div", { class: "q-checks" }, petModeC, hideC, fightC, natureQ),
     h("div", { class: "row q-foot" },
       h("button", { class: "btn small primary", onclick: () => send({ t: "studio" }) }, "Open Studio"),
       h("span", { class: "spacer" }),
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
-    hideC.update(); fightC.update(); muteUpdate(muteB); petModeC.update();
+    hideC.update(); fightC.update(); muteUpdate(muteB); petModeC.update(); natureQ.update();
     const gm = S.game;
     stopG.hidden = !gm;
     gameNote.textContent = !gm ? "" : gm.kind === "HideSeek" ? `Hide & seek: found ${gm.found} of ${gm.players}` : gm.kind === "Tag" ? `Tag: ${gm.players} playing` : `Catch: ${gm.streak} in a row (best ${gm.best})`;

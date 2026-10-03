@@ -576,6 +576,23 @@ sealed class Renderer : IDisposable
         if (strokeW > 0 && stroke.A > 0) { _brush.Color = stroke; _ctx.DrawGeometry(geo, _brush, strokeW, _round); }
     }
 
+    /// <summary>An open line through the points (one geometry, however many there are).</summary>
+    public void Polyline(ReadOnlySpan<Vector2> pts, Color4 c, float width)
+    {
+        if (pts.Length < 2) return;
+        Ink(pts, width);
+        using var geo = _factory.CreatePathGeometry();
+        using (var sink = geo.Open())
+        {
+            sink.BeginFigure(pts[0], FigureBegin.Hollow);
+            sink.AddLines(pts[1..].ToArray());
+            sink.EndFigure(FigureEnd.Open);
+            sink.Close();
+        }
+        _brush.Color = c;
+        _ctx.DrawGeometry(geo, _brush, width, _round);
+    }
+
     public void FillPolygon(ReadOnlySpan<Vector2> pts, Color4 c)
     {
         if (pts.Length < 3) return;

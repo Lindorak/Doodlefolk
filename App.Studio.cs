@@ -100,6 +100,7 @@ sealed partial class App
             version = typeof(App).Assembly.GetName().Version?.ToString(3),
             palette = Palette.All.Select(p => new { name = p.Name, hex = Settings.Hex(p.Color) }),
             presets = Personality.Presets.Select(p => new { name = p.Name, blurb = p.Blurb, traits = TraitsJson(p.Traits) }),
+            archetypes = Archetypes.All.Select(a => new { key = a.Kind.ToString(), name = a.Name, blurb = a.Blurb }),
             things = Enum.GetValues<Thing>().Select(t => new { key = t.ToString(), name = Tastes.Name(t), group = ThingGroup(t) }),
             styles = new
             {
@@ -252,7 +253,8 @@ sealed partial class App
                 annoyance = R(b.Annoyance), boredom = R(b.Boredom), loneliness = R(b.Loneliness), frustration = R(b.Frustration), weight = R(f.Weight),
             },
             traits = TraitsJson(f.Traits),
-            describe = f.Traits.Describe(),
+            describe = (f.Archetype != Archetype.None ? Archetypes.Name(f.Archetype) + ", " : "") + f.Traits.Describe(),
+            archetype = f.Archetype.ToString(),
             tastes = new
             {
                 opinions = Enum.GetValues<Thing>().ToDictionary(t => t.ToString(), t => R(f.Tastes.Of(t))),
@@ -646,6 +648,7 @@ sealed partial class App
                 break;
             }
             case "dice": f.Traits.CopyFrom(Personality.Random(_w.Rng)); break;
+            case "archetype": if (Enum.TryParse<Archetype>(Str(m, "v"), out var ark)) f.Archetype = ark; break;
             case "taste":
                 if (Enum.TryParse<Thing>(Str(m, "key"), out var th)) f.Tastes.Set(th, Math.Clamp(Num(m, "v"), -1, 1));
                 break;

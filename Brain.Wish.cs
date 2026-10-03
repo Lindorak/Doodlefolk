@@ -149,6 +149,7 @@ sealed partial class Brain
         Boredom = MathF.Max(0, Boredom - 0.2f);
         FeelUser(0.06f, $"Gave me the {what.Name.ToLowerInvariant()} I asked for");
         RememberGift(what.Item?.Key ?? what.Ball?.ToString() ?? what.Name, what.Name);
+        if (World.Current is { } wg) SayInCharacter("thanks", null, wg);
         if (f.Mode == Mode.Control && f.Grounded && _g is G.Idle or G.Walk or G.SitFloor or G.SitEdge) f.SetAction(Act.Cheer);
         _gift = item;
         _giftBall = ball;

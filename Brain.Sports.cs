@@ -165,6 +165,7 @@ sealed partial class Brain
     {
         Match = null;
         DiaryMatch(m, won, tie);
+        if (!tie && World.Current is { } wm && rng.NextDouble() < 0.6) SayInCharacter(won ? "win" : "lose", null, wm);
         if (won) RememberPlace(w, 0.5f, "winning a game");
         if (f.Weapon?.Def.Key is "racket" or "badmintonracket") f.DropWeapon(Vector2.Zero);
         if (f.Carrying == m.Ball) f.DropCarried(Vector2.Zero);

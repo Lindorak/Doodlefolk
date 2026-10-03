@@ -239,6 +239,7 @@ sealed partial class Brain
         _watchCd -= dt; _swatCd -= dt; _witnessCd -= dt; _startleCd -= dt; _waveCd -= dt; _scanT -= dt;
         UpdateNeeds(dt, w);
         UpdateLove(dt, w);
+        UpdateArchetype(dt, w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);

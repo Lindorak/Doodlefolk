@@ -643,6 +643,7 @@ const SUBPANELS = {
     const presets = h("div", { class: "row" }, INIT.presets.map((p, i) => h("button", { class: "chip", title: p.blurb, onclick: () => send({ t: "fig", id, op: "preset", v: i }) }, p.name)),
       h("button", { class: "chip", onclick: () => send({ t: "fig", id, op: "dice" }), title: "Roll a random personality" }, "🎲 Dice"));
     const blurb = h("p", { class: "sub" });
+    const archChips = (INIT.archetypes || []).map(a => { const c = h("button", { class: "chip", title: a.blurb, onclick: () => { touched(c); send({ t: "fig", id, op: "archetype", v: a.key }); } }, a.name); c.key = a.key; return c; });
     const hunter = check("Cursor hunter", "Hunts your cursor across the screen, boxes it, and throws whatever it can grab at it. Never forgives you.",
       () => fig(id) && fig(id).hunter, v => send({ t: "fig", id, op: "hunter", v }));
     const GENDERS = [["Girl", "Girl"], ["Boy", "Boy"], ["Nonbinary", "Nonbinary"]];
@@ -661,7 +662,8 @@ const SUBPANELS = {
     const lifeLine = h("p", { class: "hint" });
     add(panel, h("div", { class: "split" }, svg, h("div", null,
       h("h2", { style: { marginTop: 0 } }, "Who they are"), blurb, sliders.map(x => x.el),
-      h("h3", null, "Start from a type"), presets, h("div", { style: { marginTop: "12px" } }, hunter),
+      h("h3", null, "Start from a type"), presets,
+      h("h3", null, "Character"), h("div", { class: "row tight" }, archChips), h("div", { style: { marginTop: "12px" } }, hunter),
       h("h3", null, "Heart"),
       h("div", { class: "field" }, h("label", null, "They're a"), h("div", { class: "row tight" }, genderChips)),
       h("div", { class: "field" }, h("label", null, "Can fall for"), h("div", { class: "row tight" }, forChips)),
@@ -672,6 +674,7 @@ const SUBPANELS = {
       lifeLine)));
     return f => {
       jobChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (f.job || "None")); });
+      archChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (f.archetype || "None")); });
       coins.textContent = `🪙 ${f.coins ?? 0} coins`;
       lifeLine.textContent = [f.stage, f.ageYears ? `${f.ageYears} years old` : "", f.retired ? "Retired" : ""].filter(Boolean).join(" · ");
       genderChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === f.gender); });

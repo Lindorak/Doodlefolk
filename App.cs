@@ -826,6 +826,7 @@ sealed partial class App : ApplicationContext
         var free = Mods.FigureNames.Where(n => !_w.Figures.Any(f => f.Name == n)).ToList();
         if (free.Count > 0) cname = free[_w.Rng.Next(free.Count)];
         var nf = SpawnFigure(color, UniqueName(cname), traits ?? Personality.Random(_w.Rng), 1);
+        if (nf != null) nf.Archetype = Archetypes.Roll(nf.Traits, _w.Rng);
         nf?.Brain.DiaryBorn();
         if (nf != null) { _w.Sticker("hello"); if (_w.Figures.Count >= 8) _w.Sticker("fullhouse"); }
         return nf;
@@ -853,6 +854,7 @@ sealed partial class App : ApplicationContext
         f.Hunter = old.Hunter;
         f.Gender = old.Gender;
         f.Attraction = old.Attraction;
+        f.Archetype = old.Archetype;
         f.Weight = old.Weight;
         f.Look = old.Look;
         var plat = _w.Env.Below(old.Base.X, old.Base.Y - 2) ?? RandomSpawnPlatform(0);
@@ -934,6 +936,7 @@ sealed partial class App : ApplicationContext
         foreach (var (k, v) in s.Learned) f.Brain.Learned[k] = Math.Clamp(v, -1, 1);
         foreach (var (k, v) in s.Tried) f.Brain.Tried[k] = Math.Max(0, v);
         if (Enum.TryParse<Hobby>(s.Hobby, out var hob)) f.Brain.Hobby = hob;
+        if (Enum.TryParse<Archetype>(s.Archetype, out var arch)) f.Archetype = arch;
         if (Enum.TryParse<Job>(s.Job, out var job)) f.Brain.Job = job;
         if (s.Coins is int coins) f.Brain.Coins = Math.Max(0, coins);
         f.Brain.AgeBank = Math.Clamp(s.AgeBank, 0, 200);
@@ -996,7 +999,7 @@ sealed partial class App : ApplicationContext
             Grown = f.Brain.Grown, AdultSize = f.Brain.AdultSize, LastBaby = f.Brain.LastBaby,
             Trophies = f.Brain.Trophies, ChampionOn = f.Brain.ChampionOn, Weight = f.Weight,
             Record = _w.Figures.Where(o => f.Brain.Record.ContainsKey(o.Id)).DistinctBy(o => o.Name).ToDictionary(o => o.Name, o => new[] { f.Brain.Record[o.Id].Won, f.Brain.Record[o.Id].Lost }),
-            Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Collection = f.Brain.Collection.ToList(),
+            Gifts = f.Brain.Gifts.ToList(), Hobby = f.Brain.Hobby.ToString(), Archetype = f.Archetype == Archetype.None ? "" : f.Archetype.ToString(), Collection = f.Brain.Collection.ToList(),
             Learned = f.Brain.Learned.ToDictionary(kv => kv.Key, kv => MathF.Round(kv.Value, 3)), Tried = new(f.Brain.Tried),
             Job = (int)f.Brain.Job >= 0 ? f.Brain.Job.ToString() : "", Coins = f.Brain.Coins, AgeBank = MathF.Round(f.Brain.AgeBank, 3),
         }).ToList();

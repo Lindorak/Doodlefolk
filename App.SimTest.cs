@@ -220,6 +220,21 @@ sealed partial class App
                 if (things.Count > 0) { var it = things[a._w.Rng.Next(things.Count)]; it.Vel = new Vector2(a._w.Rng.Range(-800, 800), -600) * a._w.Scale; it.OnGround = false; }
             });
         }),
+        new("Characters", new[] { "none", "mixed", "jealous" }, (a, v) =>
+        {
+            var figs = a._w.Figures.ToList();
+            if (v == "none") { foreach (var f in figs) f.Archetype = Archetype.None; return; }
+            var kinds = Enum.GetValues<Archetype>().Where(k => k != Archetype.None).ToArray();
+            for (int i = 0; i < figs.Count; i++) figs[i].Archetype = v == "jealous" && i == 0 ? Archetype.Yandere : kinds[i % kinds.Length];
+            if (v == "jealous" && figs.Count >= 3)
+            {
+                // A yandere devoted to one figure, who's good friends with a third.
+                figs[0].Brain.AddAffinity(figs[1], 0.9f);
+                figs[1].Brain.AddAffinity(figs[2], 0.7f); figs[2].Brain.AddAffinity(figs[1], 0.7f);
+            }
+            a.SimRule("jealousy never turns into a fight", 1, t => a._w.Figures.All(f => f.Brain.Jealousy is not { jealousOf: { } j, foe: { } foe } || foe != j),
+                () => string.Join(", ", a._w.Figures.Where(f => f.Brain.Jealousy.foe != null).Select(f => $"{f.Name} fighting {f.Brain.Jealousy.foe!.Name}")));
+        }),
         new("Babies", new[] { "on", "off" }, (a, v) => a._settings.Babies = v == "on"),
         new("Jobs", new[] { "on", "off" }, (a, v) => a._settings.Jobs = v == "on"),
         new("Graphics", new[] { "low", "high", "ultra" }, (a, v) => { a._settings.Gfx = GfxSettings.For(v); Gfx.Q = a._settings.Gfx; }),

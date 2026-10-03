@@ -27,6 +27,7 @@ sealed partial class Figure
     {
         // While you focus: no words (a reminder, a tick or the timer still get through).
         if (World.Focus && System.Text.RegularExpressions.Regex.IsMatch(text, "[A-Za-z]") && !text.StartsWith("⏰") && !text.StartsWith("✓") && !text.Contains("focus done")) return;
+        if (_emote?.Text != text) text = Brain.Flavour(text);
         if (World.Gestures)
         {
             var (symbol, g) = ToGesture(text);

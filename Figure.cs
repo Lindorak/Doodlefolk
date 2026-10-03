@@ -191,6 +191,8 @@ sealed partial class Figure
     /// <summary>Girl, boy or nonbinary, and who they can fall for (both editable in the Studio).</summary>
     public Gender Gender;
     public Attraction Attraction;
+    /// <summary>Tsundere, yandere, kuudere... (or none): a character type on top of the traits (Brain.Archetype.cs).</summary>
+    public Archetype Archetype;
     /// <summary>Pink cheeks near a crush (0..1), set by the brain.</summary>
     public float Blush;
     /// <summary>Holding hands this frame: where the near / far hand should reach (set by the brain, cleared after posing).</summary>

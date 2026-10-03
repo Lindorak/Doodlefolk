@@ -29,7 +29,7 @@ sealed partial class Brain
             if (a < -0.3f) continue;
             // Kindred spirits (shared likes) are the ones it seeks out.
             float heart = w.Romance ? LoveFor(o) * 2 + (Dating(o) ? 2 : 0) : 0;   // the one they like, they seek out
-            cands.Add((o, (a + 0.6f + MathF.Max(0, f.Tastes.Similarity(o.Tastes)) * 0.5f + heart) / (1 + d / (600 * S))));
+            cands.Add((o, (a + 0.6f + MathF.Max(0, f.Tastes.Similarity(o.Tastes)) * 0.5f + heart) / (1 + d / (600 * S)) * ArchetypeSocialTilt(o, w)));
         }
         if (cands.Count == 0) return null;
         float roll = rng.Range(0, cands.Sum(c => c.score));
@@ -59,6 +59,7 @@ sealed partial class Brain
             return;
         }
         float a = AffinityWith(o);
+        if (rng.NextDouble() < 0.55) SayInCharacter("greet", o, w);
         // Shared hobbies first: two ball-lovers play catch, two dancers dance.
         var shared = f.Tastes.SharedLikes(o.Tastes).ToHashSet();
         if (shared.Contains(Thing.PlayingBall) && NearestFreeBall(w, 600 * S) is { SizeMul: <= 1.8f } ball && rng.NextDouble() < 0.6)
@@ -125,6 +126,7 @@ sealed partial class Brain
         _initiator = false;
         _turn = -1;
         FaceTo(from.Base.X);
+        if (World.Current is { } wc && rng.NextDouble() < 0.4) SayInCharacter("greet", from, wc);
         return true;
     }
 

@@ -15,7 +15,7 @@ sealed partial class App
 {
     bool _cardArt;
     string _cardDir = "";
-    readonly List<(double at, string file, string title, string desc, Func<RectangleF> area, bool background)> _shots = new();
+    readonly List<(double at, string file, string title, string desc, Func<RectangleF> area, bool background, Func<Vector2>? focus)> _shots = new();
     int _shotAt;
     readonly List<string> _cardNotes = new();
 
@@ -58,8 +58,8 @@ sealed partial class App
     void BuildCardScript()
     {
         void At(double t, Action a) => _tScript.Add((t, $"{t:0.0}", a));
-        void Card(double t, string file, string title, string desc, Func<RectangleF> area) => _shots.Add((t, file, title, desc, area, false));
-        void Background(double t, string file, string title, string desc, Func<RectangleF> area) => _shots.Add((t, file, title, desc, area, true));
+        void Card(double t, string file, string title, string desc, Func<RectangleF> area, Func<Vector2>? focus = null) => _shots.Add((t, file, title, desc, area, false, focus));
+        void Background(double t, string file, string title, string desc, Func<RectangleF> area) => _shots.Add((t, file, title, desc, area, true, null));
         void Cmd(string line) => RunCommand(line);
 
         At(0.0, () =>
@@ -117,7 +117,7 @@ sealed partial class App
         Background(70.2, "background03-night", "Festival night", "The town, lit up.", () => new RectangleF(0, 0, TW, TH));
 
         At(72, () => { _fireworks = false; if (_w.Happening is { } fh) EndHappening(fh, false); if (TF("Lou") is { } l) { l.Brain.Force("sleep", Array.Empty<string>(), _w); l.Brain.DebugTown(_w, "showdream", ""); } });
-        Card(78, "card09-dreams", "Sweet Dreams", "Late at night they get sleepy, and they dream.", () => Frame(new[] { TF("Lou")!.Jt[J.Head] + new Vector2(0, 40), TF("Lou")!.Base }, 520));
+        Card(78, "card09-dreams", "Sweet Dreams", "Late at night they get sleepy, and they dream.", () => Frame(new[] { TF("Lou")!.Jt[J.Head] + new Vector2(0, 40), TF("Lou")!.Base }, 520), () => TF("Lou")!.Jt[J.Head]);
 
         At(79, () => { _w.NightOverride = null; _tNight = 0; foreach (var it in _w.Items.Where(i => i.Temporary).ToList()) _w.RemoveItem(it); });
         At(80, () => World.Log("card art: " + Visit(VisitorKind.MailCarrier)));
@@ -149,7 +149,7 @@ sealed partial class App
         while (_shotAt < _shots.Count && t >= _shots[_shotAt].at)
         {
             var s = _shots[_shotAt++];
-            try { Shoot(s.file, s.title, s.desc, s.area(), s.background); }
+            try { Shoot(s.file, s.title, s.desc, s.area(), s.background, s.focus?.Invoke()); }
             catch (Exception e) { World.Log($"card art {s.file}: {e.Message}"); }
         }
         if (_shotAt >= _shots.Count)
@@ -162,7 +162,7 @@ sealed partial class App
         }
     }
 
-    void Shoot(string file, string title, string desc, RectangleF area, bool background)
+    void Shoot(string file, string title, string desc, RectangleF area, bool background, Vector2? focus = null)
     {
         const int W = 1920, H = 1080;
         var px = new byte[W * H * 4];
@@ -173,14 +173,14 @@ sealed partial class App
         SaveJpegUnder(bmp, Path.Combine(_cardDir, file + ".jpg"), 350_000);
         if (!background)
         {
-            // The small card: the middle of the picture at 206×184.
-            float k = Math.Max(206f / W, 184f / H);
-            int cw = (int)(206 / k), ch = (int)(184 / k);
+            // Keep the featured subject in the narrow card even when the full frame hits a screen edge.
+            float centerX = focus is { } subject ? (subject.X - area.X) / area.Width : 0.5f;
+            var crop = CardArtCrop.ForThumbnail(W, H, centerX);
             using var small = new Bitmap(206, 184, PixelFormat.Format32bppArgb);
             using (var g = Graphics.FromImage(small))
             {
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.DrawImage(bmp, new Rectangle(0, 0, 206, 184), new Rectangle((W - cw) / 2, H - ch - (H - ch) / 4, cw, ch), GraphicsUnit.Pixel);
+                g.DrawImage(bmp, new Rectangle(0, 0, 206, 184), crop, GraphicsUnit.Pixel);
             }
             small.Save(Path.Combine(_cardDir, file + "-small.png"), ImageFormat.Png);
         }

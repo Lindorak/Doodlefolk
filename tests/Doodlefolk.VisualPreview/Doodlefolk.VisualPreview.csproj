@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TieredCompilation>false</TieredCompilation>
+    <PythonExecutable Condition="'$(PythonExecutable)' == ''">python</PythonExecutable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Util.cs" Link="Production/Util.cs" />
+    <Compile Include="../../CardArtCrop.cs" Link="Production/CardArtCrop.cs" />
+    <Compile Include="obj/SourceSlices.g.cs" />
+  </ItemGroup>
+  <Target Name="GenerateSourceSlices" BeforeTargets="BeforeCompile">
+    <Exec Command="&quot;$(PythonExecutable)&quot; &quot;$(MSBuildProjectDirectory)/../../tools/visual-preview.py&quot; --generate" />
+    <Error Condition="!Exists('obj/SourceSlices.g.cs')" Text="Run python tools/visual-preview.py --generate first (see README)." />
+  </Target>
+</Project>

@@ -198,9 +198,14 @@ sealed partial class Figure
                 tiltT -= 0.2f * env * Facing;
                 break;
             case Fidget.ScratchHead:
-                hN = new(HeadR * 0.6f + MathF.Sin(t * 28) * 1.2f * S, -(HeadR * 2.1f + NeckGap));
-                eN = new(1, -0.4f);
-                tiltT += 0.18f * Facing;
+                // Reach, scratch, then lower the hand before the fidget ends, just like the
+                // other one-shot gestures. Keep the scratching phase and middle pose unchanged.
+                hN = Vector2.Lerp(hN, new(HeadR * 0.6f + MathF.Sin(t * 28) * 1.2f * S, -(HeadR * 2.1f + NeckGap)), env);
+                // A small outward arc keeps the hand clear of the shoulder as the elbow folds.
+                hN.X += MathF.Sin(env * MathF.PI) * Arm * 0.45f;
+                // Follow the hand around the shoulder without switching IK bend sides midway.
+                eN = new(-_hN.Y, _hN.X * Facing);
+                tiltT += 0.18f * env * Facing;
                 handW = 26;
                 break;
             case Fidget.CheckWatch:

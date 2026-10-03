@@ -26,6 +26,12 @@ check. Override `-p:PythonExecutable=python3` if required by your system.
 `4e554f5ecc6e44701001ee56b047fd04ee82ec85` source and the current `Figure.Style.cs`.
 It also extracts production body dimensions, neutral pose defaults, pose spring calls,
 arm/leg IK calls, and joint assignment. Both versions use linked production `Util.cs`.
+The real `RunStyle` enum and `SpringFlailHand` helper are source-sliced too; the single
+`Style.Run` read is bound to an explicit fixture input, defaulting to `Sprinter`.
+Both spring paths remain compiled. ScratchHead and neutral targets have explicit elbow
+bends, so the locomotion-only Flailer path stays inactive; checks verify identical joint
+traces with `Flailer` selected at all four scales and both facings. This does not add
+locomotion or personality-driven idle behavior to the fixture.
 The source manifest records source hashes and the complete changed equation blocks.
 The pose fixture uses fixed planted feet and the production reach limit with no step bob.
 Both versions have the same scale, facing, neutral rig, 1.4 s fidget, 120 Hz timestep,

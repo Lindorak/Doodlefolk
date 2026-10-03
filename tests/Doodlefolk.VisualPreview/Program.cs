@@ -54,12 +54,16 @@ foreach (float scale in new[] { .5f, 1f, 2f, 4f })
 foreach (int facing in new[] {-1,1})
 {
     var rig = new PoseFixture(false,scale,facing); var mirror = new PoseFixture(false,scale,-facing);
+    var flailer = new PoseFixture(false,scale,facing,RunStyle.Flailer);
     for (int tick=-120;tick<336;tick++)
     {
         float t=tick*dt; bool active=t>=.4f && t<1.8f;
-        rig.Step(dt,t,active); mirror.Step(dt,t,active);
+        rig.Step(dt,t,active); mirror.Step(dt,t,active); flailer.Step(dt,t,active);
         for(int j=0;j<11;j++)
+        {
             if(Vector2.Distance(rig.Jt[j],new(-mirror.Jt[j].X,mirror.Jt[j].Y))>1e-3f) throw new Exception("Mirrored fixture diverged");
+            if(rig.Jt[j] != flailer.Jt[j]) throw new Exception("Run style changed the explicit-bend ScratchHead fixture");
+        }
     }
 }
 // Deterministic pose calculation allocation check. Does not measure renderer, GPU, or app FPS.

@@ -9,6 +9,7 @@ sealed partial class PoseFixture
     readonly bool _before;
     readonly float S;
     readonly int Facing;
+    readonly RunStyle _runStyle;
     const int Id = 1;
     float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW;
     float Arm => UpperArm + ForeArm;
@@ -20,9 +21,9 @@ sealed partial class PoseFixture
     public readonly Vector2[] Jt = new Vector2[11];
     Vector2 W(Vector2 p) => new(p.X * Facing, p.Y);
     float StretchNow() => 0; // grounded, no landing squash in this fixture
-    public PoseFixture(bool before, float scale = 1, int facing = 1)
+    public PoseFixture(bool before, float scale = 1, int facing = 1, RunStyle runStyle = RunStyle.Sprinter)
     {
-        _before = before; S = scale; Facing = facing;
+        _before = before; S = scale; Facing = facing; _runStyle = runStyle;
         Dimensions();
         _hip = StandHip; _lean = .02f * Facing;
         _hN = new(2*S*Facing, Arm*.93f); _hF = new(-1.5f*S*Facing, Arm*.93f);

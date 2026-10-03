@@ -1684,7 +1684,7 @@ PAGES.settings = {
     });
     const petMode = check("Just pets", "Only animals on your desktop. Your figures are kept safe and come back when you switch this off.", () => !!st().petMode, v => setS("petMode", v));
     const bathC = check("Bathroom stuff", "Litter boxes, pee pads, walks to go, the odd accident to clean up. Off: none of that, ever, and any mess is tidied away.", () => st().petBathroom !== false, v => setS("petBathroom", v));
-    const careChips = [["relaxed", "Relaxed"], ["normal", "Normal"], ["realistic", "Realistic"]].map(([k, l]) => { const c = h("button", { class: "chip", onclick: () => { touched(c); setS("petCare", k); } }, l); c.key = k; return c; });
+    const careChips = [["relaxed", "Relaxed", "Half real speed, and no accidents."], ["realistic", "Realistic", "Real biology on the real clock: people eat three meals and sleep at night; a dog eats twice a day, a cat naps most of it, a hamster sleeps through the day."], ["lively", "Lively", "Everything sped up (about 8×): more eating, napping and bathroom trips to watch."]].map(([k, l, tip]) => { const c = h("button", { class: "chip", title: tip, onclick: () => { touched(c); setS("petCare", k); } }, l); c.key = k; return c; });
     const staminaC = check("Stamina", "Everyone (figures and animals) gets out of puff with running, chasing and fighting, and needs to catch their breath.", () => st().stamina !== false, v => setS("stamina", v));
     const weightC = check("Weight", "Eating too much (and treats!) makes them chubbier, exercise slims them down. Heavier means slower and quicker to tire.", () => st().weight !== false, v => setS("weight", v));
     const lassoC = check("Figures can lasso your cursor", "A figure with a lasso may rope your cursor, spin it round and fling it. Only when you've left the mouse alone for a few seconds; move it yourself and it breaks free.", () => st().lassoCursor !== false, v => setS("lassoCursor", v));
@@ -1841,7 +1841,7 @@ PAGES.settings = {
       h("p", { class: "hint" }, "Which way round the seasons (and the pond's fish) go. Automatic uses your real-weather town if you've set one, otherwise northern."),
       h("h2", null, "Pets and bodies"),
       petMode,
-      h("div", { class: "field" }, h("label", null, "Pet care"), h("div", { class: "row" }, careChips)), bathC,
+      h("div", { class: "field" }, h("label", { title: "How fast needs and sleep run, for people and pets" }, "Pace of life"), h("div", { class: "row" }, careChips)), bathC,
       h("p", { class: "hint" }, "Relaxed: needs build slowly and there are no accidents. Normal: like real pets. Realistic: hungrier, thirstier, and they can't hold it as long."),
       staminaC, weightC, petHelpC, breedC, lassoC,
       h("h2", null, "Town"),
@@ -1964,7 +1964,7 @@ PAGES.settings = {
       wxStatus.textContent = st().weather === "real" ? (st().weatherStatus || (st().weatherPlace ? st().weatherPlace : "Type your town or city and press \"Use this place\".")) : "";
       hapLine.textContent = st().happening ? `On now: ${st().happening}.` : "";
       paceChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().lifePace || "off")); });
-      careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === (st().petCare || "normal")); }); bathC.update();
+      careChips.forEach(c => { if (idle(c)) c.classList.toggle("on", c.key === ((st().petCare || "realistic") === "normal" ? "realistic" : st().petCare || "realistic")); }); bathC.update();
     };
   },
 };

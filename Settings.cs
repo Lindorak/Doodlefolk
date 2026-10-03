@@ -168,7 +168,7 @@ sealed class Settings
     /// <summary>Pets need the bathroom (litter boxes, walks, the odd accident). Off: none of that at all.</summary>
     public bool PetBathroom { get; set; } = true;
     /// <summary>How demanding pets are: relaxed (slow needs, no accidents), normal, realistic.</summary>
-    public string PetCare { get; set; } = "normal";
+    public string PetCare { get; set; } = "realistic";
     /// <summary>Everyone (figures and animals) gets tired with exertion.</summary>
     public bool StaminaOn { get; set; } = true;
     /// <summary>Everyone's weight changes with eating and exercise.</summary>

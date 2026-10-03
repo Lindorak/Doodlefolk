@@ -56,21 +56,28 @@ sealed partial class Brain
         return 1f / (1 + n * 0.3f * (0.5f + P.Curiosity));
     }
 
-    /// <summary>Things tried that fell through almost at once (couldn't get there, got turned down, it moved): not
-    /// tried again straight away, so nobody flips between trying and giving up.</summary>
-    readonly Dictionary<string, float> _fellThrough = new();
+    /// <summary>Things tried that fell through almost at once (couldn't get there, got turned down, it moved): a
+    /// couple more tries, each a little less keen, then they give up on it for a while (and say so), so nobody flips
+    /// between trying and giving up forever. Doing it properly once resets the count.</summary>
+    readonly Dictionary<string, (int fails, float until)> _fellThrough = new();
     static readonly string[] ShortByNature = { "hang out", "sit down", "cheer", "do a", "dance", "wave", "nap" };
 
-    float FellThroughTilt(string label) => _fellThrough.TryGetValue(label, out var until) && _t0 < until ? 0.12f : 1;
+    float FellThroughTilt(string label) => _fellThrough.TryGetValue(label, out var ft) && _t0 < ft.until ? ft.fails switch { 1 => 0.7f, 2 => 0.35f, _ => 0.05f } : 1;
 
     void Decide(OptionList opts)
     {
         if (opts.Items.Count == 0) { Go(G.Idle, 1); return; }
         // How did the last one go? Over in a moment (and not something brief anyway): don't go straight back to it.
-        if (LastDecision.Length > 0 && _t0 - _decidedAt < 2.5f && !ShortByNature.Any(s => ActivityKey(LastDecision).StartsWith(s)))
+        if (LastDecision.Length > 0 && !ShortByNature.Any(s => ActivityKey(LastDecision).StartsWith(s)))
         {
-            _fellThrough[LastDecision] = _t0 + 20;
-            if (_fellThrough.Count > 30) foreach (var k in _fellThrough.Where(kv => kv.Value < _t0).Select(kv => kv.Key).ToList()) _fellThrough.Remove(k);
+            if (_t0 - _decidedAt < 2.5f)
+            {
+                int fails = (_fellThrough.TryGetValue(LastDecision, out var ft) && _t0 < ft.until + 30 ? ft.fails : 0) + 1;
+                _fellThrough[LastDecision] = (fails, _t0 + (fails >= 3 ? 60 : fails == 2 ? 15 : 6));
+                if (fails == 3) f.Emote(V("forget it", "ugh, FINE!", "never mind.", "…maybe later", "not today"), 1.2f);
+            }
+            else _fellThrough.Remove(LastDecision);   // it worked: start afresh
+            if (_fellThrough.Count > 30) foreach (var k in _fellThrough.Where(kv => kv.Value.until + 30 < _t0).Select(kv => kv.Key).ToList()) _fellThrough.Remove(k);
         }
         // Decisive figures go for what they want most; playful, impulsive ones roll the dice more.
         float sharp = (1.4f + (1 - P.Playfulness) * 1.1f) * MoodSharpness;

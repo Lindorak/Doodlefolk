@@ -55,6 +55,7 @@ sealed partial class App
     void SelfTestPrepare()
     {
         World.LogAlways = true;
+        Life.HourOverride = 14;   // an afternoon, whenever the test runs
         World.LogFile = Path.Combine(AppPaths.DataDir, "events.log");
         _settings.SoundOn = false;
         _settings.CheckUpdates = false;

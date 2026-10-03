@@ -40,6 +40,7 @@ sealed partial class App
         int k = Array.IndexOf(args, "--tagline");
         if (k >= 0 && k + 1 < args.Length) _trailerTagline = args[k + 1];
         World.LogAlways = true;
+        Life.HourOverride = 15;
         World.LogFile = Path.Combine(AppPaths.DataDir, "events.log");
         _settings.SoundOn = false; _settings.CheckUpdates = false; _settings.NoticeDownloads = false; _settings.NoticeFrustration = false;
         _settings.NoticeTyping = false; _settings.Notifications = false; _settings.ScreenTerrain = _settings.ScreenReact = _settings.ScreenLinks = _settings.ScreenMedia = false;

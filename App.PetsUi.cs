@@ -19,7 +19,8 @@ sealed partial class App
 
     void PetFrame(double now)
     {
-        (Pet.CarePace, Pet.Accidents) = _settings.PetCare switch { "relaxed" => (0.5f, false), "realistic" => (1.6f, true), _ => (1f, true) };
+        (Life.Pace, Pet.Accidents) = Life.FromSetting(_settings.PetCare);
+        Pet.CarePace = Life.Pace;
         Pet.Potty = _settings.PetBathroom;
         if (!Pet.Potty) Pet.Accidents = false;
         Pet.StaminaOn = World.StaminaOn = _settings.StaminaOn;

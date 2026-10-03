@@ -129,7 +129,7 @@ sealed partial class App
             var kind = Enum.Parse<WeatherKind>(v, true);
             if (kind != WeatherKind.Clear) a.SimAt(0.5, "weather", () => a._w.Weather.Start(kind, a._clock.Elapsed.TotalSeconds, a._w.Rng, a._w));
         }),
-        new("Time", new[] { "day", "night" }, (a, v) => { if (v == "night") a._w.NightOverride = 0.85f; }),
+        new("Time", new[] { "day", "night" }, (a, v) => { if (v == "night") { a._w.NightOverride = 0.85f; Life.HourOverride = 23.5f; } }),
         new("Event", new[] { "none", "festival", "race", "talent" }, (a, v) =>
         {
             if (v == "none") return;
@@ -371,6 +371,7 @@ sealed partial class App
         foreach (var fct in SimFactors)
             if (!_simSpec.TryGetValue(fct.Name, out var val) || !fct.Values.Contains(val)) _simSpec[fct.Name] = fct.Values[pick.Next(fct.Values.Length)];
         _w.Rng = new Random(_simSeed);
+        Life.HourOverride = 14;   // the afternoon, unless the scenario says night (results never depend on when tests run)
         _settings.Gfx = GfxSettings.For("high");
     }
 

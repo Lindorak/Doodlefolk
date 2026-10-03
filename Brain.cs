@@ -57,7 +57,7 @@ sealed partial class Brain
     float S => f.S;
     Personality P => f.Traits;
     public string State => _partner != null ? $"{_g} ({_partner.Name})" : _foe != null && _g == G.Fight ? $"{(_spar ? "Spar" : "Fight")} ({_foe.Name})" : _fleeing ? "Flee" : _g.ToString();
-    public bool Asleep => _g == G.Sleep;
+    public bool Asleep => _g == G.Sleep || (_g == G.UseItem && _verb is Verb.Lie or Verb.Hammock && _t > 1.5f);
 
     /// <summary>Debug: log this figure's goal changes (and who caused them) for a while.</summary>
     public float TraceUntil;
@@ -89,6 +89,7 @@ sealed partial class Brain
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
+        if (g == G.Sleep && _g != G.Sleep) { _nightSleep = BedtimeNow; dur = MathF.Max(dur, SleepLength()); }
         _g = g;
         _t = 0;
         _dur = dur;
@@ -443,7 +444,8 @@ sealed partial class Brain
 
     void UpdateNeeds(float dt, World w)
     {
-        Hunger = M.Clamp01(Hunger + dt * 0.0012f * (0.6f + P.Energy * 0.8f));
+        Hunger = M.Clamp01(Hunger + dt * Life.Pace / (5 * 3600f) * (0.6f + P.Energy * 0.8f));
+        UpdateSleepy(dt);
         float speed = MathF.Abs(f.Vel.X);
         float cost = _g switch
         {
@@ -457,8 +459,8 @@ sealed partial class Brain
         if (speed > f.WalkSpeed * 1.2f) cost += 0.025f;
         else if (speed > 4 * S) cost += 0.006f;
         if (f.Climbing) cost += 0.03f;
-        if (cost > 0) cost *= 1.3f - 0.6f * P.Energy;   // energetic figures tire more slowly
-        if (_g != G.Sleep) cost += World.Current.Night * 0.004f;   // late at night everyone flags
+        if (cost > 0) cost *= (1.3f - 0.6f * P.Energy) * 0.55f;   // energetic figures tire more slowly; puff comes back in a minute or two
+        if (cost > 0 && Sleepy > 0.6f) cost *= 1 + (Sleepy - 0.6f) * 2;   // sleepy legs tire sooner
         // Heavier figures run out of puff sooner; exercise burns weight off, idling on a full stomach puts it on.
         if (cost > 0) cost *= 1 + f.Fat * 1.8f;
         if (World.WeightOn)
@@ -739,7 +741,7 @@ sealed partial class Brain
         f.DesiredVX = 0;
         f.SetAction(_t < 1.2f ? Act.SitFloor : Act.Lie);
         if (_t > 1.2f && f.CurrentEmote != "z") f.Emote("z", 3);
-        if ((Stamina > 0.97f && _t > 8) || _t > _dur)
+        if ((SleptEnough && _t > 8) || _t > _dur)
         {
             if (_t > 10) { DiaryNapped(null); RememberPlace(World.Current, 0.3f, "a good nap"); }
             f.Emote("♪", 0.8f);
@@ -816,8 +818,9 @@ sealed partial class Brain
         var opts = new OptionList();
         opts.Add(0.5f + (1 - E) * 0.5f, () => Go(G.Idle, rng.Range(1.5f, 4.5f)), "Hang out");
         opts.Add((tired * 0.8f + (1 - E) * 0.3f) * L(Thing.Sitting), () => Go(G.SitFloor, rng.Range(4, 12)), "Sit down");
-        if (Stamina < 0.3f || (Stamina < 0.55f && f.Tastes.Likes(Thing.Napping)))
-            opts.Add((0.55f - Stamina) * 8 * L(Thing.Napping), () => { NoBed(w); Go(G.Sleep, rng.Range(15, 40)); }, "Nap");
+        if (Stamina < 0.35f)
+            opts.Add((0.6f - Stamina) * 8, () => { f.Emote(V("phew…", "OUT OF BREATH!", "need a sec.", "*pant*", "breathe…"), 1.2f); Go(G.SitFloor, rng.Range(20, 60)); }, "Catch their breath");
+        SleepOptions(w, opts);
         if (seg.X2 - seg.X1 > 60 * S) opts.Add((0.4f + E * 0.6f + Boredom * 0.5f) * (0.4f + Stamina), () => Wander(seg), "Wander");
         if (Stamina > 0.35f && PickExplore(env, seg, out var explore))
             opts.Add(P.Curiosity * (0.5f + Boredom * 1.2f) * Stamina * L(Thing.Exploring), explore, "Explore");

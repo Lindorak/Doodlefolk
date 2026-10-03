@@ -151,7 +151,7 @@ sealed partial class Brain
         float use = _verb switch
         {
             Verb.Sit => rng.Range(8, 25) * (0.6f + it.Def.Comfort),
-            Verb.Lie or Verb.Hammock => rng.Range(18, 45),
+            Verb.Lie or Verb.Hammock => SleepLengthFor(),
             Verb.Bounce => rng.Range(6, 14),
             Verb.Hide => rng.Range(6, 15) + Fear * 10,
             Verb.Dance => rng.Range(8, 18),
@@ -247,7 +247,7 @@ sealed partial class Brain
                     var (c, _) = it.HammockCentre();
                     if (MathF.Abs(f.Base.X - c.X) > 6 * S) f.Mount(c, it.Handle);
                 }
-                if (Stamina > 0.98f && _t > 10) done = true;
+                if (SleptEnough && _t > 10) done = true;
                 break;
             case Verb.Bounce:
                 if (f.Grounded && !f.JumpPending)

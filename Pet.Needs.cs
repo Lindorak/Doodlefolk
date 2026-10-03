@@ -23,6 +23,39 @@ sealed partial class Pet
 
     const float Hour = 3600;
 
+    /// <summary>Each animal's real rhythm: hours for hunger, thirst, bladder and bowel to go from satisfied to urgent;
+    /// hours awake and asleep in a day; how long a nap lasts (minutes); and when they're active.</summary>
+    enum Rhythm { Diurnal, Crepuscular, Nocturnal }
+    (float hunger, float thirst, float bladder, float bowel, float awake, float asleep, float napMin, float napMax, Rhythm rhythm) Biology => Kind switch
+    {
+        PetKind.Dog => (10, 6, 6, 12, 11, 13, 20, 60, Rhythm.Diurnal),           // two meals a day; pees every few hours; 12-14 h of sleep
+        PetKind.Cat => (6, 8, 8, 20, 10, 14, 30, 90, Rhythm.Crepuscular),       // small meals; sleeps 12-16 h; busy at dawn and dusk
+        PetKind.Rabbit => (4, 6, 6, 2, 13, 11, 10, 30, Rhythm.Crepuscular),     // grazes all day; droppings often (in the litter)
+        PetKind.Hamster => (6, 8, 0, 3, 11, 13, 60, 180, Rhythm.Nocturnal),     // sleeps through the day, up at night
+        PetKind.Parrot => (4, 6, 0, 0.35f, 13, 11, 10, 20, Rhythm.Diurnal),     // eats all day; a dropping every ~20 minutes; sleeps at night
+        _ => (8, 6, 6, 12, 12, 12, 20, 60, Rhythm.Diurnal),
+    };
+
+    /// <summary>The body clock: how strongly the time of day says "sleep" (or "be up").</summary>
+    float Drowsy()
+    {
+        float h = Life.Hour;
+        return Biology.rhythm switch
+        {
+            Rhythm.Diurnal => Life.Between(h, 21.5f, 6.5f) ? 0.5f : Life.Between(h, 13, 15.5f) ? 0.1f : 0,
+            Rhythm.Nocturnal => Life.Between(h, 6.5f, 19.5f) ? 0.55f : -0.3f,
+            _ => Life.Between(h, 5.5f, 8.5f) || Life.Between(h, 17.5f, 21) ? -0.25f : Life.Between(h, 11, 16) || Life.Between(h, 0.5f, 4.5f) ? 0.25f : 0.05f,
+        };
+    }
+
+    /// <summary>A nap (or, at the body clock's night, a long sleep), in real minutes at the current pace.</summary>
+    float NapSeconds()
+    {
+        var b = Biology;
+        float minutes = _rng.Range(b.napMin, b.napMax) * (Young ? 1.3f : 1) * (Drowsy() >= 0.5f ? 2.5f : 1);
+        return Life.Span(minutes * 60);
+    }
+
     public float Happiness => M.Clamp01(1 - (0.3f * Hunger * Hunger + 0.3f * Thirst * Thirst + 0.2f * MathF.Max(Bladder, Bowel) * MathF.Max(Bladder, Bowel)
                                               + 0.22f * Attention * Attention + 0.15f * Boredom * Boredom + 0.45f * Stress + (Energy < 0.15f ? 0.1f : 0)));
 
@@ -35,16 +68,18 @@ sealed partial class Pet
     void UpdateNeeds(World w, float dt)
     {
         float p = CarePace * dt;
+        var bio = Biology;
         float young = Young ? 1 + (1 - Age) * 0.8f : 1;
         bool asleep = _st == State.Sleep;
-        Hunger = M.Clamp01(Hunger + p / (3 * Hour) * young * (Kind == PetKind.Parrot ? 1.2f : 1));
-        Thirst = M.Clamp01(Thirst + p / (2.5f * Hour) * (_st is State.Zoomies or State.Chase or State.ChasePet ? 3 : 1));
-        if (Kind is not (PetKind.Parrot or PetKind.Hamster)) Bladder = MathF.Min(1, Bladder + p / ((Kind is PetKind.Cat or PetKind.Rabbit ? 2 : 2.5f) * Hour) * young * (asleep ? 0.5f : 1));
-        Bowel = MathF.Min(1, Bowel + p / (Kind is PetKind.Parrot or PetKind.Hamster ? 0.7f * Hour : Kind == PetKind.Rabbit ? 3 * Hour : 6 * Hour) * young * (asleep ? 0.5f : 1));
+        Hunger = M.Clamp01(Hunger + p / (bio.hunger * Hour) * young * (asleep ? 0.6f : 1));
+        Thirst = M.Clamp01(Thirst + p / (bio.thirst * Hour) * (_st is State.Zoomies or State.Chase or State.ChasePet ? 3 : 1) * (asleep ? 0.6f : 1));
+        if (bio.bladder > 0) Bladder = MathF.Min(1, Bladder + p / (bio.bladder * Hour) * young * (asleep ? 0.4f : 1));
+        Bowel = MathF.Min(1, Bowel + p / (bio.bowel * Hour) * young * (asleep ? 0.4f : 1));
         Attention = M.Clamp01(Attention + p / (1.2f * Hour) * (Kind switch { PetKind.Dog => 1.2f, PetKind.Cat => 0.7f, _ => 1.5f }) * (asleep ? 0.2f : 1));
         Boredom = M.Clamp01(Boredom + p / (1.5f * Hour) * young * (asleep ? 0.2f : 1));
         float busy = _st is State.Zoomies or State.Chase or State.ChasePet or State.Play or State.Flee or State.Scuffle ? 4 : Flying ? 2 : 1;
-        Energy = M.Clamp01(Energy + (asleep ? dt * 0.012f * (Young ? 1.4f : 1) : -dt / (1.4f * Hour) * busy * (Young ? 1.5f : 1)));
+        // Awake, the day wears them down; asleep, it comes back: as many hours of each as the animal really has.
+        Energy = M.Clamp01(Energy + (asleep ? p / (bio.asleep * Hour) * 1.8f * (Young ? 1.4f : 1) : -p / (bio.awake * Hour) * busy * (Young ? 1.5f : 1)));
         Stress = MathF.Max(0, Stress - dt * 0.006f * (asleep || _st == State.Petted ? 3 : 1));
         Wet = MathF.Max(0, Wet - dt * 0.04f);
         if (!Potty) Bladder = Bowel = 0;

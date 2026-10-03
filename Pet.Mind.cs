@@ -126,7 +126,7 @@ sealed partial class Pet
                 _pose = Kind == PetKind.Parrot ? Pose.Fluff : Pose.Curl;
                 _sleepZ += dt;
                 if (_other != null && (!w.Pets.Contains(_other) || _other._st != State.Sleep)) _other = null;
-                if (_t > _dur || (Energy > 0.98f && _t > 10)) GoIdle(1.5f);
+                if (_t > _dur || (Energy > 0.97f && Drowsy() < 0.4f && _t > 10)) GoIdle(1.5f);
                 return;
             case State.Stretch:
                 Vel.X = 0;
@@ -337,7 +337,9 @@ sealed partial class Pet
         // Free-feeding: a full bowl is hard to resist (especially for dogs), hungry or not.
         else if (Hunger > 0.15f && w.Items.Any(i => i.Def.Key == "foodbowl" && i.Fill > 0.5f && Vector2.Distance(i.Pos, Pos) < 1500 * _s)) Add(dog ? 0.7f : 0.2f, "graze", () => GoEat(w));
         float tired = 1 - Energy;
-        if (Energy < (cat ? 0.75f : 0.5f)) Add(tired * tired * 4 * (cat ? 1.5f : 1) * (Young ? 1.6f : 1) * (Kind == PetKind.Hamster ? 1 : 1 + w.Night) * Tm(Temperament.Lazy, 1.6f), "sleep", () => GoSleep(w));
+        // Sleepy from the day, and the body clock saying it's their night (a hamster's is the daytime).
+        float sleepy = tired + Drowsy();
+        if (sleepy > 0.45f) Add(sleepy * sleepy * 5 * (Young ? 1.4f : 1) * Tm(Temperament.Lazy, 1.4f), "sleep", () => GoSleep(w));
         if (Attention > 0.4f) Add(Attention * Attention * 3.5f * Tm(Temperament.Affectionate, 1.5f) * Tm(Temperament.Shy, 0.6f), "attention", () => SeekAttention(w));
         if (Boredom > 0.25f && !Small) Add(Boredom * 1.8f * (0.3f + Energy) * (Young ? 1.6f : 1) * Tm(Temperament.Playful, 1.6f) * Tm(Temperament.Lazy, 0.6f), "play", () => GoPlay(w));
         if (Stress > 0.5f) Add(Stress * 2.5f, "hide", () => GoHide(w));
@@ -581,14 +583,14 @@ sealed partial class Pet
         if (buddy != null)
         {
             Travel(() => w.Pets.Contains(buddy) ? buddy.Pos + new Vector2((Pos.X < buddy.Pos.X ? -1 : 1) * buddy.Length * 0.7f, 0) : null, 0.8f, 6 * S, 20, () =>
-            { Go(State.Sleep, _rng.Range(40, 100)); _other = buddy; PetBond(buddy, 0.05f); Log($"Curled up with {buddy.Name}"); });
+            { Go(State.Sleep, NapSeconds()); _other = buddy; PetBond(buddy, 0.05f); Log($"Curled up with {buddy.Name}"); });
             return;
         }
         if (Kind == PetKind.Parrot)
         {
             var perch = Nearest(w, "perch");
-            if (perch != null) { FlyTo(w, PerchTop(perch), 4 * S); Travel(() => PerchTop(perch), 1, 5 * S, 20, () => Go(State.Sleep, _rng.Range(40, 120))); return; }
-            Go(State.Sleep, _rng.Range(30, 90));
+            if (perch != null) { FlyTo(w, PerchTop(perch), 4 * S); Travel(() => PerchTop(perch), 1, 5 * S, 20, () => Go(State.Sleep, NapSeconds())); return; }
+            Go(State.Sleep, NapSeconds());
             return;
         }
         var bed = Nearest(w, "petbed", i => !w.Pets.Any(o => o != this && o._st == State.Sleep && o._thing == i));
@@ -601,7 +603,7 @@ sealed partial class Pet
                 _thing = soft;
                 // Cats knead first; dogs turn round a couple of times.
                 if (Kind == PetKind.Cat) { Go(State.Groom, 0); _pose = Pose.Upright; }
-                Go(State.Sleep, _rng.Range(40, 120) * (Young ? 1.3f : 1));
+                Go(State.Sleep, NapSeconds());
                 _thing = soft;
                 if (Kind == PetKind.Dog) Facing = -Facing;
             });
@@ -611,7 +613,7 @@ sealed partial class Pet
         Frustration = MathF.Min(1, Frustration + 0.12f);
         if (Kind == PetKind.Dog || Kind == PetKind.Cat) Log("No bed to sleep in, so it slept on the floor");
         _thing = null;
-        Go(State.Sleep, _rng.Range(30, 80));
+        Go(State.Sleep, NapSeconds());
     }
 
     void GoHide(World w)

@@ -73,7 +73,15 @@ function s(tag, attrs, ...kids) {
 /** append() that flattens arrays and skips null/false. */
 function add(parent, ...kids) { parent.append(...kids.flat(Infinity).filter(k => k != null && k !== false)); }
 function touched(input) { input.dataset.t = Date.now(); }
-function idle(input) { return document.activeElement !== input && !(Date.now() - (+input.dataset.t || 0) < 900); }
+// A control the user is in the middle of using isn't overwritten by the live state. A clicked button keeps focus,
+// but it's done with as soon as it's clicked, so only typing and dragging count for focus.
+function idle(input) { return (input.tagName === "BUTTON" || document.activeElement !== input) && !(Date.now() - (+input.dataset.t || 0) < 900); }
+// Picking a chip in a row of choices lights it up at once (the others go off), before the app confirms it.
+document.addEventListener("click", e => {
+  const c = e.target.closest && e.target.closest(".chip");
+  if (!c || c.key === undefined || c.dataset.multi || !c.parentElement) return;
+  for (const o of c.parentElement.children) if (o.classList.contains("chip") && o.key !== undefined) o.classList.toggle("on", o === c);
+}, true);
 function pct(v, lo = 0, hi = 1) { return Math.round((v - lo) / (hi - lo) * 100); }
 function setRange(input, v) { if (idle(input)) { input.value = v; paintRange(input); } }
 function paintRange(input) { input.style.setProperty("--p", pct(+input.value, +input.min, +input.max) + "%"); }
@@ -681,7 +689,7 @@ const SUBPANELS = {
     const FOR = [["Girls", "girls"], ["Boys", "boys"], ["Nonbinary", "nonbinary folks"]];
     let attr = [...(f.attraction || [])];
     const forChips = FOR.map(([k, l]) => {
-      const c = h("button", { class: "chip", onclick: () => { touched(c); attr = attr.includes(k) ? attr.filter(x => x !== k) : [...attr, k]; paintFor(); send({ t: "fig", id, op: "attraction", v: attr }); } }, l);
+      const c = h("button", { class: "chip", "data-multi": "1", onclick: () => { touched(c); attr = attr.includes(k) ? attr.filter(x => x !== k) : [...attr, k]; paintFor(); send({ t: "fig", id, op: "attraction", v: attr }); } }, l);
       c.key = k; return c;
     });
     function paintFor() { forChips.forEach(c => c.classList.toggle("on", attr.includes(c.key))); }
@@ -1748,7 +1756,7 @@ PAGES.settings = {
     const quietC = check("Quiet hours", "Hide everyone at set times (say, while you work) and bring them back afterwards.", () => !!st().pauseSchedule, v => setS("pauseSchedule", v));
     const qFrom = h("input", { type: "time", onchange: () => setS("pauseFrom", qFrom.value) }), qTo = h("input", { type: "time", onchange: () => setS("pauseTo", qTo.value) });
     const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const dayChips = DAYS.map((d, i) => { const c = h("button", { class: "chip", onclick: () => { touched(c); const cur = new Set(st().pauseDays || []); cur.has(i) ? cur.delete(i) : cur.add(i); setS("pauseDays", [...cur].sort()); } }, d); c.key = i; return c; });
+    const dayChips = DAYS.map((d, i) => { const c = h("button", { class: "chip", "data-multi": "1", onclick: () => { touched(c); const cur = new Set(st().pauseDays || []); cur.has(i) ? cur.delete(i) : cur.add(i); setS("pauseDays", [...cur].sort()); } }, d); c.key = i; return c; });
     const quietBox = h("div", null, h("div", { class: "field" }, h("label", null, "From"), qFrom, h("label", null, "to"), qTo), h("div", { class: "row tight" }, dayChips));
     const voiceC = check("Talk out loud", "A 🎤 Speak button (in the quick panel) listens once: say a figure's name and what to tell them (\"Sparky, come here\"), ask for something (\"make a pizza\"), or call for an event, a photo, a clip or weather. Uses Windows' own speech recognition on this PC; nothing is sent anywhere.", () => !!st().voiceInput, v => setS("voiceInput", v));
     const aiC = check("AI conversations", "When you talk to a figure, a language model answers in their voice (their personality, mood, likes, friends and feelings about you are sent along with what you said). Needs your own OpenAI API key and uses its credit. Off: they answer the usual way, all on this PC.", () => !!st().aiChat, v => setS("aiChat", v));
@@ -2035,6 +2043,7 @@ function buildQuick() {
   const hideC = check("Hide the figures", null, () => S.settings.hidden, v => send({ t: "setting", key: "hidden", v }));
   const fightC = check("Fights happen", null, () => S.fight.enabled, v => send({ t: "fight", key: "enabled", v }));
   const muteB = muteButton();
+  let focusQ, ambQ, moonQ;
   const natureQ = check("Weather", null, () => S.settings.natureOn !== false, v => send({ t: "setting", key: "natureOn", v }));
   const petModeC = check("Just pets", null, () => S.settings.petMode, v => send({ t: "setting", key: "petMode", v }));
   const count = h("span", { class: "hint" });
@@ -2057,9 +2066,9 @@ function buildQuick() {
       h("button", { class: "btn small", onclick: () => send({ t: "tourney" }) }, "🏆 Tournament"),
       h("button", { class: "btn small", title: "Saves a picture of them (and whatever's behind them) to Pictures\\Doodlefolk", onclick: () => send({ t: "photo" }) }, "📷 Photo"),
       h("button", { class: "btn small", title: "Records 10 seconds of everyone (just them and their things, on paper) as an animated GIF in Pictures\\Doodlefolk", onclick: () => send({ t: "record", seconds: 10 }) }, "🎬 Record a clip"),
-      h("button", { class: "btn small", title: "25 minutes of quiet work together (Studio → Focus for more)", onclick: () => send({ t: "focus", op: S.settings.focus && S.settings.focus.on ? "stop" : "start", minutes: (S.settings.focus && S.settings.focus.length) || 25 }) }, "🎯 Focus"),
-      h("button", { class: "btn small", title: "Background sound: rain, birds, the pond, the town chatting (Studio → Settings → Sound to mix it)", onclick: () => send({ t: "setting", key: "ambienceOn", v: !(S.settings.ambience && S.settings.ambience.on) }) }, "🎧 Ambience"),
-      h("button", { class: "btn small", title: "Moon gravity (Studio → Things → Toybox for more toys)", onclick: () => send({ t: "toy", op: "gravity:" + (S.toybox && S.toybox.gravity === "moon" ? "normal" : "moon") }) }, "🌙 Moon gravity"),
+      focusQ = h("button", { class: "btn small", title: "25 minutes of quiet work together (Studio → Focus for more)", onclick: () => send({ t: "focus", op: S.settings.focus && S.settings.focus.on ? "stop" : "start", minutes: (S.settings.focus && S.settings.focus.length) || 25 }) }, "🎯 Focus"),
+      ambQ = h("button", { class: "btn small", title: "Background sound: rain, birds, the pond, the town chatting (Studio → Settings → Sound to mix it)", onclick: () => send({ t: "setting", key: "ambienceOn", v: !(S.settings.ambience && S.settings.ambience.on) }) }, "🎧 Ambience"),
+      moonQ = h("button", { class: "btn small", title: "Moon gravity (Studio → Things → Toybox for more toys)", onclick: () => send({ t: "toy", op: "gravity:" + (S.toybox && S.toybox.gravity === "moon" ? "normal" : "moon") }) }, "🌙 Moon gravity"),
       S.settings.voiceInput ? h("button", { class: "btn small", title: "Say something: a figure's name and what to tell them, \"make a pizza\", \"start a race\", \"make it snow\"…", onclick: () => send({ t: "listen" }) }, "🎤 Speak") : null,
       stopG),
     gameNote,
@@ -2074,6 +2083,9 @@ function buildQuick() {
       h("span", { class: "spacer" }),
       armed("Quit", "Quit?", () => send({ t: "quit" }), "btn small danger")));
   quickUpdate = () => {
+    focusQ.classList.toggle("on", !!(S.settings.focus && S.settings.focus.on));
+    ambQ.classList.toggle("on", !!(S.settings.ambience && S.settings.ambience.on));
+    moonQ.classList.toggle("on", !!(S.toybox && S.toybox.gravity === "moon"));
     hideC.update(); fightC.update(); muteUpdate(muteB); petModeC.update(); natureQ.update();
     const gm = S.game;
     stopG.hidden = !gm;

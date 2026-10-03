@@ -520,3 +520,5 @@ body[data-mode="pop"] { background: var(--paper-2); overflow: hidden; }
 .weight-ctl { flex: 1; align-items: center; }
 .weight-ctl input[type=range] { flex: 1; min-width: 90px; }
 .weight-ctl .val { min-width: 54px; font: 15px var(--scrawl); color: var(--ink-2); text-align: right; }
+/* A toggle button that's on (quick panel: Focus, Ambience, Moon gravity). */
+.btn.on { background: var(--marker); color: var(--ink); border-color: var(--ink); }

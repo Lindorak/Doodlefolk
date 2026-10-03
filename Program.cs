@@ -8,7 +8,7 @@ static class Program
         AppPaths.Configure(args);
         // The simulation tests: pick scenarios, run them side by side (each its own hidden --simrun), report.
         if (args.Contains("--simtest")) { Environment.Exit(SimTest.Run(args)); return; }
-        if (args.Contains("--voicesamples")) { Environment.Exit(VoiceSamples.Run(args)); return; }
+        if (args.Contains("--voicesamples") || args.Contains("--firesample")) { Environment.Exit(VoiceSamples.Run(args)); return; }
         // The self-test runs alongside your Doodlefolk, with its own data, and reports by exit code.
         if (args.Contains("--selftest") || args.Contains("--trailer") || args.Contains("--cardart") || args.Contains("--animsheet") || args.Contains("--simrun"))
         {

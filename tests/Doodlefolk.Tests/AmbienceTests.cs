@@ -25,6 +25,7 @@ public class AmbienceTests
         {
             foreach (var c in Ambience.Channels)
             {
+                if (c == AmbienceChannel.Fire) continue;   // the fire has its own voice (FireVoiceTests)
                 Array.Clear(Amb.Target);
                 Amb.Target[(int)c] = 1;
                 Play(Amb, 4);   // let it fade in

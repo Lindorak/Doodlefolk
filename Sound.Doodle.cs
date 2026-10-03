@@ -218,6 +218,22 @@ static class VoiceSamples
 {
     public static int Run(string[] args)
     {
+        if (args.Contains("--firesample"))
+        {
+            // 20 s of the campfire (the real-recording fire voice), stereo.
+            string path = args[Array.IndexOf(args, "--firesample") + 1];
+            var fv = FireVoice.Load()!;
+            fv.Target = 0.42f;
+            var buf = new float[Sound.SampleRate * 2 * 20];
+            for (int o = 0; o < buf.Length; o += 4096) fv.Read(buf.AsSpan(o, Math.Min(4096, buf.Length - o)));
+            using var w = new BinaryWriter(File.Create(path));
+            int n = buf.Length, rate = Sound.SampleRate;
+            w.Write("RIFF"u8); w.Write(36 + n * 2); w.Write("WAVEfmt "u8); w.Write(16); w.Write((short)1); w.Write((short)2);
+            w.Write(rate); w.Write(rate * 4); w.Write((short)4); w.Write((short)16); w.Write("data"u8); w.Write(n * 2);
+            foreach (var x in buf) w.Write((short)Math.Clamp(x * 32767, -32767, 32767));
+            Console.WriteLine($"fire: peak {buf.Max(MathF.Abs):0.00} rms {MathF.Sqrt(buf.Average(v => v * v)):0.000}");
+            return 0;
+        }
         int i = Array.IndexOf(args, "--voicesamples");
         string dir = i + 1 < args.Length ? args[i + 1] : Path.Combine(Path.GetTempPath(), "doodlefolk-voices");
         Directory.CreateDirectory(dir);

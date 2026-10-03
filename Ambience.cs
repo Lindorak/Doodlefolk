@@ -28,7 +28,7 @@ sealed class Ambience : ISampleProvider
         _loops[(int)AmbienceChannel.Birds] = Birds(r, 12);
         _loops[(int)AmbienceChannel.Crickets] = Crickets(r, 6);
         _loops[(int)AmbienceChannel.Chatter] = Chatter(r, 9);
-        _loops[(int)AmbienceChannel.Fire] = Fire(r, 7);
+        _loops[(int)AmbienceChannel.Fire] = new float[2];   // the fire has its own real voice now (FireVoice)
         _loops[(int)AmbienceChannel.LoFi] = LoFi(r);
         for (int c = 0; c < Channels.Length; c++) _pos[c] = r.Next(_loops[c].Length / 2) * 2;
     }
@@ -231,26 +231,6 @@ sealed class Ambience : ISampleProvider
         float l = 0, rr = 0;
         for (int i = 0; i < d.Length; i += 2) { l += (d[i] - l) * 0.18f; rr += (d[i + 1] - rr) * 0.18f; d[i] = l; d[i + 1] = rr; }
         Normalise(d, 0.2f);
-        return Seamless(d);
-    }
-
-    /// <summary>A campfire: a soft roar and pops.</summary>
-    static float[] Fire(Random r, int seconds)
-    {
-        var d = Stereo(seconds);
-        float lp = 0;
-        for (int i = 0; i < d.Length; i += 2)
-        {
-            lp += ((float)r.NextDouble() * 2 - 1 - lp) * 0.04f;
-            d[i] = lp * 0.6f; d[i + 1] = lp * 0.55f;
-        }
-        for (int k = 0; k < seconds * 14; k++)
-        {
-            int at = r.Next(d.Length / 2 - 400) * 2;
-            float amp = (float)Math.Pow(r.NextDouble(), 2) * 0.9f + 0.1f;
-            for (int j = 0; j < 160; j++) { float v = ((float)r.NextDouble() * 2 - 1) * amp * MathF.Exp(-j / 18f); d[at + j * 2] += v; d[at + j * 2 + 1] += v * 0.8f; }
-        }
-        Normalise(d, 0.26f);
         return Seamless(d);
     }
 

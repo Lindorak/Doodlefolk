@@ -37,8 +37,16 @@ sealed partial class App
         }
         foreach (var f in _w.Figures) { f.Warmth = Warm(f.Jt[J.Pelvis], f.S); f.NightDim = night * 0.3f * (1 - MathF.Min(1, f.Warmth * 2.5f)); }
         foreach (var p in _w.Pets) { p.Warmth = Warm(p.Centre, p.Scale); p.NightDim = night * 0.3f * (1 - MathF.Min(1, p.Warmth * 2.5f)); }
-        // A crackle now and then.
-        foreach (var fi in fires) if (_w.Rng.NextDouble() < 0.04) World.Play(Sfx.Crackle, fi.Pos, 0.18f, (float)_w.Rng.Range(0.8f, 1.3f), 0.05);
+        // The fire's own sound: real recorded crackle (FireVoice), a little fuller with more fires and with the
+        // ambience fire level turned up.
+        float fireLevel = 0, fireX = 0;
+        if (fires.Count > 0)
+        {
+            fireLevel = MathF.Min(1, 0.7f + 0.15f * fires.Count) * 0.42f;
+            if (_settings.AmbienceOn) fireLevel *= 0.8f + Level(AmbienceChannel.Fire) * 0.6f;
+            fireX = fires.Average(f => f.Pos.X);
+        }
+        _w.Sound?.Fire(fireLevel, fireX);
     }
 
     void WorldFrame(double now)

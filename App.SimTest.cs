@@ -261,6 +261,8 @@ sealed partial class App
                            || a._w.Figures.Any(f => f.Brain.Activity.Contains(gift.Def.Name, StringComparison.OrdinalIgnoreCase));
                 else if (giftBall != null) used = giftBall.LastTouch != null || giftBall.Holder != null || a._w.Figures.Any(f => f.Brain.Seeking == giftBall);
             });
+            a.SimRule("no asking for another present before using the last", 6, t => used || to == null || a._w.Wish?.By != to,
+                () => $"{to?.Name} asked for {a._w.Wish?.What.Name} with {what} unused", to: 44);
             a.SimAt(45, "the wish was enjoyed", () =>
             {
                 // Fair only if they had a chance (on their feet for a while, not flung about the whole time).

@@ -36,7 +36,11 @@ sealed partial class Brain
     /// <summary>What it would most like right now that isn't already nearby (null if it's content).</summary>
     Want? Wanting(World w)
     {
-        bool Near(Func<Item, bool> ok, float r) => w.Items.Any(i => ok(i) && Vector2.Distance(i.Pos, f.Base) < r * S);
+        // Something of that kind that's theirs to use: nearby and not claimed by anyone else (in someone's hands, slept
+        // in, sat on, or belonging to someone), or theirs wherever it is (owned, in hand, a present not yet used).
+        bool Others(Item i) => (i.Holder != null && i.Holder != f) || (i.User != null && i.User != f) || i.Seated.Any(s => s != null && s != f) || (i.OwnerId != 0 && i.OwnerId != f.Id) || i.HaulA != null;
+        bool Mine(Item i) => i.OwnerId == f.Id || i.Holder == f || f.CarryingItem == i || f.Weapon == i || i == _gift || i == _item;
+        bool Near(Func<Item, bool> ok, float r) => w.Items.Any(i => ok(i) && (Mine(i) || (!Others(i) && Vector2.Distance(i.Pos, f.Base) < r * S)));
         bool BallNear(float r) => w.Props.Any(p => p.Holder == null && Vector2.Distance(p.Pos, f.Base) < r * S);
         Want? best = null;
         void Consider(Want x) { if (best == null || x.Strength > best.Strength) best = x; }
@@ -117,6 +121,8 @@ sealed partial class Brain
             return;
         }
         if (!w.Wishes || w.Wish != null || World.Now < w.NextWishAt || _t0 < _nextWish) return;
+        // Still haven't got round to the last present: no asking for another.
+        if (_giftAt >= 0 || _gift != null || _giftBall != null) return;
         if (Wanting(w) is { Strength: > 0.35f } wish)
         {
             // Not an action: a thought that hangs over whatever it does next.

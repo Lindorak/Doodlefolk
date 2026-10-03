@@ -263,6 +263,7 @@ sealed partial class Brain
         UpdateSymbols(w);
         EnjoyGift(w);
         UpdateAmbition(w);
+        WatchOthers(w, dt);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);

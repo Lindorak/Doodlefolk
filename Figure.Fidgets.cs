@@ -148,7 +148,11 @@ sealed partial class Figure
             {
                 float rub = MathF.Sin(t * 10) * 1.2f * S;
                 hN = Ease(restN, face + new Vector2(rub, 0)); hF = Ease(restF, face + new Vector2(-2 * S - rub, 0.5f * S));
-                eN = eF = new(0, 1);
+                // Reach around the shoulder instead of passing almost through its IK origin.
+                float reachArc = MathF.Sin(env * MathF.PI) * Arm * 0.45f;
+                hN.X += reachArc; hF.X += reachArc;
+                eN = new(-_hN.Y, _hN.X * Facing);
+                eF = new(-_hF.Y, _hF.X * Facing);
                 tiltT += 0.15f * env * Facing; leanT = 0.06f * env;
                 handW = 24;
                 break;

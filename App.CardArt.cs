@@ -66,6 +66,18 @@ sealed partial class App
         return new RectangleF(Math.Clamp(cx - w / 2, 0, TW - w), Math.Clamp(bottom - h, 0, TH - h), w, h);
     }
 
+    Vector2 RaceCardFocus()
+    {
+        Vector2 sum = Vector2.Zero;
+        int count = 0;
+        if (_w.Happening is { } h)
+            foreach (var f in h.Who)
+                if (_w.Figures.Contains(f)) { sum += f.Jt[J.Head]; count++; }
+        if (count > 0) return sum / count;
+        RectangleF fallback = Frame(Array.Empty<Vector2>());
+        return new Vector2(fallback.Left + fallback.Width / 2, fallback.Top + fallback.Height / 2);
+    }
+
     void BuildCardScript()
     {
         void At(double t, Action a) => _tScript.Add((t, $"{t:0.0}", a));
@@ -120,7 +132,7 @@ sealed partial class App
         At(40, () => SetGravity("normal"));
 
         At(44, () => { foreach (var f in _w.Figures.Where(f => f.Visitor != VisitorKind.None).ToList()) _w.RemoveFigure(f); StartHappening("race"); });
-        Card(57, "card07-race", "Race Day", "Festivals, talent shows and races, whenever the town feels like it.", () => { var who = (_w.Happening?.Who ?? new List<Figure>()).Where(f => _w.Figures.Contains(f)).ToList(); World.Log($"card art race: {who.Count} racers, phase {_w.Happening?.Phase}"); return Frame(who.Select(f => f.Base), 800); });
+        Card(57, "card07-race", "Race Day", "Festivals, talent shows and races, whenever the town feels like it.", () => { var who = (_w.Happening?.Who ?? new List<Figure>()).Where(f => _w.Figures.Contains(f)).ToList(); World.Log($"card art race: {who.Count} racers, phase {_w.Happening?.Phase}"); return Frame(who.Select(f => f.Base), 800); }, RaceCardFocus);
 
         At(62, () => { if (_w.Happening is { } rh) EndHappening(rh, false); _w.NightOverride = 0.9f; _tNight = 0.9f; StartHappening("festival"); });
         At(66, () => _fireworks = true);

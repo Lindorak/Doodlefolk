@@ -491,6 +491,7 @@ sealed partial class App
         }
         foreach (var p in _w.Props) if (!Finite(p.Pos)) SimFail($"a {p.Kind} is somewhere impossible");
         foreach (var o in _simAway.Keys.Where(k => k is Figure f && !_w.Figures.Contains(f) || k is Pet p && !_w.Pets.Contains(p) || k is Item i && !_w.Items.Contains(i)).ToList()) _simAway.Remove(o);
+        SimCheck("mess never piles up", _w.Items.Count(Pet.Mess) <= Pet.MaxMesses + 2, $"{_w.Items.Count(Pet.Mess)} messes");
         SimCheck("the number of things stays sane", _w.Items.Count < 500 && _w.Props.Count < 80 && _w.Projectiles.Count < 600, $"{_w.Items.Count} things, {_w.Props.Count} balls, {_w.Projectiles.Count} projectiles");
         if (_w.Happening is { } h) SimCheck("events end", h.T < 330, $"{h.Title} has gone on for {h.T:0}s");
         foreach (var f in _w.Figures)

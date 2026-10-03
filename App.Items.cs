@@ -135,6 +135,13 @@ sealed partial class App
 
     void RestoreItems(List<SavedItem> items)
     {
+        int messes = items.Count(i => i.Key is "puddle" or "poop" or "dropping");
+        if (messes > Pet.MaxMesses)
+        {
+            int drop = messes - Pet.MaxMesses;
+            items = items.Where(i => !(i.Key is "puddle" or "poop" or "dropping") || drop-- <= 0).ToList();
+            World.Log($"tidied {messes - Pet.MaxMesses} old messes on loading");
+        }
         foreach (var s in items)
             if (ItemCatalog.Find(s.Key) is { } def)
                 if (SpawnItem(def, Math.Clamp(s.Size, 0.3f, 3.5f), s.Color.Length == 7 ? Settings.ParseHex(s.Color) : null, s.Flip) is { } it)

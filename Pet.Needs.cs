@@ -48,6 +48,7 @@ sealed partial class Pet
         Stress = MathF.Max(0, Stress - dt * 0.006f * (asleep || _st == State.Petted ? 3 : 1));
         Wet = MathF.Max(0, Wet - dt * 0.04f);
         if (!Potty) Bladder = Bowel = 0;
+        if (Kind is PetKind.Parrot or PetKind.Hamster) Bladder = 0;
         TrainingDecay(dt);
         UpdateBody(w, dt);
         UpdateHealth(w, dt);
@@ -71,6 +72,8 @@ sealed partial class Pet
         bool pee = !tiny && Bladder >= Bowel;
         // Parrots on their perch: there's a tray for that.
         bool caught = Kind == PetKind.Parrot && Grounded && w.Items.Any(i => i.Def.Key == "perch" && MathF.Abs(i.Pos.X - Pos.X) < 30 * S);
+        if (tiny) { Bladder = 0; Bowel = 0; }
+        if (w.Items.Count(Mess) >= MaxMesses) caught = true;   // the town's had enough; this one's tidied straight away
         if (!caught && w.MakeItem?.Invoke(tiny ? "dropping" : pee ? "puddle" : "poop") is { } mess)
         {
             float y = Grounded ? Pos.Y : w.Env.Below(Pos.X, Pos.Y)?.Y ?? Pos.Y;
@@ -118,7 +121,9 @@ sealed partial class Pet
 
     // ---------------- care items ----------------
 
-    static bool Mess(Item i) => i.Def.Key is "puddle" or "poop" or "dropping";
+    public static bool Mess(Item i) => i.Def.Key is "puddle" or "poop" or "dropping";
+    /// <summary>Never more mess than this in town at once, whatever happens.</summary>
+    public const int MaxMesses = 40;
 
     /// <summary>The nearest care item of a kind (food bowl, litter box…) it could get to.</summary>
     Item? Nearest(World w, string key, Func<Item, bool>? ok = null) =>

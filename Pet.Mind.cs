@@ -449,7 +449,7 @@ sealed partial class Pet
         Thirst = MathF.Max(0, Thirst - sip);
         bowl.Fill = MathF.Max(0, bowl.Fill - sip * 0.18f);
         if ((int)(_t * 3) != (int)((_t - dt) * 3)) World.Play(Sfx.Lap, HeadPos, 0.12f, 1.2f, 0.2);
-        if (Thirst < 0.03f || _t > _dur) { Log("Had a drink"); Bladder = MathF.Min(1, Bladder + 0.08f); GoIdle(1); }
+        if (Thirst < 0.03f || _t > _dur) { Log("Had a drink"); if (Kind is not (PetKind.Parrot or PetKind.Hamster)) Bladder = MathF.Min(1, Bladder + 0.08f); GoIdle(1); }
     }
 
     // ---------------- the bathroom ----------------

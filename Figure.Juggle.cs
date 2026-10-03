@@ -44,6 +44,16 @@ sealed partial class Figure
         if (Action == Act.Juggle) SetAction(Act.Stand);
     }
 
+    /// <summary>Leaving the activity releases its bags and catch callback, including an interrupted pickup.</summary>
+    public void CancelJuggling()
+    {
+        StopJuggling();
+        JugDropped = null;
+        JugDropDown = false;
+        JugCatch = null;
+        _jugDropVel = Vector2.Zero;
+    }
+
     // Hand points, in facing space from the neck (x across the body face on, y down): catch outside, throw inside.
     Vector2 JugCatchPt(int h) => new((h == 0 ? 1 : -1) * Arm * 0.78f, Arm * 0.5f);
     Vector2 JugThrowPt(int h) => new((h == 0 ? 1 : -1) * Arm * 0.3f, Arm * 0.6f);

@@ -76,9 +76,22 @@ sealed partial class Brain
             if (!f.JugDropDown) return;
             _jugPickT += World.Dt;
             if (_jugPickT < 0.35f) return;
-            if (f.JugDropped is { } d) FaceTo(d.X);
+            if (f.JugDropped is { } d)
+            {
+                FaceTo(d.X);
+                f.KeepFacing = true;
+                MoveToward(d.X - f.Facing * f.Torso * 0.8f, 2 * S);
+                f.HoldN = d;
+                f.HoldF = d + new System.Numerics.Vector2(-f.Facing * 3 * S, -S);
+            }
             f.SetAction(Act.Scoop);
             if (_jugPickT < 1.1f) return;
+            // Finish the pickup at the bag, rather than making it vanish beside an empty hand.
+            if (f.JugDropped is { } bag && MathF.Min(System.Numerics.Vector2.Distance(f.Jt[J.HandN], bag), System.Numerics.Vector2.Distance(f.Jt[J.HandF], bag)) > 5 * S)
+            {
+                if (_jugPickT > 2.5f) Go(G.Idle, 1);
+                return;
+            }
             f.JugDropped = null;
             _jugPickT = -1;
             // Again? The gritty keep at it; the easily put off don't.

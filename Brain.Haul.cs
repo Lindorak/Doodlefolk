@@ -210,9 +210,10 @@ sealed partial class Brain
         if (it == null) { f.Hauling = null; Go(G.Idle, 1); return; }
         if (!_haulLead)
         {
-            // The helper lets go: the mover finds out on their next step.
-            _haulIt = null; f.Hauling = null; f.KeepFacing = false;
-            if (_haulMate is { } lead && lead.Brain._haulIt == it) lead.Brain._haulMate = null;
+            // Losing either end drops the team load; it cannot become a solo haul.
+            var lead = _haulMate;
+            _haulIt = null; _haulMate = null; f.Hauling = null; f.KeepFacing = false;
+            if (lead != null && lead.Brain._haulIt == it) lead.Brain.DropHaul(w, false);
             Go(G.Idle, 1);
             return;
         }

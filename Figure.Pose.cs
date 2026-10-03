@@ -129,7 +129,7 @@ sealed partial class Figure
                 case Act.Scoop:
                     // Bending down for something on the ground: knees bent, leaning over it, hands low and in front
                     // (the brain points them at the thing itself).
-                    hipT = StandHip * 0.55f; leanT = 0.8f; handW = 40;
+                    hipT = StandHip * (JugDropped != null ? 0.4f : 0.55f); leanT = 0.8f; handW = 40;
                     hN = new(Arm * 0.7f, Arm * 0.7f); hF = new(Arm * 0.6f, Arm * 0.75f);
                     eN = eF = new(-0.2f, 1);
                     break;

@@ -85,6 +85,7 @@ sealed partial class Brain
         if (_ball != null && _ball.Juggler == f && g != G.Juggle) _ball.Juggler = null;
         if (_g is G.Fight or G.CursorFight && g != _g) EndFight();
         if (_g == G.Haul && g != G.Haul) LeaveHaul();
+        if (_g == G.Toss && g != G.Toss) f.CancelJuggling();
         if (_g == G.Skip && g != G.Skip) LeaveSkip();
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
@@ -147,7 +148,7 @@ sealed partial class Brain
     // ================= hooks from the body =================
 
     public void OnSpawned() => Go(G.Idle, rng.Range(0.6f, 1.4f));
-    public void OnRagdoll() { EndSocial(); LeaveOutdoors(); _g = G.Busy; }
+    public void OnRagdoll() { EndSocial(); LeaveOutdoors(); LeaveHaul(); f.CancelJuggling(); _g = G.Busy; }
     public void OnGrabbed() { EndSocial(); LeaveOutdoors(); _g = G.Busy; CursorTrust = MathF.Max(0, CursorTrust - (f.Tastes.Likes(Thing.BeingPickedUp) ? 0 : 0.08f)); FeelAboutBeingPickedUp(); }
     public void OnLanded(float impact) { if (impact > 1200 * S) Stamina = MathF.Max(0, Stamina - 0.02f); }
     public void OnUnexpectedFall() { if (_g != G.Busy) Go(G.Idle, 1.2f); }

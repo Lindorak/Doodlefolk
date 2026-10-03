@@ -3,7 +3,10 @@
 from pathlib import Path
 import argparse,json,math
 from PIL import Image, ImageDraw, ImageFont
-ap=argparse.ArgumentParser();ap.add_argument('folder',type=Path);a=ap.parse_args(); data=json.loads((a.folder/'scratchhead-poses.json').read_text())
+ap=argparse.ArgumentParser();ap.add_argument('folder',type=Path)
+ap.add_argument('--outline-mode',choices=['per-stroke','union'],default='union')
+ap.add_argument('--prefix',default='scratchhead-clean-reference')
+a=ap.parse_args(); data=json.loads((a.folder/'scratchhead-poses.json').read_text())
 W,H=1120,660; SUP=2
 FONT='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'; BOLD='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
 def font(s,b=False): return ImageFont.truetype(BOLD if b else FONT,round(s*SUP))
@@ -24,16 +27,24 @@ for idx,f in enumerate(data['frames']):
   d.line(((x+30)*SUP,485*SUP,(x+470)*SUP,485*SUP),fill='#cecbbf',width=2*SUP)
   scale=4.3*SUP; ox=(x+250)*SUP; oy=484*SUP
   pts=[(ox+p[0]*scale,oy+p[1]*scale) for p in f[key]]
-  # Composite outline with actual opacity, preserving overlap semantics of separate game strokes.
+  # A single mask applies outline opacity once across the figure silhouette. Separately
+  # compositing translucent strokes darkens their joint overlaps (28% + 28% -> ~48%).
+  # The optional old mode is retained solely for controlled preview diagnosis.
+  outline_layer=Image.new('RGBA',im.size)
+  def shape_layer(c):
+   return outline_layer if a.outline_mode=='union' and c==OUT else Image.new('RGBA',im.size)
+  def composite(layer,c):
+   if not (a.outline_mode=='union' and c==OUT):im.paste(layer,(0,0),layer)
   def line(pa,pb,c,w):
-   layer=Image.new('RGBA',im.size); ld=ImageDraw.Draw(layer);r=w/2
+   layer=shape_layer(c); ld=ImageDraw.Draw(layer);r=w/2
    ld.line([pa,pb],fill=c,width=max(1,round(w)))
    for p in [pa,pb]:ld.ellipse([p[0]-r,p[1]-r,p[0]+r,p[1]+r],fill=c)
-   im.paste(layer,(0,0),layer)
+   composite(layer,c)
   def disc(p,r,c):
-   layer=Image.new('RGBA',im.size);ld=ImageDraw.Draw(layer);ld.ellipse([p[0]-r,p[1]-r,p[0]+r,p[1]+r],fill=c);im.paste(layer,(0,0),layer)
+   layer=shape_layer(c);ld=ImageDraw.Draw(layer);ld.ellipse([p[0]-r,p[1]-r,p[0]+r,p[1]+r],fill=c);composite(layer,c)
   for u,v in bones:line(pts[u],pts[v],OUT,4.9*scale)
   disc(pts[0],7.3*scale,OUT)
+  if a.outline_mode=='union':im.paste(outline_layer,(0,0),outline_layer)
   # Head after torso before near limbs, matching Figure.Draw; flat low-shading treatment.
   for n,(u,v,far) in enumerate(draw_order):
    line(pts[u],pts[v],FAR if far else INK,3.3*scale)
@@ -45,19 +56,19 @@ for idx,f in enumerate(data['frames']):
  d=ImageDraw.Draw(im);d.rounded_rectangle((46*SUP,548*SUP,1074*SUP,554*SUP),radius=3*SUP,fill='#344652'); end=46+1028*(idx/(len(data['frames'])-1));d.rounded_rectangle((46*SUP,548*SUP,end*SUP,554*SUP),radius=3*SUP,fill='#82d6b5')
  txt(36,576,'ISOLATED CLOUD POSE PREVIEW',15,'#82d6b5',True)
  txt(36,602,'Exact before/after scratch equations + game spring/IK. Flat software rasterization.',15)
- txt(36,626,'No town simulation or Windows / Direct2D capture. Frame timing is matched.',15)
+ txt(36,626,('Single-mask preview outline. Windows / Direct2D validation pending.' if a.outline_mode=='union' else 'Original per-stroke preview outline. Windows / Direct2D validation pending.'),15)
  frames.append(im.resize((W,H),Image.Resampling.LANCZOS))
 # Single shared palette prevents color shimmer. Exactly 2.8 seconds: 30+30+40 ms pattern.
 palette=frames[0].quantize(colors=224,method=Image.Quantize.MEDIANCUT)
 indexed=[f.quantize(palette=palette,dither=Image.Dither.NONE) for f in frames]
-indexed[0].save(a.folder/'scratchhead-before-after.gif',save_all=True,append_images=indexed[1:],duration=[30,30,40]*28,loop=0,optimize=False,disposal=2)
-frames[26].save(a.folder/'scratchhead-before-after.png')
+indexed[0].save(a.folder/(a.prefix+'.gif'),save_all=True,append_images=indexed[1:],duration=[30,30,40]*28,loop=0,optimize=False,disposal=2)
+frames[26].save(a.folder/(a.prefix+'.png'))
 # Contact sheet at matched timestamps, enough to inspect the transition visually.
 chosen=[13,17,24,43,50,54]; tw=560; th=330
 sheet=Image.new('RGB',(tw*2,th*3))
 for k,i in enumerate(chosen):sheet.paste(frames[i].resize((tw,th),Image.Resampling.LANCZOS),((k%2)*tw,(k//2)*th))
-sheet.save(a.folder/'scratchhead-contact-sheet.png')
-with Image.open(a.folder/'scratchhead-before-after.gif') as gif:
+sheet.save(a.folder/(a.prefix+'-contact-sheet.png'))
+with Image.open(a.folder/(a.prefix+'.gif')) as gif:
  duration=0
  for i in range(gif.n_frames):gif.seek(i);duration+=gif.info['duration']
  assert gif.n_frames==84 and duration==2800,(gif.n_frames,duration)

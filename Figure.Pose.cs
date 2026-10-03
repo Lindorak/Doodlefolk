@@ -222,6 +222,12 @@ sealed partial class Figure
         else if (Climbing) tiltT = -0.3f * Facing;   // look up the wall
         if (HeadShake) tiltT += MathF.Sin(_time * 20) * 0.22f;
         GesturePose(dt, ref hN, ref hF, ref eN, ref tiltT, ref handW);
+        if (Dozing && Grounded)
+        {
+            // Nodding off: the head droops forward and bobs, slowly.
+            tiltT = Facing * (0.55f + 0.1f * MathF.Sin(_time * 1.1f + Id));
+            if (Action is Act.SitFloor or Act.SitEdge) { hN = new(Arm * 0.35f, Torso * 0.85f); hF = new(Arm * 0.3f, Torso * 0.9f); handW = 10; }
+        }
 
         M.Spring(ref _hip, ref _hipV, hipT, hipW, hipZ, dt);
         M.Spring(ref _lean, ref _leanV, leanT * Facing, leanW, 0.9f, dt);

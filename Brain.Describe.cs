@@ -33,7 +33,7 @@ sealed partial class Brain
                 },
                 G.SitEdge => "Sitting on a ledge",
                 G.SitFloor => "Sitting down",
-                G.Sleep => "Napping",
+                G.Sleep => _nightSleep ? "Asleep for the night" : "Napping",
                 G.Watch => "Watching you",
                 G.Swat => "Swatting at you",
                 G.Annoyed => "Annoyed",
@@ -90,8 +90,8 @@ sealed partial class Brain
                 G.Sport => Match != null ? $"Playing {Match.Name} ({Match.ScoreText})" : "Playing",
                 G.UseItem => _item == null ? "Busy" : _verb switch
                 {
-                    Verb.Sit => $"Sitting in the {_item.Def.Name.ToLowerInvariant()}",
-                    Verb.Lie => $"Napping on the {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Sit => _napping ? $"Dozing on the {_item.Def.Name.ToLowerInvariant()}" : $"Sitting in the {_item.Def.Name.ToLowerInvariant()}",
+                    Verb.Lie => _nightSleep ? $"Asleep in the {_item.Def.Name.ToLowerInvariant()}" : $"Napping on the {_item.Def.Name.ToLowerInvariant()}",
                     Verb.Hammock => "Swinging in the hammock",
                     Verb.Bounce => "Bouncing on the trampoline",
                     Verb.Eat => $"Eating {_item.Def.Article} {_item.Def.Name.ToLowerInvariant()}",

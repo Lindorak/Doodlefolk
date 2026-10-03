@@ -328,6 +328,20 @@ sealed partial class App
                 _animLater.Add((_tFrame / (double)TFps + 0.15, () => { fig.Brain.UseNow(couch, Verb.Sit, _w); walker.Brain.Puppet(99); walker.Facing = 1; walker.DesiredVX = walker.WalkSpeed; }));
             }, (_, _) => couch?.Local(0, 14) ?? Vector2.Zero, null, 1.6f));
         }
+        // Sleep: a nap (nodding off sitting up, a little z) against the night (lying down in bed, big Z's).
+        foreach (var (label, night, with) in new[] { ("Nap on the couch", false, "couch"), ("Nap on the floor", false, ""), ("Night in bed", true, "bed"), ("Night on the floor", true, "") })
+        {
+            Item? thing = null;
+            _animJobs.Add(new("Sleep", label, 6, (f, _) =>
+            {
+                Life.HourOverride = night ? 23.5f : 14f;
+                var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+                if (with.Length > 0) { thing = SpawnItem(ItemCatalog.Find(with)!); thing!.Pos = new Vector2(1060, floor.Y); thing.Vel = Vector2.Zero; thing.OnGround = true; }
+                f!.PlaceAt(floor, 1000); f.SpawnT = 0.999f;
+                var fig = f;
+                _animLater.Add((_tFrame / (double)TFps + 0.15, () => { if (night) fig.Brain.BedNow(_w); else fig.Brain.NapNow(_w); }));
+            }, (f, _) => thing?.Local(0, 14) ?? (f != null ? new Vector2(f.Base.X, f.Base.Y - 25 * _w.Scale) : Vector2.Zero), null, 1.3f));
+        }
         foreach (var kind in Enum.GetValues<PetKind>())
         {
             Animal(kind, "Walk", 1.6f, p => p.PuppetWalk(1));

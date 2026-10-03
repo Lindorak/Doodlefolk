@@ -57,7 +57,7 @@ sealed partial class Brain
     public void Rouse(float strength)
     {
         if (!Asleep || _wakeAt > 0) return;
-        float depth = M.Clamp01(0.35f + _t / 1800f) * (0.7f + Sleepy * 0.5f);   // deeper the longer they've been out
+        float depth = M.Clamp01(0.35f + _t / 1800f) * (0.7f + Sleepy * 0.5f) * (_nightSleep ? 1.15f : 0.55f);   // deeper the longer they've been out; a nap is light
         float light = 0.5f + (1 - P.Bravery) * 0.3f + Fear * 0.4f;
         if (rng.NextDouble() < strength * light * (1.1f - depth)) _wakeAt = _t0 + rng.Range(0.4f, 9f);
     }
@@ -108,12 +108,35 @@ sealed partial class Brain
         if (!night && !nap) return;
         float weight = night ? 6 + Sleepy * 4 : (Sleepy - 0.4f) * 6 * Taste(Thing.Napping);
         string label = night ? "Go to bed" : "Have a nap";
-        opts.Add(weight, () => GoToBed(w, night), label);
+        opts.Add(weight, () => { if (night) GoToBed(w, true); else TakeNap(w); }, label);
     }
+
+    bool _napping;
+
+    /// <summary>For the contact sheets: a nap now, or off to bed for the night.</summary>
+    public void NapNow(World w) { Sleepy = 0.8f; TakeNap(w); }
+    public void BedNow(World w) { Sleepy = 0.9f; GoToBed(w, true); }
+
+    /// <summary>A nap isn't bedtime: they nod off sitting up, in a comfy seat if there's one close by (a couch, an
+    /// armchair, a beanbag), else on the floor where they are. Short, light, easily woken.</summary>
+    void TakeNap(World w)
+    {
+        _nightSleep = false;
+        _sleepIntent = false;
+        var seat = w.Items.Where(i => i.Def.Verbs.Contains(Verb.Sit) && i.Def.Comfort >= 0.6f && i.Free && i.OnGround && FreeSeat(i) >= 0 && !Unreachable(i)
+                                      && System.Numerics.Vector2.Distance(i.Pos, f.Base) < 600 * S)
+                          .OrderBy(i => System.Numerics.Vector2.Distance(i.Pos, f.Base)).FirstOrDefault();
+        if (seat != null) { UseItem(seat, Verb.Sit, w); _napping = true; }
+        else Go(G.Sleep, SleepLength());
+    }
+
+    /// <summary>What they meant to do when they set off (the night, or a nap), kept until they're actually asleep.</summary>
+    bool? _sleepIntent;
 
     void GoToBed(World w, bool night)
     {
         _nightSleep = night;
+        _sleepIntent = night;
         bool Bedlike(Item i) => i.Def.Verbs.Any(v => v is Verb.Lie or Verb.Hammock) && i.Free && i.OnGround && i.User == null && !Unreachable(i);
         var bed = Home(w) is { } home && Bedlike(home) ? home
                 : w.Items.Where(Bedlike).OrderBy(i => System.Numerics.Vector2.Distance(i.Pos, f.Base)).FirstOrDefault(i => System.Numerics.Vector2.Distance(i.Pos, f.Base) < 1500 * S);
@@ -126,7 +149,7 @@ sealed partial class Brain
     float SleepLength() => _nightSleep || BedtimeNow ? Life.Span(MathF.Max(0.2f, Life.HoursUntil(WakeHour)) * 3600) : Life.Span(rng.Range(15, 40) * 60);
 
     /// <summary>Lying down on something: the night (at their bedtime), else a nap.</summary>
-    float SleepLengthFor() { _nightSleep = BedtimeNow; _wakeAt = -1; return SleepLength(); }
+    float SleepLengthFor() { _nightSleep = _sleepIntent ?? BedtimeNow; _sleepIntent = null; _wakeAt = -1; return SleepLength(); }
 
     /// <summary>Is it time to get up? (Morning came; or a nap's done and they're rested.)</summary>
     bool SleptEnough => _nightSleep ? !BedtimeNow && Sleepy < 0.3f : Sleepy < 0.12f;

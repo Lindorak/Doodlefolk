@@ -152,7 +152,7 @@ sealed partial class Brain
         if (_verb is Verb.Lie or Verb.Hammock or Verb.Eat or Verb.Read or Verb.Hide or Verb.Bounce) f.DropWeapon(Vector2.Zero);
         float use = _verb switch
         {
-            Verb.Sit => rng.Range(8, 25) * (0.6f + it.Def.Comfort),
+            Verb.Sit => _napping ? SleepLength() : rng.Range(8, 25) * (0.6f + it.Def.Comfort),   // a doze lasts a nap
             Verb.Lie or Verb.Hammock => SleepLengthFor(),
             Verb.Bounce => rng.Range(6, 14),
             Verb.Hide => rng.Range(6, 15) + Fear * 10,
@@ -234,7 +234,15 @@ sealed partial class Brain
                 Cheered(World.Dt * 0.003f * it.Def.Comfort);
                 if (it.Def.Facing != SeatFacing.Side) f.SetAction(it.Def.Facing == SeatFacing.In ? Act.SitBack : Act.SitFront);
                 else f.SetAction(Act.SitEdge);
-                if (it.Def.Comfort > 0.7f && Stamina < 0.3f && _t > 5 && rng.NextDouble() < World.Dt * 0.05) { f.Emote("z", 2); }
+                if (_napping)
+                {
+                    // Nodding off in the seat.
+                    f.Dozing = _t > 1.5f;
+                    if (_t > 2 && f.CurrentEmote != "z") f.Emote("z", 3);
+                    if (_wakeAt > 0 && _t0 >= _wakeAt) { _wakeAt = -1; f.Emote(V("mm…?", "WHAT?! WHO?!", "…what.", "w-was that…?", "a dream?"), 1.3f); done = true; }
+                    else if ((Sleepy < 0.12f && _t > 30) || _t > _dur) { WakeUp(it); done = true; }
+                }
+                else if (it.Def.Comfort > 0.7f && Stamina < 0.3f && _t > 5 && rng.NextDouble() < World.Dt * 0.05) { f.Emote("z", 2); }
                 break;
             case Verb.Lie:
             case Verb.Hammock:
@@ -242,14 +250,15 @@ sealed partial class Brain
                 Stamina = MathF.Min(1, Stamina + World.Dt * 0.025f * (0.5f + it.Def.Comfort));
                 Frustration = MathF.Max(0, Frustration - World.Dt * 0.015f * it.Def.Comfort);
                 Cheered(World.Dt * 0.003f * it.Def.Comfort);
-                if (_t > 1.5f && f.CurrentEmote != "z") f.Emote("z", 3);
+                string zz = _nightSleep ? "Z" : "z";
+                if (_t > 1.5f && f.CurrentEmote != zz) f.Emote(zz, 3);
                 if (_verb == Verb.Hammock)
                 {
                     // Keep our spot as the hammock swings (the net is a platform; ApplyCarry rides it).
                     var (c, _) = it.HammockCentre();
                     if (MathF.Abs(f.Base.X - c.X) > 6 * S) f.Mount(c, it.Handle);
                 }
-                if (SleptEnough && _t > 10) done = true;
+                if (SleptEnough && _t > 10) { WakeUp(it); done = true; }
                 if (_wakeAt > 0 && _t0 >= _wakeAt) { _wakeAt = -1; f.Emote(V("mm…?", "WHAT?! WHO?!", "…what.", "w-was that…?", "a dream?"), 1.3f); done = true; }
                 break;
             case Verb.Bounce:

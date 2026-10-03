@@ -222,9 +222,15 @@ function figSvg(cls = "fig") {
   const outline = s("g", { "stroke-linecap": "round", "stroke-linejoin": "round", fill: "none", "stroke-width": 4.9, stroke: "rgba(0,0,0,.25)" });
   const fp = s("path"), np = s("path"), op = s("path"), head = s("circle", { r: 6.5 }), headO = s("circle", { r: 7.3, fill: "rgba(0,0,0,.25)" });
   far.append(fp); near.append(np); outline.append(op);
+  // With some weight on: each bone its own line (thicker toward the body), and a filled torso.
+  const BONES = [[J.Neck, J.ElbowF, 1.6, 0.85, far], [J.ElbowF, J.HandF, 0.85, 0.35, far], [J.Pelvis, J.KneeF, 2.3, 1.15, far], [J.KneeF, J.FootF, 1.15, 0.5, far],
+                 [J.Pelvis, J.KneeN, 2.3, 1.15, near], [J.KneeN, J.FootN, 1.15, 0.5, near], [J.Neck, J.ElbowN, 1.6, 0.85, near], [J.ElbowN, J.HandN, 0.85, 0.35, near]];
+  const boneEls = BONES.map(([a, b, ka, kb, grp]) => { const o = s("line"), c = s("line"); outline.append(o); grp.append(c); return { a, b, ka, kb, o, c }; });
+  const torso = s("path", { stroke: "rgba(0,0,0,.25)", "stroke-width": 1.6, "stroke-linejoin": "round" });
+  near.prepend(torso);
   const lookBack = s("g"), lookFront = s("g");
   svg.append(lookBack, outline, headO, far, near, head, lookFront);
-  let cur = null, from = null, to = null, t0 = 0, dur = 33, lastAt = 0, streamAt = -1e9, style = ["#888", null, 1], settled = true, boundId = null;
+  let cur = null, from = null, to = null, t0 = 0, dur = 33, lastAt = 0, streamAt = -1e9, style = ["#888", null, 1, 0], settled = true, boundId = null;
   const lerp = (a, b, k) => a.map((p, i) => [p[0] + (b[i][0] - p[0]) * k, p[1] + (b[i][1] - p[1]) * k]);
   svg.target = pose => {
     if (!pose || pose.length !== 11) return;
@@ -242,9 +248,9 @@ function figSvg(cls = "fig") {
     draw(cur);
     if (k >= 1) settled = true;
   };
-  svg.update = (pose, hex, look, facing, id) => {
-    const restyle = hex !== style[0] || look !== style[1] || (facing || 1) !== style[2];
-    style = [hex, look, facing || 1];
+  svg.update = (pose, hex, look, facing, id, weight) => {
+    const restyle = hex !== style[0] || look !== style[1] || (facing || 1) !== style[2] || (weight || 0) !== style[3];
+    style = [hex, look, facing || 1, weight || 0];
     if (id != null && id !== boundId) {
       if (boundId != null && FIG_BOUND.get(boundId)) FIG_BOUND.get(boundId).delete(svg);
       boundId = id;
@@ -257,18 +263,52 @@ function figSvg(cls = "fig") {
     if (performance.now() - streamAt > 300) svg.target(pose);   // (while poses stream in, they lead)
   };
   function draw(pose) {
-    const [hex, look, facing] = style;
+    const [hex, look, facing, weight] = style;
     // Stand it on the ground line under its pelvis, whatever it's doing.
     let maxY = -1e9; for (const p of pose) maxY = Math.max(maxY, p[1]);
     const dx = -pose[J.Pelvis][0], dy = -maxY;
-    const P = i => `${(pose[i][0] + dx).toFixed(1)} ${(pose[i][1] + dy).toFixed(1)}`;
-    const nearD = `M${P(J.Neck)} L${P(J.Pelvis)} M${P(J.Pelvis)} L${P(J.KneeN)} L${P(J.FootN)} M${P(J.Neck)} L${P(J.ElbowN)} L${P(J.HandN)}`;
-    const farD = `M${P(J.Neck)} L${P(J.ElbowF)} L${P(J.HandF)} M${P(J.Pelvis)} L${P(J.KneeF)} L${P(J.FootF)}`;
-    np.setAttribute("d", nearD); fp.setAttribute("d", farD); op.setAttribute("d", nearD + farD);
+    const X = i => pose[i][0] + dx, Y = i => pose[i][1] + dy;
+    const P = i => `${X(i).toFixed(1)} ${Y(i).toFixed(1)}`;
     near.setAttribute("stroke", hex); far.setAttribute("stroke", shade(hex, 0.72));
-    const hx = pose[J.Head][0] + dx, hy = pose[J.Head][1] + dy;
-    head.setAttribute("cx", hx); head.setAttribute("cy", hy); head.setAttribute("fill", hex);
-    headO.setAttribute("cx", hx); headO.setAttribute("cy", hy);
+    // How heavy it looks (as on the desktop: nothing until past fit, then filling out everywhere).
+    const fat = S && S.settings && S.settings.weight === false ? 0 : weight > 0.27 ? Math.pow((weight - 0.27) / 0.73, 0.8) : 0;
+    const heavy = fat > 0.02;
+    np.style.display = fp.style.display = op.style.display = heavy ? "none" : "";
+    torso.style.display = heavy ? "" : "none";
+    for (const b of boneEls) { b.o.style.display = b.c.style.display = heavy ? "" : "none"; }
+    if (!heavy) {
+      const nearD = `M${P(J.Neck)} L${P(J.Pelvis)} M${P(J.Pelvis)} L${P(J.KneeN)} L${P(J.FootN)} M${P(J.Neck)} L${P(J.ElbowN)} L${P(J.HandN)}`;
+      const farD = `M${P(J.Neck)} L${P(J.ElbowF)} L${P(J.HandF)} M${P(J.Pelvis)} L${P(J.KneeF)} L${P(J.FootF)}`;
+      np.setAttribute("d", nearD); fp.setAttribute("d", farD); op.setAttribute("d", nearD + farD);
+    } else {
+      const w = 3.3;
+      for (const b of boneEls) {
+        const width = w * (1 + (b.ka + b.kb) * 0.5 * fat);
+        for (const el of [b.o, b.c]) { el.setAttribute("x1", X(b.a).toFixed(1)); el.setAttribute("y1", Y(b.a).toFixed(1)); el.setAttribute("x2", X(b.b).toFixed(1)); el.setAttribute("y2", Y(b.b).toFixed(1)); }
+        b.c.setAttribute("stroke-width", width.toFixed(2)); b.o.setAttribute("stroke-width", (width + 1.6).toFixed(2));
+      }
+      // The torso, filled out all round (shoulders, back, seat), a modest belly on top.
+      const nx = X(J.Neck), ny = Y(J.Neck), px = X(J.Pelvis), py = Y(J.Pelvis);
+      let ux = px - nx, uy = py - ny; const len = Math.hypot(ux, uy) || 1; ux /= len; uy /= len;
+      let sx = -uy, sy = ux; if (Math.sign(sx || 1) !== (facing || 1)) { sx = -sx; sy = -sy; }
+      const g = Math.sqrt(fat), girth = g * (1.8 + 4.6 * fat), belly = g * (0.6 + 2.4 * fat), sag = 0.62 + 0.06 * fat, N = 12;
+      const fr = [], bk = [];
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const shp = 0.42 + 0.58 * Math.pow(Math.sin(Math.PI * (0.04 + 0.86 * t)), 0.7) + 0.22 * t * t * t;
+        const bump = Math.pow(Math.max(0, Math.sin(Math.PI * Math.min(1, Math.max(0, (t - (sag - 0.4)) / 0.8)))), 1.4);
+        fr.push(w * 0.5 + girth * shp + belly * bump);
+        bk.push(w * 0.5 + girth * shp * 0.92 + g * 1.6 * fat * t * t);
+      }
+      const pts = [];
+      for (let i = 0; i <= N; i++) { const t = i / N; pts.push([nx + ux * len * t + sx * fr[i], ny + uy * len * t + sy * fr[i]]); }
+      for (let i = N; i >= 0; i--) { const t = i / N; pts.push([nx + ux * len * t - sx * bk[i], ny + uy * len * t - sy * bk[i]]); }
+      torso.setAttribute("d", "M" + pts.map(p => p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" L") + " Z");
+      torso.setAttribute("fill", hex);
+    }
+    const hx = X(J.Head), hy = Y(J.Head), hr = 6.5 * (1 + fat * 0.08);
+    head.setAttribute("cx", hx); head.setAttribute("cy", hy); head.setAttribute("fill", hex); head.setAttribute("r", hr.toFixed(2));
+    headO.setAttribute("cx", hx); headO.setAttribute("cy", hy); headO.setAttribute("r", (hr + 0.8).toFixed(2));
     drawLook(lookBack, lookFront, look, pose.map(p => [p[0] + dx, p[1] + dy]), facing || 1, hex);
   }
   return svg;
@@ -533,7 +573,7 @@ PAGES.cast = {
     return () => {
       for (const c of cards) {
         const f = fig(c.id); if (!f) continue;
-        c.svg.update(f.pose, f.hex, f.look, f.facing, f.id);
+        c.svg.update(f.pose, f.hex, f.look, f.facing, f.id, f.bodyWeight);
         c.name.textContent = f.name; c.dot.style.background = f.hex;
         c.act.textContent = f.activity;
         c.feels.textContent = f.feels;
@@ -648,7 +688,7 @@ PAGES.figure = {
     const sub = SUBPANELS[route.sub](panel, f);
     return () => {
       const f = fig(id); if (!f) return;
-      big.update(f.pose, f.hex, f.look, f.facing, f.id);
+      big.update(f.pose, f.hex, f.look, f.facing, f.id, f.bodyWeight);
       if (idle(name)) name.value = f.name;
       act.textContent = f.activity;
       feels.textContent = `${f.feels} · ${f.describe}`;
@@ -908,7 +948,7 @@ const SUBPANELS = {
     }
     drawCard(); paintSel();
     return f => {
-      centreFig.update(f.pose, f.hex, f.look, f.facing, f.id);
+      centreFig.update(f.pose, f.hex, f.look, f.facing, f.id, f.bodyWeight);
       for (const o of others) {
         const v = o.id === "you" ? f.fond : (f.rels.find(r => r.id === o.id) || { mine: 0 }).mine;
         const e = edges[o.id];
@@ -2275,7 +2315,7 @@ function buildPop(kind, id) {
       h("div", { class: "row pop-foot" }, feels, h("span", { class: "spacer" }),
         h("button", { class: "btn small", onclick: () => send({ t: "studio", page: "figure", id }) }, "Open in Studio")));
     updates.push(() => {
-      dot.update(x.pose, x.hex, x.look, x.facing, x.id);
+      dot.update(x.pose, x.hex, x.look, x.facing, x.id, x.bodyWeight);
       sub.textContent = x.dead ? "Gone" : x.activity;
       feels.textContent = x.feels || "";
       col.set(x.hex);

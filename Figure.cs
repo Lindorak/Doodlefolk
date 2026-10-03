@@ -149,6 +149,10 @@ sealed partial class Figure
 
     /// <summary>While singing: the note this line is on (multiplies the babble voice's pitch).</summary>
     public float SingPitch = 1;
+    /// <summary>Nodding off sitting up (a nap): head drooping, hands in the lap.</summary>
+    public bool Dozing;
+    /// <summary>Snores in the night (some do, some don't).</summary>
+    public bool Snorer => (Id * 2654435761u >> 7) % 3 == 0;
     public readonly float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW;
     readonly float _gravity;
     /// <summary>How fast it falls (the toybox can change gravity, and every jump is planned with it).</summary>

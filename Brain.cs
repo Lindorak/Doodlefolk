@@ -57,7 +57,7 @@ sealed partial class Brain
     float S => f.S;
     Personality P => f.Traits;
     public string State => _partner != null ? $"{_g} ({_partner.Name})" : _foe != null && _g == G.Fight ? $"{(_spar ? "Spar" : "Fight")} ({_foe.Name})" : _fleeing ? "Flee" : _g.ToString();
-    public bool Asleep => _g == G.Sleep || (_g == G.UseItem && _verb is Verb.Lie or Verb.Hammock && _t > 1.5f);
+    public bool Asleep => _g == G.Sleep || (_g == G.UseItem && (_verb is Verb.Lie or Verb.Hammock || (_verb == Verb.Sit && _napping)) && _t > 1.5f);
 
     /// <summary>Debug: log this figure's goal changes (and who caused them) for a while.</summary>
     public float TraceUntil;
@@ -89,7 +89,9 @@ sealed partial class Brain
         if (g is not (G.Carry or G.Throw)) _bringToUser = false;
         if (g != G.Walk) _fleeing = false;
         if (g is not (G.Fight or G.Walk)) _foe = null;
-        if (g == G.Sleep && _g != G.Sleep) { _nightSleep = BedtimeNow; _wakeAt = -1; dur = MathF.Max(dur, SleepLength()); }
+        if (g == G.Sleep && _g != G.Sleep) { _nightSleep = _sleepIntent ?? BedtimeNow; _sleepIntent = null; _wakeAt = -1; dur = MathF.Max(dur, SleepLength()); }
+        f.Dozing = false;
+        if (g != G.UseItem) _napping = false;
         _g = g;
         _t = 0;
         _dur = dur;
@@ -220,6 +222,8 @@ sealed partial class Brain
     /// <summary>Had enough (three huffs in a quarter of a minute): off somewhere quieter.</summary>
     bool FedUp => _huffs.Count >= 3 && _t0 - _huffs[^1] < 15;
 
+    float _huffedAt = -99;
+
     public void OnHit(Figure? from, bool knockedDown, World w)
     {
         Annoyance = M.Clamp01(Annoyance + (knockedDown ? 0.35f : 0.15f));
@@ -237,11 +241,16 @@ sealed partial class Brain
         }
         if (knockedDown) return;
         f.Emote(P.Aggression > 0.55f ? "#@!" : "!", 1.1f);
-        if (_g is G.Sleep or G.SitEdge or G.SitFloor or G.Idle or G.Walk or G.Watch)
+        // Hit again straight after the last huff (balls flying about), or in the middle of an event: a flinch and a
+        // glare, not stopping everything to be annoyed all over again.
+        bool justHuffed = _t0 - _huffedAt < 4;
+        if (_g is G.Sleep or G.SitEdge or G.SitFloor or G.Idle or G.Walk or G.Watch && !justHuffed && HapRole.Length == 0)
         {
             if (from != null) _glareAt = from;
+            _huffedAt = _t0;
             Go(G.Annoyed, AnnoyedFor);
         }
+        else f.DuckT = MathF.Max(f.DuckT, 0.3f);
     }
 
     void NoticeIHit(Figure victim)
@@ -741,15 +750,29 @@ sealed partial class Brain
         if (!f.Grounded) { Go(G.Idle, 0.5f); return; }
         if (RousedNow()) return;
         f.DesiredVX = 0;
-        f.SetAction(_t < 1.2f ? Act.SitFloor : Act.Lie);
-        if (_t > 1.2f && f.CurrentEmote != "z") f.Emote("z", 3);
-        if ((SleptEnough && _t > 8) || _t > _dur)
+        string zz = _nightSleep ? "Z" : "z";
+        if (_nightSleep) f.SetAction(_t < 1.2f ? Act.SitFloor : Act.Lie);
+        else { f.SetAction(Act.SitFloor); f.Dozing = _t > 0.8f; }
+        if (_t > 1.2f && f.CurrentEmote != zz) f.Emote(zz, 3);
+        if ((SleptEnough && _t > 8) || _t > _dur) WakeUp(null);
+    }
+
+    /// <summary>Up again: after the night a big stretch and a good morning; after a nap a little "better".</summary>
+    void WakeUp(Item? where)
+    {
+        if (_t > 10) { DiaryNapped(where); RememberPlace(World.Current, 0.3f, _nightSleep ? "a good night's sleep" : "a good nap"); }
+        Cheered(0.2f);
+        if (_nightSleep)
         {
-            if (_t > 10) { DiaryNapped(null); RememberPlace(World.Current, 0.3f, "a good nap"); }
-            f.Emote("♪", 0.8f);
-            Cheered(0.2f);
-            Go(G.Cheer, 0.7f);   // a big stretch
+            f.Emote(V("good morning!", "MORNING!!!", "…morning.", "m-morning…", "a new day"), 1.6f);
+            if (where == null) Go(G.Cheer, 1.1f);   // a big stretch
         }
+        else
+        {
+            f.Emote(V("mm, better.", "POWER NAP!", "…ok.", "that was nice…", "refreshed"), 1.1f);
+            if (where == null) Go(G.Idle, 1);
+        }
+        _nightSleep = false;
     }
 
     void Startle(Vector2 cur)

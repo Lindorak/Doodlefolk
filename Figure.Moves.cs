@@ -47,7 +47,8 @@ sealed partial class Figure
             case "#@!": World.Play(Sfx.Grumble, at, 0.4f, pitch, 0.2); break;
             case "ha": World.Play(Sfx.Laugh, at, 0.35f, pitch, 0.2); break;
             case "♪": case "♫": World.Play(Sfx.Tune, at, 0.25f, pitch, 0.3); break;
-            case "z": World.Play(Sfx.Snore, at, 0.25f, pitch * 0.8f, 2.5); break;
+            case "Z": if (Snorer) World.Play(Sfx.Snore, at, 0.12f, pitch * 0.75f, 3.5); break;   // the night: some snore
+            case "z": break;   // a nap: quiet
             default:
                 if (text.Length >= 2 && text.Any(char.IsLetter) && _time > _babbleUntil)
                 {
@@ -168,15 +169,18 @@ sealed partial class Figure
         if (_emote is not Emote e || Mode == Mode.Spawning) return;
         float fade = M.Clamp01((e.Dur - e.T) / 0.25f);
         Vector2 head = Jt[J.Head];
-        if (e.Text == "z")
+        if (e.Text is "z" or "Z")
         {
-            for (int i = 0; i < 3; i++)
+            // A nap: one little z at a time, quick; the night: big slow Z's, three at once.
+            bool night = e.Text == "Z";
+            int n = night ? 3 : 1;
+            for (int i = 0; i < n; i++)
             {
-                float t = (e.T * 0.6f + i / 3f) % 1;
-                Vector2 p = head + new Vector2(Facing * (4 + t * 10) * S, -(HeadR + 4 * S + t * 18 * S));
-                float size = (5 + t * 5) * S, a = (1 - t) * fade;
-                r.Text("z", p + new Vector2(0.5f, 0.6f) * S, size, Ui.Fill.A(a * 0.7f), true);
-                r.Text("z", p, size, Ui.Ink.A(a), true);
+                float t = (e.T * (night ? 0.45f : 0.8f) + i / (float)n) % 1;
+                Vector2 p = head + new Vector2(Facing * (4 + t * (night ? 12 : 7)) * S, -(HeadR + 4 * S + t * (night ? 22 : 12) * S));
+                float size = (night ? 7 + t * 7 : 4 + t * 3) * S, a = (1 - t) * fade;
+                r.Text(e.Text, p + new Vector2(0.5f, 0.6f) * S, size, Ui.Fill.A(a * 0.7f), true);
+                r.Text(e.Text, p, size, Ui.Ink.A(a), true);
             }
             return;
         }

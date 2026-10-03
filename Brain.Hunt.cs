@@ -64,7 +64,7 @@ sealed partial class Brain
         // Out of reach: grab something to throw.
         if (canHit && (!reachable || d > 500 * S) && NearestFreeBall(w, 380 * S) is { SizeMul: <= 2.2f } b)
         {
-            GoToBall(b, w, () => { PickUp(b, null); _huntThrow = true; });
+            ScoopThen(b, w, () => _huntThrow = true);
             return;
         }
         HuntStep(w, cur);

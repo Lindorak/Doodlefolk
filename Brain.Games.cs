@@ -284,7 +284,7 @@ sealed partial class Brain
             MoveToward(b.Pos.X + b.Vel.X * Math.Clamp(t, 0, 2.5f), 10 * S);
             return;
         }
-        GoToBall(b, w, () => { PickUp(b, null); _bringToUser = true; g.Flight = 0; });
+        ScoopThen(b, w, () => { _bringToUser = true; g.Flight = 0; });
     }
 
     // ---------------- shared ----------------

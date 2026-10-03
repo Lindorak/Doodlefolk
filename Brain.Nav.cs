@@ -277,7 +277,7 @@ sealed partial class Brain
     {
         float dx = x - f.Base.X;
         if (MathF.Abs(dx) <= within) { f.DesiredVX = 0; return true; }
-        float speed = (_run ? f.RunSpeed : f.WalkSpeed) * (f.Carrying != null ? 0.85f : 1);
+        float speed = BallApproachSpeed((_run ? f.RunSpeed : f.WalkSpeed) * (f.Carrying != null ? 0.85f : 1));
         f.DesiredVX = MathF.Sign(dx) * speed * MathF.Max(0.35f, M.Clamp01(MathF.Abs(dx) / (25 * S)));
         _stuckT = MathF.Abs(f.Vel.X) < 4 * S && _t > 0.4f ? _stuckT + World.Dt : 0;
         if (_stuckT > 0.6f) { f.DesiredVX = 0; _stuckT = 0; return true; }

@@ -63,11 +63,91 @@ sealed partial class Brain
         Navigate(() =>
         {
             if (!w.Props.Contains(b) || !b.Free) return null;
-            float side = fromSide ?? -MathF.Sign(b.Pos.X - f.Base.X);
+            // Head for where it's going to be (a rolling ball slows as it goes), not where it is now.
+            float gap = MathF.Abs(b.Pos.X - f.Base.X);
+            float eta = Math.Clamp(gap / MathF.Max(f.RunSpeed, 1), 0, 1.2f);
+            float x = b.Pos.X + b.Vel.X * eta * 0.6f;
+            float side = fromSide ?? -MathF.Sign(x - f.Base.X);
             if (side == 0) side = -f.Facing;
-            float y = w.Env.Below(b.Pos.X, b.Pos.Y)?.Y ?? b.Pos.Y + b.Radius;
-            return new Vector2(b.Pos.X + side * (b.Radius + 7 * S), y);
+            float y = w.Env.Below(x, b.Pos.Y)?.Y ?? b.Pos.Y + b.Radius;
+            return new Vector2(x + side * (b.Radius + 7 * S), y);
         }, 5 * S, run, then, WalkPurpose.Ball);
+    }
+
+    /// <summary>The ball we're going for or bending down to (our own feet only nudge it: we trap it, not kick it on).</summary>
+    public Prop? Seeking => (_g == G.Walk && _purpose == WalkPurpose.Ball) || _g == G.Scoop ? _ball : null;
+
+    /// <summary>Easing off on the way to a ball: a run becomes a walk, then careful steps, so we arrive beside it
+    /// instead of running into it.</summary>
+    float BallApproachSpeed(float speed)
+    {
+        if (_purpose != WalkPurpose.Ball || _ball == null) return speed;
+        float gap = MathF.Abs(_ball.Pos.X - f.Base.X) - _ball.Radius;
+        if (gap > 90 * S) return gap > 160 * S ? speed : MathF.Min(speed, f.WalkSpeed * 1.15f);
+        return MathF.Min(speed, f.WalkSpeed * M.Lerp(0.4f, 1, M.Clamp01((gap - 10 * S) / (60 * S))));
+    }
+
+    int _scoopMiss;
+
+    /// <summary>For the contact sheets and tests: go and pick up this ball.</summary>
+    public void FetchNow(Prop b, World w) => ScoopThen(b, w, () => { });
+
+    /// <summary>Bend down and pick it up properly (a crouch, both hands to it, then up), instead of it jumping into
+    /// our hands. If it's rolled off, go after it again; after a few tries, let it go.</summary>
+    void BeginScoop(Prop b, Figure? throwTo)
+    {
+        Go(G.Scoop, 1.4f);
+        _ball = b;
+        _passTo = throwTo;
+        FaceTo(b.Pos.X);
+    }
+
+    Action _afterScoop = () => { };
+
+    void ScoopThen(Prop b, World w, Action then)
+    {
+        _afterScoop = then;
+        _scoopMiss = 0;
+        GoToBall(b, w, () => BeginScoop(b, null));
+    }
+
+    void DoScoop(World w)
+    {
+        var b = _ball;
+        if (b == null || !w.Props.Contains(b) || !b.Free) { Go(G.Idle, 1); return; }
+        f.DesiredVX = 0;
+        float reach = f.Arm * 1.25f + b.Radius;
+        bool low = b.Pos.Y > f.Base.Y - f.Leg - b.Radius;
+        if (MathF.Abs(b.Pos.X - f.Base.X) > reach || !low || _t > _dur)
+        {
+            // It got away.
+            if (++_scoopMiss > 3)
+            {
+                f.Emote(V("forget it", "COME BACK!!", "…fine. stay there.", "it keeps running away…", "the ball wishes to be free"), 1.3f);
+                _scoopMiss = 0;
+                Go(G.Idle, 1.5f);
+                return;
+            }
+            var keep = _passTo;
+            GoToBall(b, w, () => BeginScoop(b, keep));
+            return;
+        }
+        FaceTo(b.Pos.X);
+        f.SetAction(Act.Scoop);
+        // Both hands to the ball, one each side.
+        f.HoldN = b.Pos + new Vector2(f.Facing * b.Radius * 0.55f, -b.Radius * 0.1f);
+        f.HoldF = b.Pos - new Vector2(f.Facing * b.Radius * 0.55f, b.Radius * 0.1f);
+        float handGap = Vector2.Distance((f.Jt[J.HandN] + f.Jt[J.HandF]) / 2, b.Pos);
+        // Hands on it: it stops rolling; a moment later, up it comes.
+        if (handGap < b.Radius + 6 * S) b.Vel *= 0.6f;
+        if (_t > 0.45f && handGap < b.Radius + 8 * S)
+        {
+            _scoopMiss = 0;
+            PickUp(b, _passTo);
+            var then = _afterScoop;
+            _afterScoop = () => { };
+            then();
+        }
     }
 
     Figure? PassCandidate(World w, Prop b)
@@ -144,7 +224,7 @@ sealed partial class Brain
                 _ball = b;
                 break;
             case BallPlay.Carry:
-                PickUp(b, friend);
+                BeginScoop(b, friend);
                 break;
         }
     }

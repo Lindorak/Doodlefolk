@@ -96,6 +96,17 @@ sealed partial class App
                 if (swim) f!.Brain.SwimNow(water, _w, dive);
             }, (f, _) => swim && f != null ? new Vector2(f.Base.X, f.Base.Y - 10 * _w.Scale) : water?.Local(0, 8) ?? Vector2.Zero, null, swim ? 1.1f : 1.4f * wide));
         }
+        // Fetching a ball: lying still, rolling away, rolling towards them (slow down, trap it, bend and scoop it up).
+        foreach (var (label, dx, vx) in new[] { ("Still ball", 160f, 0f), ("Rolling away", 120f, 520f), ("Rolling away fast", 90f, 1100f), ("Rolling towards", 520f, -420f) })
+        {
+            _animJobs.Add(new("Fetch", label, 8f, (f, _) =>
+            {
+                foreach (var p in _w.Props.ToList()) _w.RemoveProp(p);
+                var ball = SpawnProp(PropKind.SoccerBall);
+                ball.Pos = new Vector2(f!.Base.X + dx * _w.Scale, f.Base.Y - ball.Radius - 1); ball.Vel = new Vector2(vx * _w.Scale, 0);
+                f.Brain.FetchNow(ball, _w);
+            }, (f, _) => f != null ? new Vector2(f.Base.X + 160 * _w.Scale, f.Base.Y - 50 * _w.Scale) : Vector2.Zero, null, 7f));
+        }
         // Hiding: in the box (peeking over the rim now and then), the barrel, the tent (out of sight).
         foreach (var key in new[] { "box", "barrel", "tent" })
         {

@@ -56,6 +56,7 @@ sealed partial class Brain
                 G.Fight => _foe != null ? (_spar ? $"Sparring with {_foe.Name}" : $"Fighting {_foe.Name}") : "Fighting",
                 G.Victory => "Celebrating a win",
                 G.CursorFight => "Boxing your cursor",
+                G.Scoop => "Picking up the ball",
                 G.Revive => "Helping a friend up",
                 G.Hunt => "Hunting your cursor",
                 G.Groove => _rainDance ? "Dancing in the rain" : "Dancing to your music",

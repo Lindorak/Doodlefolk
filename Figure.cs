@@ -4,7 +4,7 @@ using Vortice.Mathematics;
 namespace Doodlefolk;
 
 enum Mode { Spawning, Control, Ragdoll, GetUp }
-enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm }
+enum Act { Stand, SitEdge, SitFloor, Lie, HandsHips, Wave, Swat, Cheer, Kick, Tap, Throw, Talk, HighFive, Ready, Fight, Fidget, SitFront, SitBack, Curl, Eat, Read, Warm, Scoop }
 
 /// <summary>Joint indices. N = near side (drawn in front), F = far side (drawn behind, slightly darker).</summary>
 static class J

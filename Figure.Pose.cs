@@ -121,6 +121,13 @@ sealed partial class Figure
                 case Act.HighFive:
                     hN = new(Arm * 0.55f, -Arm * 0.72f); eN = new(0.2f, 1); handW = 24; leanT = 0.08f;
                     break;
+                case Act.Scoop:
+                    // Bending down for something on the ground: knees bent, leaning over it, hands low and in front
+                    // (the brain points them at the thing itself).
+                    hipT = StandHip * 0.55f; leanT = 0.8f; handW = 40;
+                    hN = new(Arm * 0.7f, Arm * 0.7f); hF = new(Arm * 0.6f, Arm * 0.75f);
+                    eN = eF = new(-0.2f, 1);
+                    break;
                 case Act.Ready:
                     hN = new(Arm * 0.6f, Torso * 0.15f); hF = new(Arm * 0.55f, Torso * 0.25f);
                     eN = eF = new(-0.3f, 1); hipT = StandHip * 0.93f; handW = 20;

@@ -353,7 +353,7 @@ sealed partial class Brain
             _fanUntil = _t0 + rng.Range(25, 60) * (1.3f - fond * 0.5f);
             // Bring a ball if one's handy, otherwise come say hi.
             if (rng.NextDouble() < 0.3 + P.Playfulness * 0.6 && NearestFreeBall(w, 500 * S) is { SizeMul: <= 1.8f } b)
-                GoToBall(b, w, () => { PickUp(b, null); _bringToUser = true; });
+                ScoopThen(b, w, () => _bringToUser = true);
             else ComeToCursor(w);
         });
     }

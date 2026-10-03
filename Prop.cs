@@ -278,9 +278,18 @@ sealed class Prop
             // cap how hard that can bat a ball, so a celebration doesn't fire it into someone's face.
             Vector2 jv = f.JVel[joint];
             if (f.Mode != Mode.Ragdoll && jv.LengthSquared() > 900 * 900 * _s * _s) jv = Vector2.Normalize(jv) * 900 * _s;
+            bool trap = f.Mode == Mode.Control && f.Brain.Seeking == this;
+            if (trap) jv *= 0.12f;
             Vector2 rel = Vel - jv;
             float vn = Vector2.Dot(rel, n);
             if (vn >= 0) continue;
+            if (trap)
+            {
+                // Under the foot: it stops dead against it (and rolls off gently), instead of flying away.
+                Vel -= vn * n;
+                Vel *= 0.55f;
+                continue;
+            }
             if (f.Mode == Mode.Control && Vector2.Dot(jv, n) > 200 * _s && Holder == null) { LastTouch = f; ThrownByUser = false; }
             Vel -= (1 + Bounce * 0.6f) * vn * n;
             OnGround = false;

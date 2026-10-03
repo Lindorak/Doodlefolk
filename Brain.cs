@@ -10,7 +10,7 @@ sealed partial class Brain
     enum G
     {
         Busy, Idle, Walk, SitEdge, SitFloor, Sleep, Watch, Swat, Annoyed, Wave, Cheer, Startled, Trick,
-        Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch,
+        Chat, HighFive, Follow, SitWith, Kick, Dribble, Juggle, Carry, Throw, Catch, Scoop,
         Fight, Victory, CursorFight, Revive, DanceWith, Hunt, UseItem, Sport, Groove, WatchScreen, LookAtScreen, Create, Confess, Snowball, Snowman, PetAnimal, Party, Game, Pose, Tourney, Lasso, Work, Build, Ride, Swim, Fish, Happening, Boost, Visit,
     }
 
@@ -363,6 +363,7 @@ sealed partial class Brain
             case G.Dribble: DoDribble(w); break;
             case G.Juggle: DoJuggle(w); break;
             case G.Carry: DoCarry(w); break;
+            case G.Scoop: DoScoop(w); break;
             case G.Throw: DoThrow(w); break;
             case G.Catch: DoCatch(w); break;
             case G.Fight: DoFight(w); break;

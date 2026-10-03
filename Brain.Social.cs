@@ -60,6 +60,7 @@ sealed partial class Brain
         }
         float a = AffinityWith(o);
         if (rng.NextDouble() < 0.55) SayInCharacter("greet", o, w);
+        else RecallOnMeeting(o, w);
         // Shared hobbies first: two ball-lovers play catch, two dancers dance.
         var shared = f.Tastes.SharedLikes(o.Tastes).ToHashSet();
         if (shared.Contains(Thing.PlayingBall) && NearestFreeBall(w, 600 * S) is { SizeMul: <= 1.8f } ball && rng.NextDouble() < 0.6)

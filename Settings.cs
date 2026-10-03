@@ -34,6 +34,7 @@ sealed class SavedFigure
     public List<Gift> Gifts { get; set; } = new();
     public string Hobby { get; set; } = "";
     public string Archetype { get; set; } = "";
+    public List<Episode> Episodes { get; set; } = new();
     public string Job { get; set; } = "";
     public int? Coins { get; set; }
     public float AgeBank { get; set; }

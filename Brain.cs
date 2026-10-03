@@ -101,6 +101,7 @@ sealed partial class Brain
     public void CopyFrom(Brain o)
     {
         Stamina = o.Stamina; Boredom = o.Boredom; Loneliness = o.Loneliness; Annoyance = o.Annoyance; CursorTrust = o.CursorTrust;
+        Episodes.Clear(); Episodes.AddRange(o.Episodes);
         _fondness = o._fondness;
         foreach (var (k, v) in o.Affinity) Affinity[k] = v;
         foreach (var (k, v) in o.Love) Love[k] = v;
@@ -240,6 +241,8 @@ sealed partial class Brain
         UpdateNeeds(dt, w);
         UpdateLove(dt, w);
         UpdateArchetype(dt, w);
+        Reflect(w);
+        RecallPlace(w);
         UpdateWeather(dt, w);
         UpdateLife(dt, w);
         UpdateFamily(dt, w);

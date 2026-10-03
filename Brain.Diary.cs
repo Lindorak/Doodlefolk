@@ -43,6 +43,7 @@ sealed partial class Brain
         if (_diaryCd.TryGetValue(key, out var until) && _t0 < until) return;
         _diaryCd[key] = _t0 + cooldown;
         Diary.Add(new DiaryEntry { At = DateTime.Now, Text = text, Mood = mood });
+        if (!key.StartsWith("place:")) Remember(key, text, mood);
         if (Diary.Count > 200) Diary.RemoveRange(0, Diary.Count - 200);
         World.Log($"diary {f.Name}: {text}");
     }

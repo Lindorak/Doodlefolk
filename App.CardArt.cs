@@ -55,6 +55,17 @@ sealed partial class App
         return new RectangleF(Math.Clamp(cx - w / 2, 0, TW - w), Math.Clamp(top, 0, TH - h), w, h);
     }
 
+    /// <summary>Keep the dream cloud and sleeper readable without the empty window chrome above them.</summary>
+    static RectangleF DreamFrame(Figure f)
+    {
+        Vector2 head = f.Jt[J.Head];
+        float top = MathF.Min(head.Y - f.HeadR - 46 * f.S, f.Base.Y - f.Height);
+        float bottom = MathF.Max(f.Base.Y, head.Y + f.HeadR) + 22 * f.S;
+        float w = Math.Clamp(MathF.Max(360, (bottom - top) * 16 / 9), 360, TW), h = w * 9 / 16;
+        float cx = (head.X + f.Base.X) / 2 + f.Facing * 12 * f.S;
+        return new RectangleF(Math.Clamp(cx - w / 2, 0, TW - w), Math.Clamp(bottom - h, 0, TH - h), w, h);
+    }
+
     void BuildCardScript()
     {
         void At(double t, Action a) => _tScript.Add((t, $"{t:0.0}", a));
@@ -117,7 +128,7 @@ sealed partial class App
         Background(70.2, "background03-night", "Festival night", "The town, lit up.", () => new RectangleF(0, 0, TW, TH));
 
         At(72, () => { _fireworks = false; if (_w.Happening is { } fh) EndHappening(fh, false); if (TF("Lou") is { } l) { l.Brain.Force("sleep", Array.Empty<string>(), _w); l.Brain.DebugTown(_w, "showdream", ""); } });
-        Card(78, "card09-dreams", "Sweet Dreams", "Late at night they get sleepy, and they dream.", () => Frame(new[] { TF("Lou")!.Jt[J.Head] + new Vector2(0, 40), TF("Lou")!.Base }, 520), () => TF("Lou")!.Jt[J.Head]);
+        Card(78, "card09-dreams", "Sweet Dreams", "Late at night they get sleepy, and they dream.", () => DreamFrame(TF("Lou")!), () => TF("Lou")!.Jt[J.Head]);
 
         At(79, () => { _w.NightOverride = null; _tNight = 0; foreach (var it in _w.Items.Where(i => i.Temporary).ToList()) _w.RemoveItem(it); });
         At(80, () => World.Log("card art: " + Visit(VisitorKind.MailCarrier)));

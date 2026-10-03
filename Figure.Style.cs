@@ -209,9 +209,10 @@ sealed partial class Figure
                 handW = 26;
                 break;
             case Fidget.CheckWatch:
-                hF = new(Arm * 0.5f, Torso * 0.05f);
-                eF = new(0, 1);
-                tiltT += 0.4f * Facing;
+                hF = Vector2.Lerp(hF, new(Arm * 0.5f, Torso * 0.05f), env);
+                // Keep the bend on the same side while the wrist rises and lowers.
+                eF = new(-_hF.Y, _hF.X * Facing);
+                tiltT += 0.4f * env * Facing;
                 break;
             case Fidget.FootTap:
                 hN = new(1.5f * S, Torso * 0.85f); hF = new(1 * S, Torso * 0.85f);

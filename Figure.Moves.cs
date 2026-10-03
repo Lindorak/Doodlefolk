@@ -55,7 +55,7 @@ sealed partial class Figure
                     float vp = (Gender switch { Gender.Girl => 1.35f, Gender.Boy => 0.88f, _ => 1.1f }) / MathF.Sqrt(SizeMul) * (0.92f + (Id % 7) * 0.025f) * SingPitch;
                     float speed = (0.85f + Traits.Energy * 0.35f) * (SingPitch != 1 ? 0.7f : 1);
                     float vol = 0.3f + Traits.Sociability * 0.15f;
-                    World.Babble(text, at, vp, vol, speed);
+                    World.Babble(text, at, vp, vol, speed, Pen, new VoiceMood(Math.Clamp(Mood.Happy - Mood.Sad, -1, 1), Mood.Angry, Mood.Scared, Mood.Tired));
                     _babbleUntil = _time + MathF.Min(2.2f, 0.12f * text.Length / speed);
                 }
                 break;

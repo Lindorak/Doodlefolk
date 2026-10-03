@@ -95,6 +95,7 @@ sealed partial class App : ApplicationContext
         Mark("env");
         // Sound effects are synthesised on a worker thread so the figures appear sooner; until then it's quiet.
         World.Voices = _settings.Voices;
+        Sound.ClassicVoices = _settings.VoiceStyle == "classic";
         var screen = (_w.Env.Virtual.Left, _w.Env.Virtual.Width);
         if (!_trailer) Task.Run(() =>
         {

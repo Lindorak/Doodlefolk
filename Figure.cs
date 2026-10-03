@@ -195,6 +195,17 @@ sealed partial class Figure
     public Attraction Attraction;
     /// <summary>Tsundere, yandere, kuudere... (or none): a character type on top of the traits (Brain.Archetype.cs).</summary>
     public Archetype Archetype;
+
+    /// <summary>What they're drawn with, which is what their voice sounds like (Sound.Doodle.cs): little ones in crayon,
+    /// old ones in chalk, the bold in marker, the shy in fountain pen, everyone else in pencil.</summary>
+    public VoicePen Pen => Brain.Baby ? VoicePen.Crayon : Brain.IsElder ? VoicePen.Chalk : Archetype switch
+    {
+        Archetype.Genki or Archetype.Tsundere => VoicePen.Marker,
+        Archetype.Kuudere => VoicePen.Chalk,
+        Archetype.Dandere or Archetype.Yandere => VoicePen.Fountain,
+        Archetype.Deredere => VoicePen.Pencil,
+        _ => Traits.Aggression > 0.65f || Traits.Energy > 0.8f ? VoicePen.Marker : Traits.Sociability < 0.3f ? VoicePen.Fountain : Traits.Energy < 0.3f ? VoicePen.Chalk : VoicePen.Pencil,
+    };
     /// <summary>Pink cheeks near a crush (0..1), set by the brain.</summary>
     public float Blush;
     /// <summary>Holding hands this frame: where the near / far hand should reach (set by the brain, cleared after posing).</summary>

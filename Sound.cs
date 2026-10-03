@@ -18,7 +18,7 @@ enum Sfx
 /// <summary>Dynamic sound effects, synthesized at start-up (no sound files): every effect is a few short
 /// generated variations played with random pitch, panned by where it happens on screen and scaled by how hard it was.
 /// Mixed with NAudio (WASAPI shared mode). Optional, with a master volume.</summary>
-sealed class Sound : IDisposable
+sealed partial class Sound : IDisposable
 {
     const int Rate = 44100;
     readonly Dictionary<Sfx, float[][]> _bank = new();
@@ -182,9 +182,17 @@ sealed class Sound : IDisposable
 
     /// <summary>Gibberish speech for a bubble: one little sung syllable per few letters, vowels taken from the words
     /// (so the same words always sound alike), a rising end for questions and a lift for shouts. pitch 1 ≈ 220 Hz.</summary>
-    public void Babble(string text, Vector2 at, float pitch, float vol, float speed)
+    public void Babble(string text, Vector2 at, float pitch, float vol, float speed, VoicePen pen = VoicePen.Pencil, VoiceMood mood = default)
     {
         if (!Enabled || _out == null || vol < 0.02f || _voices > 24) return;
+        if (!ClassicVoices)
+        {
+            if (DoodleSpeech(text, pitch, speed, pen, mood) is not { } line) return;
+            float pan2 = Math.Clamp(((at.X - _left) / _width) * 2 - 1, -1, 1) * 0.75f;
+            Interlocked.Increment(ref _voices);
+            _mixer.AddMixerInput(new Voice(line, Math.Clamp(vol, 0, 1), 1, pan2));
+            return;
+        }
         var letters = new System.Text.StringBuilder();
         foreach (char c in text.ToLowerInvariant()) if (c is >= 'a' and <= 'z') letters.Append(c);
         if (letters.Length == 0) return;

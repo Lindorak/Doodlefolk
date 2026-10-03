@@ -361,7 +361,7 @@ sealed partial class Pet
     {
         _say = text;
         _sayUntil = World.Now + 2 + text.Length * 0.06;
-        World.Babble(text, Pos, 1.9f, 0.28f, 1.35f);
+        World.Babble(text, Pos, 1.9f, 0.28f, 1.35f, VoicePen.Fountain);
     }
 
     /// <summary>Parrots listen. Hear something often enough (or from you, directly) and they'll start saying it.</summary>

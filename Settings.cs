@@ -148,6 +148,8 @@ sealed class Settings
     public float SoundVolume { get; set; } = 0.55f;
     /// <summary>Babble voices when they talk.</summary>
     public bool Voices { get; set; } = true;
+    /// <summary>"doodle" (they talk in drawing sounds) or "classic" (vowel babble).</summary>
+    public string VoiceStyle { get; set; } = "doodle";
     /// <summary>Screen awareness (all read on this PC only; nothing is saved or sent).</summary>
     public bool ScreenTerrain { get; set; } = true;
     public bool ScreenReact { get; set; } = true;

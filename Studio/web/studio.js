@@ -1672,7 +1672,8 @@ PAGES.settings = {
     ];
     const vv = h("span", { class: "val" });
     const vol = range(0, 1, 0.01, st().volume ?? 0.55, v => { vv.textContent = Math.round(v * 100) + "%"; sendSoon("vol", { t: "setting", key: "volume", v }); });
-    const voicesC = check("Babble voices", "They mumble along when they talk: their own little voice, higher or lower, quicker or shyer.", () => st().voices !== false, v => setS("voices", v));
+    const voicesC = check("Voices", "They talk along with their speech bubbles in their own little voice: higher or lower, quicker or shyer, and sounding like what they're drawn with.", () => st().voices !== false, v => setS("voices", v));
+    const voiceStyle = select([{ value: "doodle", label: "Doodle: pencil, marker, crayon, chalk, pen" }, { value: "classic", label: "Classic babble" }], st().voiceStyle || "doodle", v => setS("voiceStyle", v));
     const soundC = check("Sound effects", "Footsteps, punches, bounces, boings, a radio that plays music... all made up on the fly.", () => st().sound, v => setS("sound", v));
     // Ambience: background sound, channel by channel.
     const amb = () => st().ambience || { channels: [] };
@@ -1848,7 +1849,9 @@ PAGES.settings = {
       h("div", { class: "row" }, gfxChips),
       h("div", { class: "field" }, h("label", null, "Shadows"), shadowSel),
       gfxChecks,
-      h("h2", null, "Sound"), soundC, voicesC, h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
+      h("h2", null, "Sound"), soundC, voicesC,
+      h("div", { class: "field" }, h("label", { title: "Doodle: each word is a little tune of its own; hard letters are nib taps, hissy ones pencil scritches. Shy ones speak in fountain pen, bold ones in marker, little ones in crayon, old ones in chalk." }, "Voice style"), voiceStyle),
+      h("div", { class: "field" }, h("label", null, "Volume"), vol, vv),
       ambOn, ambBox,
       h("h2", null, "Look"), h("div", { class: "row" }, themes),
       h("h2", null, "Behaviour"), checks,

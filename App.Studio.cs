@@ -185,7 +185,7 @@ sealed partial class App
         settings = new
         {
             fps = _settings.FpsCap, remember = _settings.RememberCast, platforms = _showPlatforms, hidden = _paused, theme = _settings.Theme,
-            sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
+            sound = _settings.SoundOn, volume = _settings.SoundVolume, voices = _settings.Voices, voiceStyle = _settings.VoiceStyle, smartFps = _settings.SmartFps, gfx = _settings.Gfx,
             weather = _settings.WeatherMode, dayNight = _settings.DayNight, celebrations = _settings.Celebrations, babies = _settings.Babies,
             petMode = _settings.PetMode, petCare = _settings.PetCare, petBathroom = _settings.PetBathroom, stamina = _settings.StaminaOn, weight = _settings.WeightOn, petHelp = _settings.PetHelp, petBreeding = _settings.PetBreeding, lassoCursor = _settings.LassoCursor, jobs = _settings.Jobs, lifePace = _settings.LifePace, events = _settings.Events, calm = _settings.Calm, noticeDownloads = _settings.NoticeDownloads, voiceInput = _settings.VoiceInput, visitors = _settings.Visitors, unlockedHats = _settings.UnlockedHats, cratesWaiting = _settings.CratesWaiting,
             dex = new
@@ -859,6 +859,11 @@ sealed partial class App
             }
             case "smartFps": _settings.SmartFps = v.GetBoolean(); if (!_settings.SmartFps) ApplyFps(); break;
             case "voices": _settings.Voices = World.Voices = v.GetBoolean(); break;
+            case "voiceStyle":
+                _settings.VoiceStyle = v.GetString() == "classic" ? "classic" : "doodle";
+                Sound.ClassicVoices = _settings.VoiceStyle == "classic";
+                if (_w.Figures.Count > 0) _w.Figures[_w.Rng.Next(_w.Figures.Count)].Emote(_w.Rng.NextDouble() < 0.5 ? "Hello! Is this me?" : "Pizza, please!", 2.2f);
+                break;
             case "sound": _settings.SoundOn = v.GetBoolean(); if (_w.Sound != null) _w.Sound.Enabled = _settings.SoundOn; break;
             case "romance": _settings.Romance = v.GetBoolean(); _w.Romance = _settings.Romance; break;
             case "weather": _settings.WeatherMode = v.GetString() ?? "sometimes"; break;

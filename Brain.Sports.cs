@@ -65,12 +65,15 @@ sealed partial class Brain
         var kindBall = BallFor(kind);
         var ball = w.Props.Where(p => (p.Kind == kindBall || (kind == Sport.Soccer && p.Kind == PropKind.Ball)) && p.Holder == null && !w.Matches.Any(m => m.Ball == p))
                           .OrderBy(p => Vector2.Distance(p.Pos, gear.Pos)).FirstOrDefault();
-        if (ball == null || Vector2.Distance(ball.Pos, gear.Pos) > 1500 * S)
+        // A stray one anywhere will do before bringing out another (balls fly off and pile up otherwise).
+        bool made = false;
+        if (ball == null || (Vector2.Distance(ball.Pos, gear.Pos) > 1500 * S && w.Props.Count(p => p.Kind == kindBall) < 2))
         {
             if (w.MakeProp == null) return;
             ball = w.MakeProp(kindBall);
+            made = true;
         }
-        var m = new Match(kind, gearList, ball);
+        var m = new Match(kind, gearList, ball) { MadeBall = made };
         var players = new List<Figure> { f };
         int want = kind switch { Sport.Soccer => gearList.Count == 2 ? 5 : 3, Sport.Basketball => 3, _ => rng.NextDouble() < 0.3 ? 3 : 1 };
         foreach (var o in w.Figures.Where(o => o != f && Vector2.Distance(o.Base, gear.Pos) < 1600 * S).OrderByDescending(o => AffinityWith(o)))

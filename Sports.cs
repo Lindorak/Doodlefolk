@@ -27,6 +27,8 @@ sealed class Match
     float _stuckT;
 
     public Match(Sport kind, List<Item> gear, Prop ball) { Kind = kind; Gear = gear; Ball = ball; }
+    /// <summary>The ball was brought out for this match: it's put away again afterwards.</summary>
+    public bool MadeBall;
 
     public int Target => Kind switch { Sport.Soccer => 3, Sport.Basketball => 9, _ => 5 };
     public bool OneGoal => Kind == Sport.Soccer && Gear.Count == 1;
@@ -88,7 +90,12 @@ sealed class Match
         T += dt;
         ShoutT -= dt;
         Players.RemoveAll(p => !w.Figures.Contains(p) || p.Dead || p.Brain.Match != this);
-        if (Over || Players.Count < MinPlayers(Kind) || !w.Props.Contains(Ball) || Gear.Any(g => !w.Items.Contains(g)) || T > 150) { End(w); return false; }
+        if (Over || Players.Count < MinPlayers(Kind) || !w.Props.Contains(Ball) || Gear.Any(g => !w.Items.Contains(g)) || T > 150)
+        {
+            End(w);
+            if (MadeBall && Ball.Holder == null && w.Props.Contains(Ball)) w.RemoveProp(Ball);
+            return false;
+        }
         if (Pause > 0)
         {
             Pause -= dt;

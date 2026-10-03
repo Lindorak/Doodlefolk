@@ -1054,7 +1054,8 @@ sealed partial class App : ApplicationContext
         // Older saves could have two pets with the same name.
         foreach (var g in _w.Pets.GroupBy(pt => pt.Name).Where(g => g.Count() > 1))
             foreach (var (pt, i) in g.Skip(1).Select((pt, i) => (pt, i))) pt.Name = $"{g.Key} {new[] { "II", "III", "IV", "V", "VI" }[Math.Min(i, 4)]}";
-        foreach (var s in _settings.Props)
+        // A pile-up of balls (from matches that each brought out a new one) is tidied to a few of each kind.
+        foreach (var s in _settings.Props.GroupBy(p => p.Kind).SelectMany(g => g.Take(6)).ToList())
         {
             var p = SpawnProp(s.Kind);
             p.SizeMul = Math.Clamp(s.Size, 0.3f, 5f);

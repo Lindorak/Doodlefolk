@@ -11,6 +11,7 @@ sealed partial class Figure
     Vector2 _hN, _hNV, _hF, _hFV;              // hand offsets from the shoulder (world space)
     Vector2 _fNRel, _fNRelV, _fFRel, _fFRelV;  // free foot offsets from the pelvis (in air / sitting)
     bool _feetFree;
+    bool _celebrateArmClearance;
     readonly Foot _fN = new(), _fF = new();
 
     void ResetPose()
@@ -22,6 +23,7 @@ sealed partial class Figure
         _fN.Pos = new(Base.X + Facing * 5.5f * S, Base.Y); _fN.Stepping = false;
         _fF.Pos = new(Base.X - Facing * 5.5f * S, Base.Y); _fF.Stepping = false;
         _feetFree = false;
+        _celebrateArmClearance = false;
         Pose(1 / 120f);
         Array.Copy(Jt, _jtPrev, J.Count);
     }
@@ -235,7 +237,14 @@ sealed partial class Figure
         M.Spring(ref _lean, ref _leanV, leanT * Facing, leanW, 0.9f, dt);
         M.Spring(ref _tilt, ref _tiltV, tiltT, 12, 0.8f, dt);
         M.Spring(ref _pdx, ref _pdxV, pdxT * Facing, 4, 1, dt);
-        bool flailHands = (eN == Vector2.Zero || eF == Vector2.Zero) && Style.Run == RunStyle.Flailer;
+        // Raised celebration wrists need room around the shoulder on entry and return.
+        if (Action == Act.Cheer && (eN == Vector2.Zero || eF == Vector2.Zero)) _celebrateArmClearance = true;
+        else if (_celebrateArmClearance &&
+                 (eN != Vector2.Zero || eF != Vector2.Zero ||
+                  (Vector2.Dot(_hN, W(hN)) >= 0 && Vector2.Dot(_hF, W(hF)) >= 0 &&
+                   _hN.LengthSquared() >= Arm * Arm * 0.1225f && _hF.LengthSquared() >= Arm * Arm * 0.1225f)))
+            _celebrateArmClearance = false;
+        bool flailHands = (eN == Vector2.Zero || eF == Vector2.Zero) && (Style.Run == RunStyle.Flailer || _celebrateArmClearance);
         if (eN == Vector2.Zero && flailHands) SpringFlailHand(ref _hN, ref _hNV, W(hN), handW, dt);
         else M.Spring(ref _hN, ref _hNV, W(hN), handW, 0.8f, dt);
         if (eF == Vector2.Zero && flailHands) SpringFlailHand(ref _hF, ref _hFV, W(hF), handW, dt);

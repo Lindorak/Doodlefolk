@@ -10,6 +10,8 @@ sealed partial class PoseFixture
     readonly float S;
     readonly int Facing;
     readonly RunStyle _runStyle;
+    readonly bool _isCheer = false; // This bounded fixture exercises ScratchHead only.
+    bool _celebrateArmClearance;
     const int Id = 1;
     float HeadR, NeckGap, Torso, UpperArm, ForeArm, Thigh, Shin, LineW;
     float Arm => UpperArm + ForeArm;

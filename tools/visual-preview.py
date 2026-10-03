@@ -26,6 +26,8 @@ def generate():
     # Bind the production style read to the fixture's explicit RunStyle input; keep both spring paths.
     assert springs.count('Style.Run') == 1, 'Review the fixture style binding'
     springs=springs.replace('Style.Run', '_runStyle')
+    assert springs.count('Action == Act.Cheer') == 1, 'Review the fixture action binding'
+    springs=springs.replace('Action == Act.Cheer', '_isCheer')
     run_style='enum RunStyle '+between(body_style,'enum RunStyle ','\n')+'\n'
     flail_spring='    void SpringFlailHand('+between(pose,'    void SpringFlailHand(','    Vector2 SwatDir()')
     geometry='        Vector2 pelvis = '+between(pose,'        Vector2 pelvis = ','        Vector2 footN, footF;')

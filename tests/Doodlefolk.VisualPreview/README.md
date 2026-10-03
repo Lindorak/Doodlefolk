@@ -32,6 +32,9 @@ Both spring paths remain compiled. ScratchHead and neutral targets have explicit
 bends, so the locomotion-only Flailer path stays inactive; checks verify identical joint
 traces with `Flailer` selected at all four scales and both facings. This does not add
 locomotion or personality-driven idle behavior to the fixture.
+The celebration clearance branch is also retained, with `Action == Act.Cheer` bound to
+the fixture's explicit false `_isCheer` input and its clearance state initially false.
+This keeps the source slice compilable without adding celebration behavior to ScratchHead.
 The source manifest records source hashes and the complete changed equation blocks.
 The pose fixture uses fixed planted feet and the production reach limit with no step bob.
 Both versions have the same scale, facing, neutral rig, 1.4 s fidget, 120 Hz timestep,

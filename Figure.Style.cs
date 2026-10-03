@@ -264,7 +264,7 @@ sealed partial class Figure
                 pdxT = MathF.Sin(t * 5.5f) * 3 * S;
                 hN = new(Arm * 0.35f, -Arm * 0.9f * (0.5f + 0.5f * s));
                 hF = new(-Arm * 0.25f, -Arm * 0.9f * (0.5f - 0.5f * s));
-                eN = eF = new(1, 0.4f);
+                eN = eF = Vector2.Zero;
                 tiltT += MathF.Sin(t * 5.5f) * 0.15f;
                 break;
             }
@@ -284,7 +284,7 @@ sealed partial class Figure
                 break;
             default:
                 hN = new(Arm * 0.3f, -Arm * (0.8f + 0.15f * b)); hF = new(-Arm * 0.1f, -Arm * (0.85f + 0.1f * b));
-                eN = eF = new(1, 0.2f);
+                eN = eF = Vector2.Zero;
                 hipT = StandHip * (0.9f + 0.1f * b);
                 break;
         }

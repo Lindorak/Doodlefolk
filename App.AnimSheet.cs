@@ -187,6 +187,7 @@ sealed partial class App
     {
         double t = _tFrame / (double)TFps;
         _tFrame++;
+        if (_animFilter.Equals("catalog", StringComparison.OrdinalIgnoreCase)) { CatalogSheets(); SelfTestExitCode = 0; ExitThread(); return; }
         if (_animJob < 0 || (_animFrame >= Shots && t > _animNextShot))
         {
             _animJob++;
@@ -244,6 +245,43 @@ sealed partial class App
         _animFrame = 0;
         using var font = new Font("Segoe UI", 15, FontStyle.Bold, GraphicsUnit.Pixel);
         _sheetG!.DrawString(job.Label, font, Brushes.Black, 8, 30 + _sheetRow * (Tile + 8) + Tile / 2 - 10);
+    }
+
+    /// <summary>Every object in the catalogue, each drawn on its own in a labelled grid (for the art pass).</summary>
+    void CatalogSheets()
+    {
+        const int cell = 200, cols = 6, rows = 6;
+        var defs = ItemCatalog.All.ToList();
+        var floor = _w.Env.Platforms.First(p => p.Hwnd == IntPtr.Zero);
+        using var font = new Font("Segoe UI", 13, FontStyle.Bold, GraphicsUnit.Pixel);
+        for (int page = 0; page * cols * rows < defs.Count; page++)
+        {
+            using var sheet = new Bitmap(cols * cell, rows * (cell + 22), PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(sheet);
+            g.Clear(Color.White);
+            for (int i = 0; i < cols * rows && page * cols * rows + i < defs.Count; i++)
+            {
+                var d = defs[page * cols * rows + i];
+                var it = new Item(d, _w.Scale) { Pos = new Vector2(1500, floor.Y), OnGround = true };
+                float size = MathF.Max(d.W, d.H) * it.Sc;
+                float span = MathF.Max(size * 1.35f, 50 * _w.Scale);
+                var area = new RectangleF(it.Pos.X - span / 2, it.Pos.Y - d.H * it.Sc / 2 - span / 2, span, span);
+                var px = new byte[cell * cell * 4];
+                _w.Items.Add(it);
+                _r.Capture(area, a =>
+                {
+                    _r.Line(new Vector2(area.Left, floor.Y + 1), new Vector2(area.Right, floor.Y + 1), Ui.Pencil.A(0.6f), 1.5f * _w.Scale);
+                    it.Draw(_r, false, 1.0); it.Draw(_r, true, 1.0);
+                }, new Color4(0.985f, 0.975f, 0.94f, 1), cell / span, px, cell, cell);
+                _w.Items.Remove(it);
+                using var tile = ToBitmap(px, cell, cell);
+                int x = (i % cols) * cell, y = (i / cols) * (cell + 22);
+                g.DrawImage(tile, x, y);
+                g.DrawString(d.Key, font, Brushes.Black, x + 4, y + cell + 2);
+            }
+            sheet.Save(Path.Combine(_trailerPath, $"catalog-{page + 1:00}.png"), ImageFormat.Png);
+        }
+        World.Log($"catalog: {defs.Count} things → {_trailerPath}");
     }
 
     void NewSheet(string group)

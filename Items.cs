@@ -192,7 +192,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "sleepingbag", Name = "Sleeping bag", Words = new[] { "sleeping bag", "sleepingbag", "bedroll", "futon", "mattress", "air mattress" }, W = 64, H = 8, Color = M.Hex(0x43A047),
-            Shapes = new[] { O(-32, 0, 32, 7, 3, 0), O(-30, 1, -18, 7, 3, 2), new('o', new float[] { -16, 0, 32, 9, 3 }, 1, Over: true, WhenUsed: true) },
+            Shapes = new[] { O(-32, 0, 32, 7.5f, 3.5f, 0), L(-20, 0.8f, -20, 6.8f, 1, 0.5f), L(-8, 0.8f, -8, 6.8f, 1, 0.5f), L(4, 0.8f, 4, 6.8f, 1, 0.5f), L(16, 0.8f, 16, 6.8f, 1, 0.5f), L(26, 0.8f, 26, 6.6f, 1, 0.5f), C(5, 0.5f, -18, 7.3f, 0, 7.4f, 31, 7.2f), O(-33.5f, 0, -21, 8.8f, 4, 1), E(-27, 5.4f, 4, 2.2f, 7), new('o', new float[] { -16, 0, 32, 9, 3 }, 1, Over: true, WhenUsed: true), new('l', new float[] { -10, 1, -10, 8 }, 0, 0.5f, Over: true, WhenUsed: true), new('l', new float[] { 4, 1, 4, 8 }, 0, 0.5f, Over: true, WhenUsed: true), new('l', new float[] { 18, 1, 18, 8 }, 0, 0.5f, Over: true, WhenUsed: true) },
             Verbs = new[] { Verb.Lie }, Surface = 6, SurfX1 = -30, SurfX2 = 30, Comfort = 0.7f, Likes = new[] { Thing.Napping },
         });
 
@@ -225,7 +225,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "lasso", Name = "Lasso", Words = new[] { "lasso", "lariat", "rope", "cowboy rope", "lasso rope" }, W = 14, H = 14, Color = M.Hex(0xC29A5B),
-            Shapes = new[] { new Shape('e', new[] { 0f, 9, 6, 5 }, 0, 1.6f, NoOutline: true), C(1, 1.6f, 0, 4, -1, 2, 1, 0), C(0, 1.4f, -6, 9, -4, 13, 0, 14, 4, 13, 6, 9, 4, 5, 0, 4, -4, 5, -6, 9) },
+            Shapes = new[] { C(1, 1.5f, 6, 7, 5.64f, 8.92f, 4.6f, 10.6f, 3, 11.85f, 1.04f, 12.51f, -1.04f, 12.51f, -3, 11.85f, -4.6f, 10.6f, -5.64f, 8.92f, -6, 7, -5.64f, 5.08f, -4.6f, 3.4f, -3, 2.15f, -1.04f, 1.49f, 1.04f, 1.49f, 3, 2.15f, 4.6f, 3.4f, 5.64f, 5.08f, 6, 7), C(0, 1.4f, 4.2f, 7.2f, 3.85f, 8.85f, 2.85f, 10.24f, 1.36f, 11.17f, -0.4f, 11.5f, -2.16f, 11.17f, -3.65f, 10.24f, -4.65f, 8.85f, -5, 7.2f, -4.65f, 5.55f, -3.65f, 4.16f, -2.16f, 3.23f, -0.4f, 2.9f, 1.36f, 3.23f, 2.85f, 4.16f, 3.85f, 5.55f, 4.2f, 7.2f), C(2, 1.2f, 2.6f, 7.3f, 2.27f, 8.65f, 1.36f, 9.72f, 0.03f, 10.32f, -1.43f, 10.32f, -2.76f, 9.72f, -3.67f, 8.65f, -4, 7.3f, -3.67f, 5.95f, -2.76f, 4.88f, -1.43f, 4.28f, 0.03f, 4.28f, 1.36f, 4.88f, 2.27f, 5.95f, 2.6f, 7.3f), C(0, 1.3f, 5.6f, 4, 6.8f, 2, 7.6f, 0.6f), E(7.6f, 0.9f, 1.1f, 0.8f, 1) },
             Verbs = new[] { Verb.Lasso }, Carry = true, Damage = 0.15f, Reach = 10, Likes = new[] { Thing.Tricks },
         });
 
@@ -238,8 +238,8 @@ static class ItemCatalog
         Add(Trinket("button", "Button", new[] { "button", "shiny button" }, 6, 2, 0xE53935, new[] { E(0, 1, 3, 1.1f, 0), E(-0.8f, 1, 0.4f, 0.3f, 1), E(0.8f, 1, 0.4f, 0.3f, 1) }));
         Add(Trinket("seashell", "Seashell", new[] { "seashell", "shell", "sea shell" }, 7, 5, 0xF8BBD0, new[] { P(0, -3.5f, 0, 3.5f, 0, 0, 5), L(0, 0.2f, -2, 3.5f, 1, 0.6f), L(0, 0.2f, 0, 4.5f, 1, 0.6f), L(0, 0.2f, 2, 3.5f, 1, 0.6f) }));
         Add(Trinket("feather", "Feather", new[] { "feather", "pretty feather" }, 9, 3, 0x7E57C2, new[] { P(0, -4.5f, 0.8f, 0, 2.6f, 4.5f, 1.2f, 0, 0.2f), L(-4.5f, 0.6f, 4.5f, 1.4f, 7, 0.5f) }));
-        Add(Trinket("bottlecap", "Bottle cap", new[] { "bottle cap", "bottlecap", "cap" }, 5, 2, 0xFDD835, new[] { R(-2.5f, 0, 2.5f, 1.8f, 0), L(-2.5f, 1.8f, 2.5f, 1.8f, 1, 0.6f) }));
-        Add(Trinket("coin", "Shiny coin", new[] { "coin", "shiny coin", "penny", "gold coin" }, 5, 5, 0xF2C14E, new[] { E(0, 2.5f, 2.5f, 2.5f, 0), E(0, 2.5f, 1.5f, 1.5f, 2) }));
+        Add(Trinket("bottlecap", "Bottle cap", new[] { "bottle cap", "bottlecap", "cap" }, 5, 2, 0xFDD835, new[] { P(0, -2.7f, 0, -2.7f, 1.2f, -2.2f, 1.85f, -1.3f, 1.25f, -0.45f, 1.85f, 0.45f, 1.25f, 1.3f, 1.85f, 2.2f, 1.25f, 2.7f, 1.85f, 2.7f, 0), L(-2.4f, 1.15f, 2.4f, 1.15f, 1, 0.4f), L(-2.6f, 0.4f, 2.6f, 0.4f, 2, 0.4f) }));
+        Add(Trinket("coin", "Shiny coin", new[] { "coin", "shiny coin", "penny", "gold coin" }, 5, 5, 0xF2C14E, new[] { E(0, 2.5f, 2.6f, 2.6f, 1), E(0, 2.5f, 2.05f, 2.05f, 0), P(2, 0, 3.85f, 0.32f, 2.94f, 1.28f, 2.92f, 0.52f, 2.33f, 0.79f, 1.41f, 0, 1.95f, -0.79f, 1.41f, -0.52f, 2.33f, -1.28f, 2.92f, -0.32f, 2.94f), C(7, 0.35f, -1.5f, 3.5f, -0.7f, 4.2f) }));
         Add(Trinket("gem", "Gem", new[] { "gem", "jewel", "crystal", "diamond", "ruby" }, 5, 5, 0x26C6DA, new[] { P(0, -2.5f, 3, 0, 5, 2.5f, 3, 0, 0), L(-2.5f, 3, 2.5f, 3, 2, 0.5f) }));
 
         // ---------------- garden ----------------
@@ -320,8 +320,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "stage", Name = "Stage", Words = new[] { "stage", "bandstand", "theatre", "theater", "performance stage" }, W = 80, H = 14, Color = M.Hex(0x8E24AA),
-            Shapes = new[] { R(-40, 0, 40, 10, 3), R(-40, 10, 40, 14, 4), L(-38, 14, -38, 46, 0, 2.6f), L(38, 14, 38, 46, 0, 2.6f), P(0, -40, 46, 40, 46, 30, 40, 0, 43, -30, 40),
-                             E(-24, 6, 2, 2, 11), E(0, 6, 2, 2, 11), E(24, 6, 2, 2, 11) },
+            Shapes = new[] { R(-40, 0, 40, 10, 0), L(-32, 0.6f, -32, 9.4f, 1, 0.6f), L(-24, 0.6f, -24, 9.4f, 1, 0.6f), L(-16, 0.6f, -16, 9.4f, 1, 0.6f), L(-8, 0.6f, -8, 9.4f, 1, 0.6f), L(0, 0.6f, 0, 9.4f, 1, 0.6f), L(8, 0.6f, 8, 9.4f, 1, 0.6f), L(16, 0.6f, 16, 9.4f, 1, 0.6f), L(24, 0.6f, 24, 9.4f, 1, 0.6f), L(32, 0.6f, 32, 9.4f, 1, 0.6f), R(-40, 9, 40, 10.2f, 11), R(-41, 10, 41, 14, 4), L(-41, 13.5f, 41, 13.5f, 3, 0.6f), L(-41, 11.8f, 41, 11.8f, 1, 0.3f), E(-30, 14.6f, 1.6f, 1.1f, 11), E(-15, 14.6f, 1.6f, 1.1f, 11), E(0, 14.6f, 1.6f, 1.1f, 11), E(15, 14.6f, 1.6f, 1.1f, 11), E(30, 14.6f, 1.6f, 1.1f, 11), R(-40, 14, -37, 46, 4), R(37, 14, 40, 46, 4), P(0, -41, 48, 41, 48, 41, 44, 34, 42, 27, 44, 20, 42, 13, 44, 6, 42, -1, 44, -8, 42, -15, 44, -22, 42, -29, 44, -36, 42, -41, 44), R(-42, 47.5f, 42, 49, 4), P(1, -37, 43, -29, 43, -31.5f, 32, -36, 16, -37, 16), E(-34.5f, 29, 1.3f, 1.3f, 11), P(1, 37, 43, 29, 43, 31.5f, 32, 36, 16, 37, 16), E(34.5f, 29, 1.3f, 1.3f, 11) },
             Verbs = new[] { Verb.Stand }, Surface = 14, SurfX1 = -39, SurfX2 = 39, Mass = 4, Likes = new[] { Thing.Dancing },
         });
         Add(new ItemDef
@@ -338,8 +337,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "fort", Name = "Blanket fort", Words = new[] { "fort", "blanket fort", "pillow fort", "den" }, W = 64, H = 40, Color = M.Hex(0x1E88E5),
-            Shapes = new[] { L(-28, 0, -28, 30, 3, 2.4f), L(28, 0, 28, 30, 3, 2.4f), P(0, -32, 30, 0, 40, 32, 30, 30, 4, 18, 0, -18, 0, -30, 4), POver(1, -10, 0, -12, 18, 12, 18, 10, 0),
-                             L(-30, 30, -30, 26, 2, 3), L(0, 40, 0, 50, 4, 1.2f), P(9, 0, 50, 9, 47, 0, 44) },
+            Shapes = new[] { L(-28, 0, -28, 30, 3, 2.4f), L(28, 0, 28, 30, 3, 2.4f), P(0, -32, 30, 0, 40, 32, 30, 30, 4, 18, 0, -18, 0, -30, 4), C(2, 1.6f, -30.5f, 22, -15, 30, 0, 33, 15, 30, 30.5f, 22), C(1, 1.6f, -30.5f, 13, -15, 19.5f, 0, 22, 15, 19.5f, 30.5f, 13), C(2, 0.8f, -30.5f, 9, -15, 14.5f, 0, 16.5f, 15, 14.5f, 30.5f, 9), POver(8, -10, 0, -12, 18, 12, 18, 10, 0), POver(2, -12, 18, -10, 0, -14, 0, -15, 17), POver(2, 12, 18, 10, 0, 14, 0, 15, 17), L(-30, 30, -30, 26, 2, 3), L(0, 40, 0, 50, 4, 1.2f), P(9, 0, 50, 9, 47, 0, 44), E(-23, 2.8f, 5, 2.8f, 9), E(23, 2.6f, 4.5f, 2.6f, 11) },
             Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.8f, Mass = 2, Likes = new[] { Thing.Napping, Thing.Exploring }, Material = Material.Fabric,
         });
         Add(new ItemDef
@@ -577,8 +575,8 @@ static class ItemCatalog
         });
         Add(new ItemDef
         {
-            Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi" }, W = 64, H = 42, Color = M.Hex(0x43A047),
-            Shapes = new[] { P(1, -30, 0, 0, 42, 30, 0), POver(0, -32, 0, -6, 0, 0, 40, -2, 40), POver(2, 6, 0, 32, 0, 2, 40, 0, 40), L(0, 40, 0, 46, 6, 1.4f) },
+            Key = "tent", Name = "Tent", Words = new[] { "tent", "camping tent", "teepee", "tipi" }, W = 72, H = 42, Color = M.Hex(0x43A047),
+            Shapes = new[] { L(-21, 14, -35, 0, 3, 0.5f), L(21, 14, 35, 0, 3, 0.5f), R(-36, 0, -34.2f, 2.2f, 6), R(34.2f, 0, 36, 2.2f, 6), P(0, -31, 0, 0, 42, 31, 0), P(1, 0, 42, 31, 0, 13, 0), P(8, -7.5f, 0, 0, 23, 7.5f, 0), P(2, -13, 0, -1, 23.5f, -6.5f, 0), P(1, 13, 0, 1, 23.5f, 6.5f, 0), E(-7, 9, 1, 1, 11), E(7, 9, 1, 1, 11), L(0, 42, 0, 24, 1, 0.6f), L(0, 40, 0, 47, 6, 1.4f), P(9, 0, 47, 5, 45.5f, 0, 44) },
             Verbs = new[] { Verb.Hide, Verb.Lie }, Comfort = 0.6f, Likes = new[] { Thing.Napping, Thing.Exploring }, Mass = 2,
         });
         // A skipping rope, coiled (wooden handles); and a long rope for two to turn.
@@ -597,7 +595,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "table", Name = "Table", Words = new[] { "table", "desk", "coffee table", "picnic table", "workbench" }, W = 56, H = 24, Color = M.Hex(0xA0703C),
-            Shapes = new[] { R(-28, 21, 28, 24, 0), L(-24, 0, -24, 21, 1, 2.4f), L(24, 0, 24, 21, 1, 2.4f) },
+            Shapes = new[] { R(-24, 16.5f, 24, 20.8f, 1), P(0, -25.5f, 16.5f, -21.5f, 16.5f, -22.4f, 0, -24.4f, 0), P(0, 21.5f, 16.5f, 25.5f, 16.5f, 24.4f, 0, 22.4f, 0), L(-24.6f, 15, -23.6f, 1.5f, 1, 0.5f), L(23.6f, 15, 24.6f, 1.5f, 1, 0.5f), O(-28.5f, 20.5f, 28.5f, 24.5f, 1.2f, 0), L(-28, 21.3f, 28, 21.3f, 1, 0.7f), C(1, 0.4f, -21, 22.8f, -10, 23.1f, 2, 22.7f, 14, 23, 22, 22.8f), C(2, 0.6f, -26, 23.7f, -14, 23.9f, -4, 23.7f) },
             Verbs = new[] { Verb.Stand }, Surface = 24, SurfX1 = -27, SurfX2 = 27, Likes = new[] { Thing.HighPlaces }, Mass = 2,
         });
 
@@ -619,7 +617,7 @@ static class ItemCatalog
         Add(new ItemDef
         {
             Key = "pillow", Name = "Pillow", Words = new[] { "pillow", "cushion" }, W = 16, H = 7, Color = M.Hex(0xF7F5EF),
-            Shapes = new[] { O(-8, 0, 8, 7, 3, 0) }, Verbs = new[] { Verb.Lie, Verb.Wield }, Surface = 7, SurfX1 = -7, SurfX2 = 7, Comfort = 0.6f, Carry = true,
+            Shapes = new[] { O(-8.4f, 0.2f, 8.4f, 6.9f, 3.2f, 0), C(1, 0.35f, -6.5f, 0.9f, 0, 0.6f, 6.5f, 0.9f), E(0, 3.6f, 0.6f, 0.45f, 1), C(7, 0.9f, -5, 5.4f, -1, 5.9f, 3.5f, 5.6f), C(1, 0.35f, -8, 2.2f, -8.3f, 3.5f, -8, 4.8f), C(1, 0.35f, 8, 2.2f, 8.3f, 3.5f, 8, 4.8f) }, Verbs = new[] { Verb.Lie, Verb.Wield }, Surface = 7, SurfX1 = -7, SurfX2 = 7, Comfort = 0.6f, Carry = true,
             Reach = 10, Damage = 0.1f, Knock = 0.7f, Likes = new[] { Thing.Napping, Thing.Sparring },
         });
 

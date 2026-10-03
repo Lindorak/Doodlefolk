@@ -9,7 +9,7 @@ public class FireVoiceTests
     [Fact]
     public void BurnsAndCrackles()
     {
-        var fire = FireVoice.Load();
+        var fire = FireVoice.Load(seed: 7);   // the same fire every run
         Assert.NotNull(fire);
         fire!.Target = 0.42f;
         var buf = new float[44100 * 2 * 6];
@@ -27,7 +27,7 @@ public class FireVoiceTests
     [Fact]
     public void FallsSilentWhenOut()
     {
-        var fire = FireVoice.Load()!;
+        var fire = FireVoice.Load(seed: 7)!;
         fire.Target = 0;
         var buf = new float[44100 * 2];
         fire.Read(buf);

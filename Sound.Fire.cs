@@ -24,18 +24,20 @@ sealed class FireVoice : ISampleProvider
     bool _fading;
     int _untilJump = Rate * 3, _untilBreath;
     readonly List<Grain> _active = new();
-    readonly Random _r = new();
+    readonly Random _r;
 
     sealed class Grain { public int I; public double Pos; public float Rate, Gain, L, R; }
 
-    FireVoice(float[] bed, float[] grains, (int, int, float)[] index)
+    FireVoice(float[] bed, float[] grains, (int, int, float)[] index, int? seed)
     {
         _bed = bed; _grains = grains; _index = index;
+        _r = seed is int sd ? new Random(sd) : new Random();
         _a = _r.Next(_bed.Length);
     }
 
     /// <summary>The fire, from the sounds built into the app (null if they can't be read).</summary>
-    public static FireVoice? Load()
+    /// <param name="seed">Fixed for tests (the same fire every time); random otherwise.</param>
+    public static FireVoice? Load(int? seed = null)
     {
         try
         {
@@ -53,7 +55,7 @@ sealed class FireVoice : ISampleProvider
             }
             using var js = asm.GetManifestResourceStream("sounds/fire-grains.json") ?? throw new FileNotFoundException("fire-grains.json");
             var idx = JsonDocument.Parse(js).RootElement.EnumerateArray().Select(e => (e.GetProperty("o").GetInt32(), e.GetProperty("n").GetInt32(), e.GetProperty("lvl").GetSingle())).ToArray();
-            return new FireVoice(Wav("fire-bed.wav"), Wav("fire-grains.wav"), idx);
+            return new FireVoice(Wav("fire-bed.wav"), Wav("fire-grains.wav"), idx, seed);
         }
         catch (Exception e) { World.Log("fire sound: " + e.Message); return null; }
     }

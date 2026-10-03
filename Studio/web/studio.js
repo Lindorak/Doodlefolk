@@ -30,6 +30,7 @@ function receive(m) {
   switch (m.t) {
     case "init": INIT = m; applyTheme(); break;
     case "state": S = m; onState(); break;
+    case "poses": posesIn(m); break;
     case "go": go(m.page, m.id); break;
     case "spawned": if (!QUICK) { go("figure", m.id); toast("Fresh off the pencil!"); } break;
     case "winstate": document.body.classList.toggle("max", !!m.max); break;
@@ -192,6 +193,27 @@ const J = { Head: 0, Neck: 1, Pelvis: 2, ElbowN: 3, HandN: 4, ElbowF: 5, HandF: 
 const STANDING = [[1, -55], [1, -47], [0, -26], [5, -37], [6, -27], [-3, -37], [-4, -27], [3, -13], [5, 0], [-2, -13], [-5, 0]];
 
 /** Build a figure drawing; returns the svg with an .update(pose, hex) method. */
+/* Figures in the Studio move smoothly: the app sends their poses ~30 times a second ("poses"), and every drawing
+   glides from where it's showing to the latest pose each screen frame, instead of jumping with each state update. */
+const FIG_ANIM = new Set();
+const FIG_BOUND = new Map();   // figure id -> drawings showing it
+let figAnimOn = false;
+function figTick(now) {
+  for (const svg of FIG_ANIM) {
+    if (!svg.isConnected) { FIG_ANIM.delete(svg); continue; }
+    svg.tick(now);
+  }
+  if (FIG_ANIM.size) requestAnimationFrame(figTick); else figAnimOn = false;
+}
+function figAnimate(svg) { FIG_ANIM.add(svg); if (!figAnimOn) { figAnimOn = true; requestAnimationFrame(figTick); } }
+function posesIn(m) {
+  for (const [id, pose] of m.f) {
+    if (S) { const f = S.figures.find(x => x.id === id); if (f) f.pose = pose; }
+    const set = FIG_BOUND.get(id);
+    if (set) for (const svg of set) { if (svg.isConnected) svg.stream(pose); else set.delete(svg); }
+  }
+}
+
 function figSvg(cls = "fig") {
   const svg = s("svg", { class: cls, viewBox: "-45 -76 90 84" });
   svg.append(s("path", { class: "ground", d: "M-36 2.5 Q-10 1.2 12 2.8 T38 2" }));
@@ -202,8 +224,40 @@ function figSvg(cls = "fig") {
   far.append(fp); near.append(np); outline.append(op);
   const lookBack = s("g"), lookFront = s("g");
   svg.append(lookBack, outline, headO, far, near, head, lookFront);
-  svg.update = (pose, hex, look, facing) => {
+  let cur = null, from = null, to = null, t0 = 0, dur = 33, lastAt = 0, streamAt = -1e9, style = ["#888", null, 1], settled = true, boundId = null;
+  const lerp = (a, b, k) => a.map((p, i) => [p[0] + (b[i][0] - p[0]) * k, p[1] + (b[i][1] - p[1]) * k]);
+  svg.target = pose => {
+    if (!pose || pose.length !== 11) return;
+    const now = performance.now();
+    if (lastAt) dur = Math.min(160, Math.max(16, dur * 0.7 + (now - lastAt) * 0.3));   // how often poses arrive
+    lastAt = now;
+    from = cur || pose; to = pose; t0 = now; settled = false;
+    figAnimate(svg);
+  };
+  svg.stream = pose => { streamAt = performance.now(); svg.target(pose); };
+  svg.tick = now => {
+    if (settled || !to) return;
+    const k = Math.min(1, (now - t0) / dur);
+    cur = k >= 1 ? to : lerp(from, to, k);
+    draw(cur);
+    if (k >= 1) settled = true;
+  };
+  svg.update = (pose, hex, look, facing, id) => {
+    const restyle = hex !== style[0] || look !== style[1] || (facing || 1) !== style[2];
+    style = [hex, look, facing || 1];
+    if (id != null && id !== boundId) {
+      if (boundId != null && FIG_BOUND.get(boundId)) FIG_BOUND.get(boundId).delete(svg);
+      boundId = id;
+      if (!FIG_BOUND.has(id)) FIG_BOUND.set(id, new Set());
+      FIG_BOUND.get(id).add(svg);
+    }
     pose = pose && pose.length === 11 ? pose : STANDING;
+    if (!cur || id == null) { cur = pose; to = pose; settled = true; draw(pose); return; }
+    if (restyle) draw(cur);
+    if (performance.now() - streamAt > 300) svg.target(pose);   // (while poses stream in, they lead)
+  };
+  function draw(pose) {
+    const [hex, look, facing] = style;
     // Stand it on the ground line under its pelvis, whatever it's doing.
     let maxY = -1e9; for (const p of pose) maxY = Math.max(maxY, p[1]);
     const dx = -pose[J.Pelvis][0], dy = -maxY;
@@ -216,7 +270,7 @@ function figSvg(cls = "fig") {
     head.setAttribute("cx", hx); head.setAttribute("cy", hy); head.setAttribute("fill", hex);
     headO.setAttribute("cx", hx); headO.setAttribute("cy", hy);
     drawLook(lookBack, lookFront, look, pose.map(p => [p[0] + dx, p[1] + dy]), facing || 1, hex);
-  };
+  }
   return svg;
 }
 
@@ -479,7 +533,7 @@ PAGES.cast = {
     return () => {
       for (const c of cards) {
         const f = fig(c.id); if (!f) continue;
-        c.svg.update(f.pose, f.hex, f.look, f.facing);
+        c.svg.update(f.pose, f.hex, f.look, f.facing, f.id);
         c.name.textContent = f.name; c.dot.style.background = f.hex;
         c.act.textContent = f.activity;
         c.feels.textContent = f.feels;
@@ -594,7 +648,7 @@ PAGES.figure = {
     const sub = SUBPANELS[route.sub](panel, f);
     return () => {
       const f = fig(id); if (!f) return;
-      big.update(f.pose, f.hex, f.look, f.facing);
+      big.update(f.pose, f.hex, f.look, f.facing, f.id);
       if (idle(name)) name.value = f.name;
       act.textContent = f.activity;
       feels.textContent = `${f.feels} · ${f.describe}`;
@@ -854,7 +908,7 @@ const SUBPANELS = {
     }
     drawCard(); paintSel();
     return f => {
-      centreFig.update(f.pose, f.hex, f.look, f.facing);
+      centreFig.update(f.pose, f.hex, f.look, f.facing, f.id);
       for (const o of others) {
         const v = o.id === "you" ? f.fond : (f.rels.find(r => r.id === o.id) || { mine: 0 }).mine;
         const e = edges[o.id];
@@ -2221,7 +2275,7 @@ function buildPop(kind, id) {
       h("div", { class: "row pop-foot" }, feels, h("span", { class: "spacer" }),
         h("button", { class: "btn small", onclick: () => send({ t: "studio", page: "figure", id }) }, "Open in Studio")));
     updates.push(() => {
-      dot.update(x.pose, x.hex, x.look, x.facing);
+      dot.update(x.pose, x.hex, x.look, x.facing, x.id);
       sub.textContent = x.dead ? "Gone" : x.activity;
       feels.textContent = x.feels || "";
       col.set(x.hex);

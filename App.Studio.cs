@@ -60,8 +60,26 @@ sealed partial class App
         foreach (var win in new[] { _studio, _quick, _pop }) if (win != null && !win.IsDisposed && win.PageReady) win.Post(json);
     }
 
+    double _nextPoses;
+
+    /// <summary>Just the figures' poses, ~30 times a second, so the Studio's drawings of them move smoothly (the full
+    /// state goes out much less often).</summary>
+    void PushPoses(double now)
+    {
+        if (now < _nextPoses) return;
+        _nextPoses = now + 1 / 30.0;
+        bool studio = _studio != null && _studio.PageReady && _studio.WindowState != FormWindowState.Minimized;
+        bool pop = _pop != null && _pop.PageReady && _pop.Visible;
+        if (!studio && !pop) return;
+        static float R(float v) => MathF.Round(v, 1);
+        string json = JsonSerializer.Serialize(new { t = "poses", f = _w.Figures.Select(f => new object[] { f.Id, f.Jt.Select(j => new[] { R((j.X - f.Base.X) / f.S), R((j.Y - f.Base.Y) / f.S) }) }) }, Json);
+        if (studio) _studio!.Post(json);
+        if (pop) _pop!.Post(json);
+    }
+
     void PushStudio(double now)
     {
+        PushPoses(now);
         bool studio = _studio != null && _studio.PageReady && _studio.WindowState != FormWindowState.Minimized;
         bool quick = _quick != null && _quick.PageReady;
         bool pop = _pop != null && _pop.PageReady && _pop.Visible;

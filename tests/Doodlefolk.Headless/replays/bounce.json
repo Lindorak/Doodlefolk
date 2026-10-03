@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "seed": 1701,
+  "ticks": 1200,
+  "gravity": 1800,
+  "drag": 0.15,
+  "radius": 6.5,
+  "floorY": 1000,
+  "bounce": 0.7,
+  "position": { "x": 0, "y": 500 },
+  "velocity": { "x": 250, "y": -700 }
+}

@@ -4,8 +4,6 @@ using Vortice.Mathematics;
 
 namespace Doodlefolk;
 
-enum PropKind { Ball, SoccerBall, Basketball, BeachBall, TennisBall, Shuttlecock }
-
 /// <summary>A physics ball the figures can kick, juggle, carry and throw. Bounces off window tops,
 /// the taskbar and screen edges, rolls with spin, rides moving windows, and knocks figures over.</summary>
 sealed class Prop

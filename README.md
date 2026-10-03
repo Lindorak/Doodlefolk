@@ -230,6 +230,9 @@ powershell -ExecutionPolicy Bypass -File tools\install-hooks.ps1   # run the qui
 - **Unit tests** (`tests/Doodlefolk.Tests`, xUnit): the GIF encoder, mods (JSON and SVG), the object catalogue,
   settings saving and loading, quiet hours, reminders, weather codes.
 - **Studio tests** (`tests/studio.test.mjs`, Node): the calendar (.ics) import.
+- **Portable numeric checks** (`tests/Doodlefolk.Headless`, .NET console): production ballistics, spring/IK math,
+  covering-array planning, and bounded JSON replay on Linux and Windows. Run `dotnet run --project tests/Doodlefolk.Headless -c Release`.
+  This is a small helper-level proof, not the full town simulator; see its [scope and replay instructions](tests/Doodlefolk.Headless/README.md).
 - **Self-test** (`Doodlefolk.exe --selftest`): the real app, hidden and sped up six times, with its own throwaway
   data (your cast is never touched). It plays through every feature (jobs, building, rides, swimming, fishing, each
   town event with people leaving mid-way, resizing, casts, clips, reminders, voice commands, mods, calm mode) while

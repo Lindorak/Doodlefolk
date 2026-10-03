@@ -1,0 +1,33 @@
+# Narrow portable checks; the existing Windows app/unit/town/self-test jobs remain required.
+name: Headless helpers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  numeric-helpers:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Check production numeric helpers and covering-array planner
+        run: dotnet run --project tests/Doodlefolk.Headless -c Release
+      - name: Replay the bounded flat-floor experiment
+        run: dotnet run --project tests/Doodlefolk.Headless -c Release --no-build -- --replay tests/Doodlefolk.Headless/replays/bounce.json --out bounce-result.json
+      - name: Keep numeric replay result
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-replay-${{ matrix.os }}
+          path: bounce-result.json

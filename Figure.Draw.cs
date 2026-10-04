@@ -36,7 +36,7 @@ sealed partial class Figure
         float fade = Fade;
         Color4 baseColor = Lit(Dead ? Color4.Lerp(Color, new Color4(0.55f, 0.55f, 0.55f, 1), M.Clamp01(_fadeT / 1.5f)) : Color);
         Color4 near = new(baseColor.R, baseColor.G, baseColor.B, fade);
-        Color4 far = new(baseColor.R * 0.72f, baseColor.G * 0.72f, baseColor.B * 0.72f, fade);
+        Color4 far = new(baseColor.R * 0.84f, baseColor.G * 0.84f, baseColor.B * 0.84f, fade);
         float w = LineW, ow = 1.6f * S;
         float headR = HeadR * (1 + Fat * 0.08f);
         void Bone(int a, int b, Color4 c, bool shade, float extra = 0) { var (wa, wb) = BoneW(a, b, w); Seg(r, Jt[a], Jt[b], wa + extra, wb + extra, c, shade); }
@@ -61,7 +61,9 @@ sealed partial class Figure
         Bone(J.Pelvis, J.KneeF, far, false); Bone(J.KneeF, J.FootF, far, false);
         DrawTorso(r, near, w);
         DrawFullFace(r, near);
-        r.ShadedDisc(Jt[J.Head], headR, near);
+        // A little form, without the glossy spot and heavy rim used on round props.
+        r.Disc(Jt[J.Head], headR, near);
+        r.ShadeDisc(Jt[J.Head], headR, near.A * 0.35f);
         Bone(J.Pelvis, J.KneeN, near, true); Bone(J.KneeN, J.FootN, near, true);
         Bone(J.Neck, J.ElbowN, near, true); Bone(J.ElbowN, J.HandN, near, true);
         DrawSweat(r);
@@ -106,7 +108,7 @@ sealed partial class Figure
         int strokes = SketchOrder.Length + 1;
         float p = SpawnT * strokes;
         float headK = M.Smooth(p);
-        Color4 far = M.Shade(Color, 0.72f);
+        Color4 far = M.Shade(Color, 0.84f);
         BeginBodyOutline(r, Outline.A, HeadR);
         try
         {

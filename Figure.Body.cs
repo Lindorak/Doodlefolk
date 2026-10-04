@@ -44,7 +44,12 @@ sealed partial class Figure
     /// <summary>A limb segment: a plain round-capped line when thin, a tapered capsule when not.</summary>
     void Seg(Renderer r, Vector2 a, Vector2 b, float wa, float wb, Color4 c, bool shade = false)
     {
-        if (MathF.Abs(wa - wb) < 0.05f) { if (shade) r.ShadedLine(a, b, c, wa); else r.Line(a, b, c, wa); return; }
+        if (MathF.Abs(wa - wb) < 0.05f)
+        {
+            r.Line(a, b, c, wa);
+            if (shade) BodyHighlight(r, a, b, wa, wb, c);
+            return;
+        }
         Vector2 d = b - a;
         float len = d.Length();
         if (len < 0.01f) { r.Disc(a, wa * 0.5f, c); return; }
@@ -52,11 +57,21 @@ sealed partial class Figure
         r.FillPolygon(stackalloc Vector2[] { a + n * wa * 0.5f, b + n * wb * 0.5f, b - n * wb * 0.5f, a - n * wa * 0.5f }, c);
         r.Disc(a, wa * 0.5f, c);
         r.Disc(b, wb * 0.5f, c);
-        if (shade && Gfx.Q.Shading)
-        {
-            Vector2 lit = n.X + n.Y < 0 ? n : -n;   // toward the light (top left)
-            r.Line(a + lit * wa * 0.22f, b + lit * wb * 0.22f, Gfx.Lighter(c, 0.35f).A(0.5f * c.A), MathF.Min(wa, wb) * 0.25f);
-        }
+        if (shade) BodyHighlight(r, a, b, wa, wb, c);
+    }
+
+    /// <summary>A soft matte light, fading through zero as a limb turns across the light direction.</summary>
+    static void BodyHighlight(Renderer r, Vector2 a, Vector2 b, float wa, float wb, Color4 c)
+    {
+        if (!Gfx.Q.Shading || MathF.Min(wa, wb) < 2 || c.A <= 0) return;
+        Vector2 d = b - a;
+        if (d.LengthSquared() < 1) return;
+        Vector2 n = Vector2.Normalize(new Vector2(-d.Y, d.X));
+        float light = n.X + n.Y;
+        Vector2 lit = light < 0 ? n : -n;
+        float strength = MathF.Abs(light) * 0.70710678f;
+        r.Line(a + lit * wa * 0.22f, b + lit * wb * 0.22f,
+            Gfx.Lighter(c, 0.22f).A(0.18f * strength), MathF.Min(wa, wb) * 0.25f);
     }
 
     readonly Vector2[] _torsoOut = new Vector2[2 * TorsoSteps + 2];
@@ -120,15 +135,15 @@ sealed partial class Figure
 
     void DrawTorso(Renderer r, Color4 body, float w)
     {
-        if (Fat <= 0.02f) { r.ShadedLine(Jt[J.Neck], Jt[J.Pelvis], body, w); _torsoN = 0; return; }
+        if (Fat <= 0.02f) { r.Line(Jt[J.Neck], Jt[J.Pelvis], body, w); BodyHighlight(r, Jt[J.Neck], Jt[J.Pelvis], w, w, body); _torsoN = 0; return; }
         r.FillPolygon(_torso.AsSpan(0, _torsoN), body);
         if (Gfx.Q.Shading)
         {
-            // Light across the top of the back and chest, a shadow tucked under the belly.
+            // The same restrained light as the limbs, without a bright patch on the chest.
             Vector2 neck = Jt[J.Neck], pel = Jt[J.Pelvis];
-            int top = TorsoSteps / 3, low = (int)(TorsoSteps * 0.85f);
+            int top = TorsoSteps / 3;
             Vector2 hi = Vector2.Lerp(Vector2.Lerp(neck, pel, 0.3f), _torso[top], 0.45f);
-            r.Oval(hi, (1.5f + 3 * Fat) * S, (2.5f + 4 * Fat) * S, Gfx.Lighter(body, 0.45f).A(0.2f * body.A));
+            r.Oval(hi, (1.5f + 3 * Fat) * S, (2.5f + 4 * Fat) * S, Gfx.Lighter(body, 0.22f).A(0.18f));
 
         }
     }
